@@ -24,6 +24,7 @@ RUN apt-get install -y python3-dev
 RUN apt-get install -y libssl-dev
 RUN apt-get install -y qtbase5-dev
 RUN apt-get install -y uuid-dev
+RUN apt-get install -y patchelf
 
 # SWI-Prolog specific apt repository and packages
 #RUN apt-get install -y software-properties-common

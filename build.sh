@@ -3,7 +3,6 @@
 # https://github.com/SWI-Prolog/swipl-devel/blob/master/CMAKE.md
 
 cd swipl
-rm -rf build
 mkdir build
 cd build
 cmake -G Ninja ..
@@ -20,14 +19,12 @@ mkdir build
 # Copy libswipl.so.9 to the pwd
 cp -f swipl/build/src/libswipl.so.9 build/
 
-cd build
-
-# Instruct the linker that the library can be found here 
-#     (omitted due to addition of -rpath option to compilation below)
-#export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH
+cd src
 
 # Build our application
-rm -rf calc
-swipl-ld -goal true -o calc ../src/calc.c ../src/calc.pl -Wl,-rpath,'$ORIGIN'
+../swipl/build/src/swipl-ld -goal true -o ../build/calc calc.c calc.pl
 
-# https://www.swi-prolog.org/pldoc/man?section=plld
+cd ..
+
+# Link manually to the library which will be expected to sit alongside the executable.
+patchelf --set-rpath '$ORIGIN' build/calc
