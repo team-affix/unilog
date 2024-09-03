@@ -21,10 +21,12 @@ cp -f swipl/build/src/libswipl.so.9 build/
 
 cd src
 
+OUTFILE="uni"
+
 # Build our application
-../swipl/build/src/swipl-ld -goal true -o ../build/calc calc.c calc.pl
+../swipl/build/src/swipl-ld -goal true -o ../build/$OUTFILE *.cpp *.pl
 
 cd ..
 
 # Link manually to the library which will be expected to sit alongside the executable.
-patchelf --set-rpath '$ORIGIN' build/calc
+patchelf --set-rpath '$ORIGIN' build/$OUTFILE
