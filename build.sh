@@ -19,14 +19,50 @@ mkdir build
 # Copy libswipl.so.9 to the pwd
 cp -f swipl/build/src/libswipl.so.9 build/
 
-cd src
+
+OUTLIBRARY="libuni"
+
+##########################
+#### COMPILE UNI LIB #####
+##########################
+
+OUTFILE=$OUTLIBRARY
+
+# Build our library
+swipl/build/src/swipl-ld -shared -goal true -o build/$OUTFILE src_lib/*.cpp src_lib/*.pl
+
+##########################
+##########################
+
+
+
+
+##########################
+#### COMPILE UNI MAIN ####
+##########################
 
 OUTFILE="uni"
 
 # Build our application
-../swipl/build/src/swipl-ld -goal true -o ../build/$OUTFILE *.cpp *.pl
+swipl/build/src/swipl-ld -goal true -o build/$OUTFILE src_main/*.cpp src_main/*.pl build/$OUTLIBRARY.so
 
-cd ..
+# Link manually to the library which will be expected to sit alongside the executable.
+patchelf --set-rpath '$ORIGIN' build/$OUTFILE
+
+##########################
+##########################
+
+
+
+
+###########################
+#### COMPILE UNI TESTS ####
+###########################
+
+OUTFILE="test"
+
+# Build our test application
+swipl/build/src/swipl-ld -goal true -o build/$OUTFILE src_test/*.cpp src_test/*.pl build/$OUTLIBRARY.so
 
 # Link manually to the library which will be expected to sit alongside the executable.
 patchelf --set-rpath '$ORIGIN' build/$OUTFILE
