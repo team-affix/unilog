@@ -1,6 +1,7 @@
 #include <stdio.h>
+#include <iostream>
 #include <string.h>
-#include <SWI-Prolog.h>
+#include "../swipl/src/SWI-Prolog.h"
 #include "../CLI11/include/CLI/CLI.hpp"
 
 #define MAXLINE 1024
@@ -9,13 +10,10 @@ int main(int argc, char **argv)
 {
     /* make the argument vector for Prolog */
 
-    char *plav[2];
-    plav[0] = argv[0];
-    plav[1] = NULL;
+    const char *plav[] = {argv[0], "--quiet", "--nosignals"};
 
     /* initialise Prolog */
-
-    if (!PL_initialise(1, plav))
+    if (!PL_initialise(3, const_cast<char **>(plav)))
         PL_halt(1);
 
         /* Lookup calc/1 and make the arguments and call */
@@ -71,6 +69,8 @@ int main(int argc, char **argv)
         std::cout << e.what() << std::endl;
         return 1;
     }
+
+    PL_halt(0); // Properly halt the Prolog engine
 
     return 0;
 }
