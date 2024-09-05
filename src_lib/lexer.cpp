@@ -1,4 +1,5 @@
 #include <string>
+#include <regex>
 #include "lexer.hpp"
 
 #define LEXEME_SEPARATOR ' '
@@ -10,6 +11,78 @@
 int unilog::fxn()
 {
     return 14;
+}
+
+std::istream &escape(std::istream &a_istream, char &a_char)
+{
+    char l_char = a_istream.get();
+
+    switch (l_char)
+    {
+    case '0':
+    {
+        a_char = '\0';
+    }
+    break;
+    case 'a':
+    {
+        a_char = '\a';
+    }
+    break;
+    case 'b':
+    {
+        a_char = '\b';
+    }
+    break;
+    case 't':
+    {
+        a_char = '\t';
+    }
+    break;
+    case 'n':
+    {
+        a_char = '\n';
+    }
+    break;
+    case 'v':
+    {
+        a_char = '\v';
+    }
+    break;
+    case 'f':
+    {
+        a_char = '\f';
+    }
+    break;
+    case 'r':
+    {
+        a_char = '\r';
+    }
+    break;
+    case '\'':
+    {
+        a_char = '\'';
+    }
+    break;
+    case '\\':
+    {
+        a_char = '\\';
+    }
+    break;
+    case 'x':
+    {
+        char l_upper_hex_digit = a_istream.get();
+        char l_lower_hex_digit = a_istream.get();
+    }
+    break;
+    default:
+    {
+        throw std::string("Incorrect escape sequence: \\" + a_char);
+    }
+    break;
+    }
+
+    return a_istream;
 }
 
 namespace unilog
@@ -44,7 +117,12 @@ namespace unilog
 
             // Scan until closing quote.
             while (a_istream.get(l_char) && l_char != QUOTE_CHAR)
+            {
+                if (l_char == '\\')
+                    escape(a_istream, l_char);
+
                 a_lexeme.m_token_text.push_back(l_char);
+            }
         }
         break;
         default:
