@@ -8,14 +8,18 @@
 #define LIST_CLOSE_CHAR ')'
 #define QUOTE_CHAR '\''
 
-int unilog::fxn()
+namespace unilog
 {
-    return 14;
+    int fxn()
+    {
+        return 15;
+    }
 }
 
 std::istream &escape(std::istream &a_istream, char &a_char)
 {
-    char l_char = a_istream.get();
+    char l_char;
+    a_istream.get(l_char);
 
     switch (l_char)
     {
@@ -59,25 +63,20 @@ std::istream &escape(std::istream &a_istream, char &a_char)
         a_char = '\r';
     }
     break;
-    case '\'':
-    {
-        a_char = '\'';
-    }
-    break;
-    case '\\':
-    {
-        a_char = '\\';
-    }
-    break;
     case 'x':
     {
         char l_upper_hex_digit = a_istream.get();
         char l_lower_hex_digit = a_istream.get();
+        int l_hex_value;
+        std::stringstream l_ss;
+        l_ss << std::hex << l_upper_hex_digit << l_lower_hex_digit;
+        l_ss >> l_hex_value;
+        a_char = static_cast<char>(l_hex_value);
     }
     break;
     default:
     {
-        throw std::string("Incorrect escape sequence: \\" + a_char);
+        a_char = l_char;
     }
     break;
     }
@@ -132,7 +131,12 @@ namespace unilog
             // The input was unquoted. Thus it should be treated as text,
             //     and we must terminate the text at a lexeme separator character.
             while (a_istream.get(l_char) && l_char != LEXEME_SEPARATOR)
+            {
+                if (l_char == '\\')
+                    escape(a_istream, l_char);
+
                 a_lexeme.m_token_text.push_back(l_char);
+            }
         }
         break;
         }

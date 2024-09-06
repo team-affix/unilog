@@ -23,8 +23,6 @@ namespace unilog
         std::string m_token_text;
     };
 
-    int fxn();
-
     std::istream &operator>>(std::istream &a_istream, lexeme &a_lexeme);
 
 }
