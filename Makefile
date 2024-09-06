@@ -1,32 +1,17 @@
-REMOTE_LIBSWIPL := swipl/build/src/libswipl.so.9
-LIBSWIPL := build/libswipl.so.9
-LIBUNI   := build/libuni.so
-MAINBIN  := build/uni
-TESTBIN  := build/test
+REMOTE_LIBSWIPL := /usr/lib/swi-prolog/lib/x86_64-linux/libswipl.so.9
+LIBSWIPL 		:= build/libswipl.so.9
+LIBUNI   		:= build/libuni.so
+MAINBIN  		:= build/uni
+TESTBIN  		:= build/test
 
 all: $(LIBSWIPL) $(LIBUNI) $(MAINBIN) $(TESTBIN) test
 
-$(REMOTE_LIBSWIPL):
-	# Build SWIPL
-	# https://github.com/SWI-Prolog/swipl-devel/blob/master/CMAKE.md
-
-	# NOTE: distinct terminal sessions are given to each distinct command.
-	#     hence the `&& \` for each cd command.
-	cd swipl && \
-	mkdir -p build && \
-	cd build && \
-	cmake -G Ninja .. && \
-	ninja && \
-	ctest -j 8 && \
-	ninja install
-
-$(LIBSWIPL): $(REMOTE_LIBSWIPL)
+$(LIBSWIPL):
 	# Create the root build output
 	mkdir -p build
 
 	# Copy libswipl.so.9 to the pwd
 	cp -f $(REMOTE_LIBSWIPL) build/
-	
 
 $(LIBUNI): $(LIBSWIPL)
 	##########################
@@ -34,7 +19,7 @@ $(LIBUNI): $(LIBSWIPL)
 	##########################
 
 	# Build our library
-	swipl/build/src/swipl-ld -shared -goal true -o $(LIBUNI) src_lib/*.cpp src_lib/*.pl
+	swipl-ld -shared -goal true -o $(LIBUNI) src_lib/*.cpp src_lib/*.pl
 
 	##########################
 	##########################
@@ -70,8 +55,3 @@ test: $(TESTBIN)
 clean:
 	# Only remove the local build folder, but not swipl's
 	rm -rf ./build
-
-deep_clean: clean
-	# Remove the swipl build folder as well.
-	rm -rf ./swipl/build
-
