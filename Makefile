@@ -1,3 +1,5 @@
+SWIPL_INCLUDE_PATH := /usr/lib/swi-prolog/include/
+
 REMOTE_LIBSWIPL := /usr/lib/swi-prolog/lib/x86_64-linux/libswipl.so.9
 LIBSWIPL 		:= build/libswipl.so.9
 LIBUNI   		:= build/libuni.so
@@ -30,7 +32,7 @@ $(MAINBIN): $(LIBUNI)
 	##########################
 
 	# Build our application
-	g++ -std=c++20 -Wall -g -o $(MAINBIN) src_main/*.cpp $(LIBUNI) $(LIBSWIPL)
+	g++ -std=c++20 -Wall -g -o $(MAINBIN) src_main/*.cpp $(LIBUNI) $(LIBSWIPL) -I$(SWIPL_INCLUDE_PATH)
 
 	# Link manually to the library which will be expected to sit alongside the executable.
 	patchelf --set-rpath '$$ORIGIN' $(MAINBIN)
@@ -44,7 +46,7 @@ $(TESTBIN): $(LIBUNI)
 	###########################
 
 	# Build our test application
-	g++ -std=c++20 -Wall -g -o $(TESTBIN) src_test/*.cpp $(LIBUNI) $(LIBSWIPL)
+	g++ -std=c++20 -Wall -g -o $(TESTBIN) src_test/*.cpp $(LIBUNI) $(LIBSWIPL) -I$(SWIPL_INCLUDE_PATH)
 
 	# Link manually to the library which will be expected to sit alongside the executable.
 	patchelf --set-rpath '$$ORIGIN' $(TESTBIN)

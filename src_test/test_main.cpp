@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../swipl/src/SWI-Prolog.h"
+#include <SWI-Prolog.h>
 
 #define LOG(x)             \
     if (ENABLE_DEBUG_LOGS) \

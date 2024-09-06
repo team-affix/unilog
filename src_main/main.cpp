@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <string.h>
-#include "../swipl/src/SWI-Prolog.h"
+#include <SWI-Prolog.h>
 #include "../CLI11/include/CLI/CLI.hpp"
 
 #define MAXLINE 1024
