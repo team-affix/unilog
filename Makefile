@@ -55,5 +55,5 @@ test: $(TESTBIN)
 	$(TESTBIN)
 
 clean:
-	# Only remove the local build folder, but not swipl's
+	# Remove the local build folder
 	rm -rf ./build
