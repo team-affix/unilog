@@ -6,7 +6,7 @@ LIBUNI   		:= build/libuni.so
 MAINBIN  		:= build/uni
 TESTBIN  		:= build/test
 
-all: $(LIBSWIPL) $(LIBUNI) $(MAINBIN) $(TESTBIN) test
+all: $(LIBSWIPL) $(LIBUNI) $(MAINBIN) $(TESTBIN)
 
 $(LIBSWIPL):
 	# Create the root build output
@@ -15,7 +15,7 @@ $(LIBSWIPL):
 	# Copy libswipl.so.9 to the pwd
 	cp -f $(REMOTE_LIBSWIPL) build/
 
-$(LIBUNI): $(LIBSWIPL)
+$(LIBUNI): $(LIBSWIPL) $(wildcard src_lib/*.cpp) $(wildcard src_lib/*.pl)
 	##########################
 	#### COMPILE UNI LIB #####
 	##########################
@@ -26,7 +26,7 @@ $(LIBUNI): $(LIBSWIPL)
 	##########################
 	##########################
 
-$(MAINBIN): $(LIBUNI)
+$(MAINBIN): $(wildcard src_main/*.cpp) $(LIBUNI) $(LIBSWIPL)
 	##########################
 	#### COMPILE UNI MAIN ####
 	##########################
@@ -40,7 +40,7 @@ $(MAINBIN): $(LIBUNI)
 	##########################
 	##########################
 
-$(TESTBIN): $(LIBUNI)
+$(TESTBIN): $(wildcard src_test/*.cpp) $(LIBUNI) $(LIBSWIPL)
 	###########################
 	#### COMPILE UNI TESTS ####
 	###########################

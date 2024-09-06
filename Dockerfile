@@ -7,6 +7,7 @@ WORKDIR /unilog
 # Basic CLI Reqs
 RUN apt-get update -y && apt-get install -y build-essential
 RUN apt-get update -y && apt-get install -y patchelf
+RUN apt-get update -y && apt-get install -y gdb
 #RUN apt-get update -y && apt-get install -y pkg-config
 
 #RUN apt-get update -y && apt-get install -y curl
