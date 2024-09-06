@@ -1,6 +1,3 @@
-[submodule "swipl"]
-	path = swipl
-	url = https://github.com/SWI-Prolog/swipl.git
 [submodule "CLI11"]
 	path = CLI11
 	url = https://github.com/team-affix/CLI11.git
