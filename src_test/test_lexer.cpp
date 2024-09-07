@@ -783,6 +783,348 @@ void test_lexer_extract_lexeme()
                 },
             },
         },
+        {
+            // Single atom, with special characters
+            "test@!.$^&*()",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "test@!.$^&*()",
+                },
+            },
+        },
+        {
+            // Single atom, with special characters
+            "1.24",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "1.24",
+                },
+            },
+        },
+        {
+            // Single atom, with special characters
+            "[[[1.24]]]",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "1.24",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+            },
+        },
+        {
+            // Single atom, with special characters
+            "@",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "@",
+                },
+            },
+        },
+        {
+            // Single atom, with special characters
+            "+",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "+",
+                },
+            },
+        },
+        {
+            // Single atom, with special characters
+            "<-",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "<-",
+                },
+            },
+        },
+        {
+            // Having fun, realistic scenario
+            "axiom add_bc_0 [add [] L L]",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "axiom",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "add_bc_0",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "add",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "L",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "L",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+            },
+        },
+        {
+            // Having fun, realistic scenario
+            "axiom add_gc\n"
+            "[if\n"
+            "    [add X Y Z]\n"
+            "    [and\n"
+            "        [cons X XH XT]\n"
+            "        [cons Y YH YT]\n"
+            "        [add [XH] [YH] [ZH]]\n"
+            "        [add XT YT ZT]\n"
+            "        [cons Z ZH ZT]\n"
+            "    ]\n"
+            "]\n",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "axiom",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "add_gc",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "if",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "add",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "X",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "Y",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "Z",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "and",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "cons",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "X",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "XH",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "XT",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "cons",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "Y",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "YH",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "YT",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "add",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "XH",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "YH",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "ZH",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "add",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "XT",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "YT",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "ZT",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "cons",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "Z",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "ZH",
+                },
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "ZT",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+            },
+        },
     };
 
     for (const auto &[l_key, l_value] : l_desired_map)
