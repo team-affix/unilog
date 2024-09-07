@@ -5,6 +5,7 @@
 #include <vector>
 #include <iterator>
 #include <algorithm>
+#include <random>
 #include "test_utils.hpp"
 
 #include "../src_lib/lexer.hpp"
@@ -17,14 +18,22 @@
     void_fn();        \
     LOG("TEST COMPLETED: " << #void_fn << std::endl);
 
+// Function signatures to test
+std::istream &escape(std::istream &a_istream, char &a_char);
+std::istream &unilog::operator>>(std::istream &a_istream, unilog::lexeme &a_lexeme);
+
 namespace unilog
 {
     int fxn();
 }
 
-// Function signatures to test
-std::istream &escape(std::istream &a_istream, char &a_char);
-std::istream &unilog::operator>>(std::istream &a_istream, unilog::lexeme &a_lexeme);
+////////////////////////////////
+//// HELPER FUNCTIONS
+////////////////////////////////
+
+////////////////////////////////
+//// TESTS
+////////////////////////////////
 
 void test_lexer_escape()
 {
@@ -1127,6 +1136,7 @@ void test_lexer_extract_lexeme()
         },
     };
 
+    // Execute pre-made tests
     for (const auto &[l_key, l_value] : l_desired_map)
     {
         std::stringstream l_ss(l_key);
