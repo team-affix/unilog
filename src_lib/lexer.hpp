@@ -11,10 +11,10 @@ namespace unilog
 
     enum class token_types
     {
-        list_open,     // `(`
-        list_close,    // `)`
-        quoted_text,   // `'abc'`, `'123'` etc.
-        unquoted_text, // `axiom`, `infer`, `abc123`, `12345`, `+`, `'test123'` etc.
+        list_open,  // `(`
+        list_close, // `)`
+        atom,       // `axiom`, `infer`, `abcDEF`, `12345`, `+`, `'test123'` etc.
+        variable    // `A`, `Bcdef`, `A12abc`
     };
 
     struct lexeme
@@ -22,6 +22,8 @@ namespace unilog
         token_types m_token_type;
         std::string m_token_text;
     };
+
+    bool operator==(const lexeme &a_first, const lexeme &a_second);
 
     std::istream &operator>>(std::istream &a_istream, lexeme &a_lexeme);
 
