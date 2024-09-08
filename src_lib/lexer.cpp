@@ -12,14 +12,6 @@
 
 #define UNNAMED_VARIABLE_CHAR '_'
 
-namespace unilog
-{
-    int fxn()
-    {
-        return 17;
-    }
-}
-
 std::istream &escape(std::istream &a_istream, char &a_char)
 {
     char l_char;

@@ -22,11 +22,6 @@
 std::istream &escape(std::istream &a_istream, char &a_char);
 std::istream &unilog::operator>>(std::istream &a_istream, unilog::lexeme &a_lexeme);
 
-namespace unilog
-{
-    int fxn();
-}
-
 ////////////////////////////////
 //// HELPER FUNCTIONS
 ////////////////////////////////
@@ -276,6 +271,16 @@ void test_lexer_extract_lexeme()
                 lexeme{
                     .m_token_type = token_types::variable,
                     .m_token_text = "_test",
+                },
+            },
+        },
+        {
+            // Test single lexeme variable
+            "Test_",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::variable,
+                    .m_token_text = "Test_",
                 },
             },
         },
@@ -1346,8 +1351,6 @@ void test_lexer_extract_lexeme()
 int test_lexer_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
-
-    std::cout << "linked: " << unilog::fxn() << std::endl;
 
     TEST(test_lexer_escape);
     TEST(test_lexer_extract_lexeme);
