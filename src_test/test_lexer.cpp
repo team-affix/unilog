@@ -1312,6 +1312,16 @@ void test_lexer_extract_lexeme()
                 },
             },
         },
+        {
+            // Test title-case command
+            "!Test",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "Test",
+                },
+            },
+        },
     };
 
     // Execute pre-made tests
