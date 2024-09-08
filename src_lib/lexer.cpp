@@ -4,9 +4,12 @@
 #include <cctype>
 #include "lexer.hpp"
 
+// Lexer special characters
+#define COMMAND_CHAR '!'
 #define LIST_OPEN_CHAR '['
 #define LIST_CLOSE_CHAR ']'
 #define QUOTE_CHAR '\''
+
 #define UNNAMED_VARIABLE_CHAR '_'
 
 namespace unilog
@@ -111,6 +114,14 @@ namespace unilog
                a_first.m_token_text == a_second.m_token_text;
     }
 
+    bool is_special_lexer_character(char c)
+    {
+        return c == COMMAND_CHAR ||
+               c == LIST_OPEN_CHAR ||
+               c == LIST_CLOSE_CHAR ||
+               c == QUOTE_CHAR;
+    }
+
     std::istream &operator>>(std::istream &a_istream, lexeme &a_lexeme)
     {
         /// NOTE TO SELF IN FUTURE
@@ -125,9 +136,11 @@ namespace unilog
         ///     enough to terminate extraction. failbit is required to terminate, I am NOT sure if eofbit is required however.
 
         // Cases:
-        // 1. list_open `(`
-        // 2. list_close `)`
-        // 3. text
+        // 1. command `!`
+        // 2. list_open `(`
+        // 3. list_close `)`
+        // 4. atom
+        // 5. variable
 
         // Clear lexeme if prepopulated.
         a_lexeme = {};
@@ -145,6 +158,27 @@ namespace unilog
 
         switch (l_char)
         {
+        case COMMAND_CHAR:
+        {
+            a_lexeme.m_token_type = token_types::command;
+
+            // Command lexemes must only contain alphanumeric chars.
+
+            while (
+                // Chars we DO NOT want to consume
+                a_istream.peek() != std::istream::traits_type::eof() &&
+                std::isspace(a_istream.peek()) == 0 &&
+                isalnum(a_istream.peek()) &&
+                // Get the char now
+                a_istream.get(l_char))
+            {
+                // if (l_char == '\\')
+                //     escape(a_istream, l_char);
+
+                a_lexeme.m_token_text.push_back(l_char);
+            }
+        }
+        break;
         case LIST_OPEN_CHAR:
         {
             a_lexeme.m_token_type = token_types::list_open;
@@ -192,14 +226,13 @@ namespace unilog
             while (
                 // Chars we DO NOT want to consume
                 a_istream.peek() != std::istream::traits_type::eof() &&
-                a_istream.peek() != LIST_OPEN_CHAR &&
-                a_istream.peek() != LIST_CLOSE_CHAR &&
+                std::isspace(a_istream.peek()) == 0 &&
+                !is_special_lexer_character(a_istream.peek()) &&
                 // Get the char now
-                a_istream.get(l_char) &&
-                std::isspace(l_char) == 0)
+                a_istream.get(l_char))
             {
-                if (l_char == '\\')
-                    escape(a_istream, l_char);
+                // if (l_char == '\\')
+                //     escape(a_istream, l_char);
 
                 a_lexeme.m_token_text.push_back(l_char);
             }

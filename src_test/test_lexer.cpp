@@ -116,12 +116,64 @@ void test_lexer_extract_lexeme()
     // Cases where content should be left alone:
     std::map<std::string, std::vector<lexeme>> l_desired_map = {
         {
+            // Single command lexeme
+            "!test",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test",
+                },
+            },
+        },
+        {
+            // Multiple command lexeme
+            "!test1 !test2",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test1",
+                },
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test2",
+                },
+            },
+        },
+        {
             // Single unquoted lexeme
             "test",
             std::vector{
                 lexeme{
                     .m_token_type = token_types::atom,
                     .m_token_text = "test",
+                },
+            },
+        },
+        {
+            // Single unquoted lexeme
+            "!test1 test2",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test1",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "test2",
+                },
+            },
+        },
+        {
+            // Single unquoted lexeme
+            "test1 !test2",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "test1",
+                },
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test2",
                 },
             },
         },
@@ -140,12 +192,16 @@ void test_lexer_extract_lexeme()
             },
         },
         {
-            // One lexeme, space escaped
+            // One lexeme, space escape does not work outside quotes
             "test\\ 123",
             std::vector{
                 lexeme{
                     .m_token_type = token_types::atom,
-                    .m_token_text = "test 123",
+                    .m_token_text = "test\\",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "123",
                 },
             },
         },
@@ -155,7 +211,15 @@ void test_lexer_extract_lexeme()
             std::vector{
                 lexeme{
                     .m_token_type = token_types::atom,
-                    .m_token_text = "test 123 abc",
+                    .m_token_text = "test\\",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "123\\",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "abc",
                 },
             },
         },
@@ -165,7 +229,15 @@ void test_lexer_extract_lexeme()
             std::vector{
                 lexeme{
                     .m_token_type = token_types::atom,
-                    .m_token_text = "test\t123\nabc",
+                    .m_token_text = "test\\",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "123\\",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "abc",
                 },
             },
         },
@@ -773,32 +845,40 @@ void test_lexer_extract_lexeme()
             },
         },
         {
-            // Single atom, escaping the interpreter's separation of lexemes
+            // Single atom, failing to escape the interpreter's separation of lexemes
             "test\\[",
             std::vector{
                 lexeme{
                     .m_token_type = token_types::atom,
-                    .m_token_text = "test[",
+                    .m_token_text = "test\\",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
                 },
             },
         },
         {
-            // Single atom, escaping the interpreter's separation of lexemes
+            // Single atom, failing to escape the interpreter's separation of lexemes
             "test\\xa4\\[",
             std::vector{
                 lexeme{
                     .m_token_type = token_types::atom,
-                    .m_token_text = "test\xa4[",
+                    .m_token_text = "test\\xa4\\",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
                 },
             },
         },
         {
             // Single atom, with special characters
-            "test@!.$^&*()",
+            "test@.$^&*()",
             std::vector{
                 lexeme{
                     .m_token_type = token_types::atom,
-                    .m_token_text = "test@!.$^&*()",
+                    .m_token_text = "test@.$^&*()",
                 },
             },
         },
@@ -1127,6 +1207,104 @@ void test_lexer_extract_lexeme()
                 lexeme{
                     .m_token_type = token_types::list_close,
                     .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+            },
+        },
+        {
+            // Single command lexeme
+            "!test1!test2",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test1",
+                },
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test2",
+                },
+            },
+        },
+        {
+            // Single command lexeme
+            "!test1\\!test2",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test1",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "\\",
+                },
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test2",
+                },
+            },
+        },
+        {
+            // Single command lexeme
+            "!test1[abc]",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test1",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "abc",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+            },
+        },
+        {
+            // Command with special char, which causes lexer to split it
+            "!tes@t",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "tes",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "@t",
+                },
+            },
+        },
+        {
+            // Single command lexeme
+            "[!test1][abc]",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::command,
+                    .m_token_text = "test1",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "abc",
                 },
                 lexeme{
                     .m_token_type = token_types::list_close,
