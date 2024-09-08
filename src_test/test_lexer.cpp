@@ -879,11 +879,11 @@ void test_lexer_extract_lexeme()
         },
         {
             // Single atom, with special characters
-            "test@.$^&*()",
+            "test!@.$^&*()",
             std::vector{
                 lexeme{
                     .m_token_type = token_types::atom,
-                    .m_token_text = "test@.$^&*()",
+                    .m_token_text = "test!@.$^&*()",
                 },
             },
         },
@@ -1221,20 +1221,6 @@ void test_lexer_extract_lexeme()
         },
         {
             // Single command lexeme
-            "!test1!test2",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test1",
-                },
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test2",
-                },
-            },
-        },
-        {
-            // Single command lexeme
             "!test1[abc]",
             std::vector{
                 lexeme{
@@ -1295,6 +1281,52 @@ void test_lexer_extract_lexeme()
                 },
             },
         },
+        {
+            // Test lex stop character: whitespace
+            "1.24 ",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "1.24",
+                },
+            },
+        },
+        {
+            // Test lex stop character: eof
+            "1.24",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "1.24",
+                },
+            },
+        },
+        {
+            // Test lex stop character: list open
+            "1.24[",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "1.24"},
+                lexeme{
+                    .m_token_type = token_types::list_open,
+                    .m_token_text = "[",
+                },
+            },
+        },
+        {
+            // Test lex stop character: list close
+            "1.24]",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "1.24"},
+                lexeme{
+                    .m_token_type = token_types::list_close,
+                    .m_token_text = "]",
+                },
+            },
+        },
     };
 
     // Execute pre-made tests
@@ -1323,6 +1355,7 @@ void test_lexer_extract_lexeme()
             "Test1 Test_ Test_#",
             "!tes@t",
             "!test1\\!test2",
+            "!test1!test2",
         };
 
     for (const auto &l_input : l_expect_failure_inputs)

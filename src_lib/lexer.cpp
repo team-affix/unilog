@@ -106,12 +106,12 @@ namespace unilog
                a_first.m_token_text == a_second.m_token_text;
     }
 
-    bool is_special_lexer_character(char c)
+    bool is_lex_stop_character(int c)
     {
-        return c == COMMAND_CHAR ||
+        return std::isspace(c) != 0 ||
+               c == std::istream::traits_type::eof() ||
                c == LIST_OPEN_CHAR ||
-               c == LIST_CLOSE_CHAR ||
-               c == QUOTE_CHAR;
+               c == LIST_CLOSE_CHAR;
     }
 
     std::istream &operator>>(std::istream &a_istream, lexeme &a_lexeme)
@@ -150,9 +150,7 @@ namespace unilog
 
             while (
                 // Conditions for consumption
-                a_istream.peek() != std::istream::traits_type::eof() &&
-                std::isspace(a_istream.peek()) == 0 &&
-                !is_special_lexer_character(a_istream.peek()) &&
+                !is_lex_stop_character(a_istream.peek()) &&
                 // Consume char now
                 a_istream.get(l_char))
             {
@@ -189,9 +187,7 @@ namespace unilog
 
             while (
                 // Conditions for consumption
-                a_istream.peek() != std::istream::traits_type::eof() &&
-                std::isspace(a_istream.peek()) == 0 &&
-                !is_special_lexer_character(a_istream.peek()) &&
+                !is_lex_stop_character(a_istream.peek()) &&
                 // Consume char now
                 a_istream.get(l_char))
             {
@@ -237,9 +233,7 @@ namespace unilog
             //     should not consume the EOF so as to prevent setting the failbit.
             while (
                 // Chars we DO NOT want to consume
-                a_istream.peek() != std::istream::traits_type::eof() &&
-                std::isspace(a_istream.peek()) == 0 &&
-                !is_special_lexer_character(a_istream.peek()) &&
+                !is_lex_stop_character(a_istream.peek()) &&
                 // Get the char now
                 a_istream.get(l_char))
             {
