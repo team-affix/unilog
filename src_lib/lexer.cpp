@@ -8,7 +8,6 @@
 #define COMMAND_CHAR '!'
 #define LIST_OPEN_CHAR '['
 #define LIST_CLOSE_CHAR ']'
-#define QUOTE_CHAR '\''
 
 #define UNNAMED_VARIABLE_CHAR '_'
 
@@ -106,6 +105,13 @@ namespace unilog
                a_first.m_token_text == a_second.m_token_text;
     }
 
+    bool is_quote(int c)
+    {
+        // single OR double-quote.
+        return c == '\'' ||
+               c == '\"';
+    }
+
     bool is_lex_stop_character(int c)
     {
         return std::isspace(c) != 0 ||
@@ -201,16 +207,19 @@ namespace unilog
             }
         }
         // 5. quoted atom
-        else if (l_char == QUOTE_CHAR)
+        else if (is_quote(l_char))
         {
             a_lexeme.m_token_type = token_types::atom;
+
+            // Save the type of quotation. This allows us to match for closing quote.
+            char l_quote_char = l_char;
 
             // The input was a quote character. Thus we should scan until the closing quote
             //     to produce a valid lexeme.
             while (
                 // Consume char now
                 a_istream.get(l_char) &&
-                l_char != QUOTE_CHAR)
+                l_char != l_quote_char)
             {
                 if (l_char == '\\')
                     escape(a_istream, l_char);

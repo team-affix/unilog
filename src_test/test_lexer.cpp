@@ -187,7 +187,7 @@ void test_lexer_extract_lexeme()
             },
         },
         {
-            // One lexeme, space escape does not work outside quotes
+            // space escape does not work outside quotes
             "test\\ 123",
             std::vector{
                 lexeme{
@@ -325,6 +325,54 @@ void test_lexer_extract_lexeme()
                 lexeme{
                     .m_token_type = token_types::atom,
                     .m_token_text = "test",
+                },
+            },
+        },
+        {
+            // Test single lexeme quote
+            "\"test\"",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "test",
+                },
+            },
+        },
+        {
+            // Test lexeme with both quotation types
+            "\"test \' test\"",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "test \' test",
+                },
+            },
+        },
+        {
+            // Test lexeme with both quotation types
+            "\'test \" test\'",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "test \" test",
+                },
+            },
+        },
+        {
+            // Test lexeme with single quotation type
+            "\'test \' test \'\'",
+            std::vector{
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "test ",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "test",
+                },
+                lexeme{
+                    .m_token_type = token_types::atom,
+                    .m_token_text = "",
                 },
             },
         },
