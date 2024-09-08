@@ -127,13 +127,6 @@ namespace unilog
         ///     istream_iterator will only terminate extraction once an extraction FAILS. in other words, simply enabling eofbit is NOT
         ///     enough to terminate extraction. failbit is required to terminate, I am NOT sure if eofbit is required however.
 
-        // Cases:
-        // 1. command `!`
-        // 2. list_open `(`
-        // 3. list_close `)`
-        // 4. atom
-        // 5. variable
-
         // Clear lexeme if prepopulated.
         a_lexeme = {};
 
@@ -148,45 +141,78 @@ namespace unilog
         if (!a_istream.good())
             return a_istream;
 
-        switch (l_char)
-        {
-        case COMMAND_CHAR:
+        // 1. command `!`
+        if (l_char == COMMAND_CHAR)
         {
             a_lexeme.m_token_type = token_types::command;
 
             // Command lexemes must only contain alphanumeric chars.
 
             while (
-                // Chars we DO NOT want to consume
+                // Conditions for consumption
                 a_istream.peek() != std::istream::traits_type::eof() &&
                 std::isspace(a_istream.peek()) == 0 &&
-                isalnum(a_istream.peek()) &&
-                // Get the char now
+                !is_special_lexer_character(a_istream.peek()) &&
+                // Consume char now
                 a_istream.get(l_char))
             {
+                if (!isalnum(l_char))
+                {
+                    a_istream.setstate(std::ios::failbit);
+                    throw std::runtime_error("Failed to parse command: non-alphanumeric character read.");
+                }
+
                 a_lexeme.m_token_text.push_back(l_char);
             }
         }
-        break;
-        case LIST_OPEN_CHAR:
+        // 2. list_open `[`
+        else if (l_char == LIST_OPEN_CHAR)
         {
             a_lexeme.m_token_type = token_types::list_open;
             a_lexeme.m_token_text.push_back(l_char);
         }
-        break;
-        case LIST_CLOSE_CHAR:
+        // 3. list_close `]`
+        else if (l_char == LIST_CLOSE_CHAR)
         {
             a_lexeme.m_token_type = token_types::list_close;
             a_lexeme.m_token_text.push_back(l_char);
         }
-        break;
-        case QUOTE_CHAR:
+        // 4. variable
+        else if (isupper(l_char) || l_char == UNNAMED_VARIABLE_CHAR)
+        {
+            a_lexeme.m_token_type = token_types::variable;
+
+            a_lexeme.m_token_text.push_back(l_char);
+
+            // Variable lexemes must only contain alphanumeric chars,
+            //     beginning with an upper-case letter or underscore.
+
+            while (
+                // Conditions for consumption
+                a_istream.peek() != std::istream::traits_type::eof() &&
+                std::isspace(a_istream.peek()) == 0 &&
+                !is_special_lexer_character(a_istream.peek()) &&
+                // Consume char now
+                a_istream.get(l_char))
+            {
+                if (!isalnum(l_char) && l_char != UNNAMED_VARIABLE_CHAR)
+                {
+                    a_istream.setstate(std::ios::failbit);
+                    throw std::runtime_error("Failed to parse variable: non-alphanumeric, non-underscore (_) character read.");
+                }
+
+                a_lexeme.m_token_text.push_back(l_char);
+            }
+        }
+        // 5. quoted atom
+        else if (l_char == QUOTE_CHAR)
         {
             a_lexeme.m_token_type = token_types::atom;
 
             // The input was a quote character. Thus we should scan until the closing quote
             //     to produce a valid lexeme.
             while (
+                // Consume char now
                 a_istream.get(l_char) &&
                 l_char != QUOTE_CHAR)
             {
@@ -196,13 +222,10 @@ namespace unilog
                 a_lexeme.m_token_text.push_back(l_char);
             }
         }
-        break;
-        default:
+        // 6. unquoted atom
+        else
         {
-            if (isupper(l_char) || l_char == UNNAMED_VARIABLE_CHAR)
-                a_lexeme.m_token_type = token_types::variable;
-            else
-                a_lexeme.m_token_type = token_types::atom;
+            a_lexeme.m_token_type = token_types::atom;
 
             a_lexeme.m_token_text.push_back(l_char);
 
@@ -222,13 +245,6 @@ namespace unilog
             {
                 a_lexeme.m_token_text.push_back(l_char);
             }
-        }
-        break;
-        }
-
-        if (a_istream.fail())
-        {
-            throw std::runtime_error("Failed to lex lexeme.");
         }
 
         return a_istream;

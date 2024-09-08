@@ -14,8 +14,8 @@ namespace unilog
         command,    // `!axiom`, `!infer`, `!guide`, etc.
         list_open,  // `(`
         list_close, // `)`
+        variable,   // `A`, `Bcdef`, `A12abc`
         atom,       // `abcDEF`, `12345`, `+`, `'test123'` etc.
-        variable    // `A`, `Bcdef`, `A12abc`
     };
 
     struct lexeme

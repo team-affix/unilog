@@ -1235,24 +1235,6 @@ void test_lexer_extract_lexeme()
         },
         {
             // Single command lexeme
-            "!test1\\!test2",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test1",
-                },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "\\",
-                },
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test2",
-                },
-            },
-        },
-        {
-            // Single command lexeme
             "!test1[abc]",
             std::vector{
                 lexeme{
@@ -1270,20 +1252,6 @@ void test_lexer_extract_lexeme()
                 lexeme{
                     .m_token_type = token_types::list_close,
                     .m_token_text = "]",
-                },
-            },
-        },
-        {
-            // Command with special char, which causes lexer to split it
-            "!tes@t",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "tes",
-                },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "@t",
                 },
             },
         },
@@ -1345,6 +1313,32 @@ void test_lexer_extract_lexeme()
         assert(l_lexemes == l_value);
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "Test@",
+            "Test#",
+            "_#",
+            "Test1 Test_ Test_#",
+            "!tes@t",
+            "!test1\\!test2",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        std::vector<lexeme> l_lexemes;
+
+        assert_throws(
+            ([&l_ss, &l_lexemes]
+             { std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes)); }));
+
+        // Make sure the stream state has its failbit set.
+        assert(l_ss.fail());
+
+        LOG("success, expected throw, case: " << l_input << std::endl);
     }
 }
 
