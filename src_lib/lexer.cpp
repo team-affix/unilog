@@ -172,9 +172,6 @@ namespace unilog
                 // Get the char now
                 a_istream.get(l_char))
             {
-                // if (l_char == '\\')
-                //     escape(a_istream, l_char);
-
                 a_lexeme.m_token_text.push_back(l_char);
             }
         }
@@ -231,9 +228,6 @@ namespace unilog
                 // Get the char now
                 a_istream.get(l_char))
             {
-                // if (l_char == '\\')
-                //     escape(a_istream, l_char);
-
                 a_lexeme.m_token_text.push_back(l_char);
             }
         }
