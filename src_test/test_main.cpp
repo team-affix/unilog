@@ -22,13 +22,15 @@ void unit_test_main()
 
 int main(int argc, char **argv)
 {
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
     const char *plav[] = {argv[0], "--quiet", "--nosignals"};
 
     /* initialise Prolog */
     if (!PL_initialise(3, const_cast<char **>(plav)))
         PL_halt(1);
 
-    unit_test_main();
+    TEST(unit_test_main);
 
     PL_halt(0); // Properly halt the Prolog engine
     return 0;
