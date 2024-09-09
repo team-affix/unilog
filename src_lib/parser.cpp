@@ -1,6 +1,5 @@
 #include <iterator>
 #include <algorithm>
-#include <iostream>
 
 #include "parser.hpp"
 
@@ -8,12 +7,7 @@ namespace unilog
 {
     bool operator==(const prolog_expression &a_lhs, const prolog_expression &a_rhs)
     {
-        bool l_result = a_lhs.m_variant == a_rhs.m_variant;
-        if (!l_result)
-        {
-            std::cout << "test" << std::endl;
-        }
-        return l_result;
+        return a_lhs.m_variant == a_rhs.m_variant;
     }
     bool operator==(const axiom_statement &a_lhs, const axiom_statement &a_rhs)
     {
