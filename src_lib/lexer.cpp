@@ -99,10 +99,27 @@ std::istream &escape(std::istream &a_istream, char &a_char)
 
 namespace unilog
 {
-    bool operator==(const lexeme &a_first, const lexeme &a_second)
+
+    // Comparison operators for lexeme types.
+    bool operator==(const list_open &a_lhs, const list_open &a_rhs)
     {
-        return a_first.m_token_type == a_second.m_token_type &&
-               a_first.m_token_text == a_second.m_token_text;
+        return true;
+    }
+    bool operator==(const list_close &a_lhs, const list_close &a_rhs)
+    {
+        return true;
+    }
+    bool operator==(const command &a_lhs, const command &a_rhs)
+    {
+        return a_lhs.m_text == a_rhs.m_text;
+    }
+    bool operator==(const variable &a_lhs, const variable &a_rhs)
+    {
+        return a_lhs.m_identifier == a_rhs.m_identifier;
+    }
+    bool operator==(const atom &a_lhs, const atom &a_rhs)
+    {
+        return a_lhs.m_text == a_rhs.m_text;
     }
 
     bool is_quote(int c)
@@ -133,9 +150,6 @@ namespace unilog
         ///     istream_iterator will only terminate extraction once an extraction FAILS. in other words, simply enabling eofbit is NOT
         ///     enough to terminate extraction. failbit is required to terminate, I am NOT sure if eofbit is required however.
 
-        // Clear lexeme if prepopulated.
-        a_lexeme = {};
-
         char l_char;
 
         // Extract character (read until first non-whitespace)
@@ -150,7 +164,7 @@ namespace unilog
         // 1. command `!`
         if (l_char == COMMAND_CHAR)
         {
-            a_lexeme.m_token_type = token_types::command;
+            std::string l_text;
 
             // Command lexemes must only contain alphanumeric chars.
 
@@ -166,27 +180,29 @@ namespace unilog
                     throw std::runtime_error("Failed to parse command: non-alphanumeric character read.");
                 }
 
-                a_lexeme.m_token_text.push_back(l_char);
+                l_text.push_back(l_char);
             }
+
+            a_lexeme = command{
+                .m_text = l_text,
+            };
         }
         // 2. list_open `[`
         else if (l_char == LIST_OPEN_CHAR)
         {
-            a_lexeme.m_token_type = token_types::list_open;
-            a_lexeme.m_token_text.push_back(l_char);
+            a_lexeme = list_open{};
         }
         // 3. list_close `]`
         else if (l_char == LIST_CLOSE_CHAR)
         {
-            a_lexeme.m_token_type = token_types::list_close;
-            a_lexeme.m_token_text.push_back(l_char);
+            a_lexeme = list_close{};
         }
         // 4. variable
         else if (isupper(l_char) || l_char == UNNAMED_VARIABLE_CHAR)
         {
-            a_lexeme.m_token_type = token_types::variable;
+            std::string l_identifier;
 
-            a_lexeme.m_token_text.push_back(l_char);
+            l_identifier.push_back(l_char);
 
             // Variable lexemes must only contain alphanumeric chars,
             //     beginning with an upper-case letter or underscore.
@@ -203,13 +219,17 @@ namespace unilog
                     throw std::runtime_error("Failed to parse variable: non-alphanumeric, non-underscore (_) character read.");
                 }
 
-                a_lexeme.m_token_text.push_back(l_char);
+                l_identifier.push_back(l_char);
             }
+
+            a_lexeme = variable{
+                .m_identifier = l_identifier,
+            };
         }
         // 5. quoted atom
         else if (is_quote(l_char))
         {
-            a_lexeme.m_token_type = token_types::atom;
+            std::string l_text;
 
             // Save the type of quotation. This allows us to match for closing quote.
             char l_quote_char = l_char;
@@ -224,15 +244,19 @@ namespace unilog
                 if (l_char == '\\')
                     escape(a_istream, l_char);
 
-                a_lexeme.m_token_text.push_back(l_char);
+                l_text.push_back(l_char);
             }
+
+            a_lexeme = atom{
+                .m_text = l_text,
+            };
         }
         // 6. unquoted atom
         else
         {
-            a_lexeme.m_token_type = token_types::atom;
+            std::string l_text;
 
-            a_lexeme.m_token_text.push_back(l_char);
+            l_text.push_back(l_char);
 
             // The input was unquoted. Thus it should be treated as text,
             //     and we must terminate the text at a lexeme separator character OR
@@ -246,8 +270,12 @@ namespace unilog
                 // Get the char now
                 a_istream.get(l_char))
             {
-                a_lexeme.m_token_text.push_back(l_char);
+                l_text.push_back(l_char);
             }
+
+            a_lexeme = atom{
+                .m_text = l_text,
+            };
         }
 
         return a_istream;

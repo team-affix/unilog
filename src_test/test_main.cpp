@@ -9,15 +9,15 @@
     void_fn();        \
     LOG("TEST COMPLETED: " << #void_fn << std::endl);
 
-extern int test_lexer_main();
+extern void test_lexer_main();
+extern void test_parser_main();
 
-int unit_test_main()
+void unit_test_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     TEST(test_lexer_main);
-
-    return 0;
+    TEST(test_parser_main);
 }
 
 int main(int argc, char **argv)

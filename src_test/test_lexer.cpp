@@ -105,955 +105,692 @@ void test_lexer_extract_lexeme()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
+    using unilog::atom;
+    using unilog::command;
     using unilog::lexeme;
-    using unilog::token_types;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::variable;
 
     // Cases where content should be left alone:
     std::map<std::string, std::vector<lexeme>> l_desired_map = {
         {
             // Single command lexeme
             "!test",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test",
+            std::vector<lexeme>{
+                command{
+                    .m_text = "test",
                 },
             },
         },
         {
             // Multiple command lexeme
             "!test1 !test2",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test1",
+            std::vector<lexeme>{
+                command{
+                    .m_text = "test1",
                 },
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test2",
+                command{
+                    .m_text = "test2",
                 },
             },
         },
         {
-            // Single unquoted lexeme
+            // Single unquoted atom
             "test",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test",
                 },
             },
         },
         {
-            // Single unquoted lexeme
+            // Command then unquoted atom
             "!test1 test2",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test1",
+            std::vector<lexeme>{
+                command{
+                    .m_text = "test1",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test2",
+                atom{
+                    .m_text = "test2",
                 },
             },
         },
         {
-            // Single unquoted lexeme
+            // atom followed by command
             "test1 !test2",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test1",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test1",
                 },
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test2",
+                command{
+                    .m_text = "test2",
                 },
             },
         },
         {
-            // Multiple lexemes all unquoted
+            // Multiple atoms all unquoted
             "test 123",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "123",
+                atom{
+                    .m_text = "123",
                 },
             },
         },
         {
-            // space escape does not work outside quotes
+            // space escape fails outside quotes
             "test\\ 123",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\\",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\\",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "123",
+                atom{
+                    .m_text = "123",
                 },
             },
         },
         {
-            // One lexeme, space escaped
+            // testing multiple failed escape sequences
             "test\\ 123\\ abc",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\\",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\\",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "123\\",
+                atom{
+                    .m_text = "123\\",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
+                atom{
+                    .m_text = "abc",
                 },
             },
         },
         {
-            // One lexeme, space escaped
+            // three atoms, with irregular whitespace
             "test\\\t123\\\nabc",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\\",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\\",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "123\\",
+                atom{
+                    .m_text = "123\\",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
+                atom{
+                    .m_text = "abc",
                 },
             },
         },
         {
-            // Multiple lexemes all unquoted
+            // Multiple atoms unquoted
             "test 123 456",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "123",
+                atom{
+                    .m_text = "123",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "456",
+                atom{
+                    .m_text = "456",
                 },
             },
         },
         {
-            // Single unquoted lexeme
+            // Single unquoted atom
             "test_",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test_",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test_",
                 },
             },
         },
         {
-            // Test single lexeme variable
+            // Test single variable
             "_test",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "_test",
+            std::vector<lexeme>{
+                variable{
+                    .m_identifier = "_test",
                 },
             },
         },
         {
-            // Test single lexeme variable
+            // Test single variable
             "Test_",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "Test_",
+            std::vector<lexeme>{
+                variable{
+                    .m_identifier = "Test_",
                 },
             },
         },
         {
-            // Test single lexeme variable
+            // Test single variable
             "Test",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "Test",
+            std::vector<lexeme>{
+                variable{
+                    .m_identifier = "Test",
                 },
             },
         },
         {
             // Test 2 lexeme variables
             "Test1 Test2",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "Test1",
+            std::vector<lexeme>{
+                variable{
+                    .m_identifier = "Test1",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "Test2",
+                variable{
+                    .m_identifier = "Test2",
                 },
             },
         },
         {
             // Test unnamed variable
             "_",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "_",
+            std::vector<lexeme>{
+                variable{
+                    .m_identifier = "_",
                 },
             },
         },
         {
-            // Test single lexeme quote
+            // Test single quoted atom
             "\'test\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test",
                 },
             },
         },
         {
             // Test single lexeme quote
             "\"test\"",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test",
                 },
             },
         },
         {
             // Test lexeme with both quotation types
             "\"test \' test\"",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test \' test",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test \' test",
                 },
             },
         },
         {
             // Test lexeme with both quotation types
             "\'test \" test\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test \" test",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test \" test",
                 },
             },
         },
         {
             // Test lexeme with single quotation type
             "\'test \' test \'\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test ",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test ",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test",
+                atom{
+                    .m_text = "test",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "",
+                atom{
+                    .m_text = "",
                 },
             },
         },
         {
             // Test single lexeme quote WITH UPPERCASE
             "\'Test\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "Test",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "Test",
                 },
             },
         },
         {
             // Test spaces in quote
             "\'test blah blah\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test blah blah",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test blah blah",
                 },
             },
         },
         {
             // Test spaces BETWEEN quotes
             "\'test\' \'blah\' \'blah\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "blah",
+                atom{
+                    .m_text = "blah",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "blah",
+                atom{
+                    .m_text = "blah",
                 },
             },
         },
         {
             // Test embedding a backslash by escaping with another backslash
             "\'test\\\\\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\\",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\\",
                 },
             },
         },
         {
             // Test embedding a \n by escape sequence
             "\'test\\n\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\n",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\n",
                 },
             },
         },
         {
             // Test embedding a hex escape sequence
             "\'test\\x12\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\x12",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\x12",
                 },
             },
         },
         {
             // Test embedding a hex escape sequence
             "\'test\\x123\'",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\x12"
-                                    "3",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\x12"
+                              "3",
                 },
             },
         },
         {
             // Test quoted escape sequence, followed by unquoted text
             "\'test\\x12\' test12",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\x12",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\x12",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test12",
+                atom{
+                    .m_text = "test12",
                 },
             },
         },
         {
             // Test list open
             "[",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
+            std::vector<lexeme>{
+                list_open{},
             },
         },
         {
             // Test list close
             "]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+            std::vector<lexeme>{
+                list_close{},
             },
         },
         {
             // Test list open and list close
             "[]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+            std::vector<lexeme>{
+                list_open{},
+                list_close{},
             },
         },
         {
             // Test 2 empty lists with no separation
             "[][]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+            std::vector<lexeme>{
+                list_open{},
+                list_close{},
+                list_open{},
+                list_close{},
             },
         },
         {
             // Test 2 empty lists with separation
             "[] []",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+            std::vector<lexeme>{
+                list_open{},
+                list_close{},
+                list_open{},
+                list_close{},
             },
         },
         {
             // Test flat list with 1 unquoted text
             "[abc]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
             },
         },
         {
             // Test 2 flat lists side-by-side
             "[abc][]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
+                list_open{},
+                list_close{},
             },
         },
         {
             // Test 2 flat lists side-by-side
             "[abc] [def]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
+                list_close{},
+                list_open{},
+                atom{
+                    .m_text = "def",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "def",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
             },
         },
         {
             // Test 2 lists, one nested with unquoted text, with innermost list empty
             "[abc] [def []]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
+                list_close{},
+                list_open{},
+                atom{
+                    .m_text = "def",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "def",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_open{},
+                list_close{},
+                list_close{},
             },
         },
         {
             // Test 1 list, containing variable
             "[A]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                variable{
+                    .m_identifier = "A",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "A",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
             },
         },
         {
             // Test 1 list, containing variable and 1 variable immediately outside without separation
             "[A]B",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                variable{
+                    .m_identifier = "A",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "A",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "B",
+                list_close{},
+                variable{
+                    .m_identifier = "B",
                 },
             },
         },
         {
             // Test 1 list, containing 2 variables
             "[A B]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                variable{
+                    .m_identifier = "A",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "A",
+                variable{
+                    .m_identifier = "B",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "B",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
             },
         },
         {
             // Test 1 list, containing 2 variables and 1 atom
             "[A B abc]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                variable{
+                    .m_identifier = "A",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "A",
+                variable{
+                    .m_identifier = "B",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "B",
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
             },
         },
         {
             // Test 1 list, containing 2 variables and 1 atom
             "[_ _ abc]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                variable{
+                    .m_identifier = "_",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "_",
+                variable{
+                    .m_identifier = "_",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "_",
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
             },
         },
         {
             // Test composite list containing atoms and varaibles, some unnamed
             "[abc [_ _] [def A]]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
+                list_open{},
+                variable{
+                    .m_identifier = "_",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                variable{
+                    .m_identifier = "_",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "_",
+                list_close{},
+                list_open{},
+                atom{
+                    .m_text = "def",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "_",
+                variable{
+                    .m_identifier = "A",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "def",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "A",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
+                list_close{},
             },
         },
         {
             // Test unconventional white-space
             "abc\ndef\nA\n\t_",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "def",
+                atom{
+                    .m_text = "def",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "A",
+                variable{
+                    .m_identifier = "A",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "_",
+                variable{
+                    .m_identifier = "_",
                 },
             },
         },
         {
             // Test unconventional white-space
             "abc\t[\ndef\nA\n\t_",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                list_open{},
+                atom{
+                    .m_text = "def",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "def",
+                variable{
+                    .m_identifier = "A",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "A",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "_",
+                variable{
+                    .m_identifier = "_",
                 },
             },
         },
         {
             // Test unconventional white-space
             "abc\t[\n\'\\n \\t \\\\\'\nA\n\t_",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                list_open{},
+                atom{
+                    .m_text = "\n \t \\",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "\n \t \\",
+                variable{
+                    .m_identifier = "A",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "A",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "_",
+                variable{
+                    .m_identifier = "_",
                 },
             },
         },
         {
             // Single atom, failing to escape the interpreter's separation of lexemes
             "test\\[",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\\",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\\",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
+                list_open{},
             },
         },
         {
             // Single atom, failing to escape the interpreter's separation of lexemes
             "test\\xa4\\[",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test\\xa4\\",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test\\xa4\\",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
+                list_open{},
             },
         },
         {
             // Single atom, with special characters
             "test!@.$^&*()",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "test!@.$^&*()",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "test!@.$^&*()",
                 },
             },
         },
         {
             // Single atom, with special characters
             "1.24",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "1.24",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "1.24",
                 },
             },
         },
         {
             // Single atom, with special characters
             "[[[1.24]]]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                list_open{},
+                list_open{},
+                atom{
+                    .m_text = "1.24",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "1.24",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
+                list_close{},
+                list_close{},
             },
         },
         {
             // Single atom, with special characters
             "@",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "@",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "@",
                 },
             },
         },
         {
             // Single atom, with special characters
             "+",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "+",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "+",
                 },
             },
         },
         {
             // Single atom, with special characters
             "<-",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "<-",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "<-",
                 },
             },
         },
         {
             // Having fun, realistic scenario
-            "axiom add_bc_0 [add [] L L]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "axiom",
+            "!axiom add_bc_0 [add [] L L]",
+            std::vector<lexeme>{
+                command{
+                    .m_text = "axiom",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "add_bc_0",
+                atom{
+                    .m_text = "add_bc_0",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                list_open{},
+                atom{
+                    .m_text = "add",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "add",
+                list_open{},
+                list_close{},
+                variable{
+                    .m_identifier = "L",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                variable{
+                    .m_identifier = "L",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "L",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "L",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
             },
         },
         {
             // Having fun, realistic scenario
-            "axiom add_gc\n"
+            "!axiom add_gc\n"
             "[if\n"
             "    [add X Y Z]\n"
             "    [and\n"
@@ -1064,315 +801,201 @@ void test_lexer_extract_lexeme()
             "        [cons Z ZH ZT]\n"
             "    ]\n"
             "]\n",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "axiom",
+            std::vector<lexeme>{
+                command{
+                    .m_text = "axiom",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "add_gc",
+                atom{
+                    .m_text = "add_gc",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                list_open{},
+                atom{
+                    .m_text = "if",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "if",
+                list_open{},
+                atom{
+                    .m_text = "add",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                variable{
+                    .m_identifier = "X",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "add",
+                variable{
+                    .m_identifier = "Y",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "X",
+                variable{
+                    .m_identifier = "Z",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "Y",
+                list_close{},
+                list_open{},
+                atom{
+                    .m_text = "and",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "Z",
+
+                list_open{},
+                atom{
+                    .m_text = "cons",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
+                variable{
+                    .m_identifier = "X",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                variable{
+                    .m_identifier = "XH",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "and",
+                variable{
+                    .m_identifier = "XT",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                list_close{},
+
+                list_open{},
+                atom{
+                    .m_text = "cons",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "cons",
+                variable{
+                    .m_identifier = "Y",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "X",
+                variable{
+                    .m_identifier = "YH",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "XH",
+                variable{
+                    .m_identifier = "YT",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "XT",
+                list_close{},
+
+                list_open{},
+                atom{
+                    .m_text = "add",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
+
+                list_open{},
+                variable{
+                    .m_identifier = "XH",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                list_close{},
+
+                list_open{},
+                variable{
+                    .m_identifier = "YH",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "cons",
+                list_close{},
+
+                list_open{},
+                variable{
+                    .m_identifier = "ZH",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "Y",
+                list_close{},
+
+                list_close{},
+
+                list_open{},
+                atom{
+                    .m_text = "add",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "YH",
+                variable{
+                    .m_identifier = "XT",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "YT",
+                variable{
+                    .m_identifier = "YT",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
+                variable{
+                    .m_identifier = "ZT",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                list_close{},
+
+                list_open{},
+                atom{
+                    .m_text = "cons",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "add",
+                variable{
+                    .m_identifier = "Z",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                variable{
+                    .m_identifier = "ZH",
                 },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "XH",
+                variable{
+                    .m_identifier = "ZT",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "YH",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "ZH",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "add",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "XT",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "YT",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "ZT",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "cons",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "Z",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "ZH",
-                },
-                lexeme{
-                    .m_token_type = token_types::variable,
-                    .m_token_text = "ZT",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
+
+                list_close{},
+                list_close{},
+
             },
         },
         {
             // Single command lexeme
             "!test1[abc]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test1",
+            std::vector<lexeme>{
+                command{
+                    .m_text = "test1",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+                list_open{},
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
             },
         },
         {
             // Single command lexeme
             "[!test1][abc]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                list_open{},
+                command{
+                    .m_text = "test1",
                 },
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "test1",
+                list_close{},
+                list_open{},
+                atom{
+                    .m_text = "abc",
                 },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
-                },
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "abc",
-                },
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
-                },
+                list_close{},
             },
         },
         {
             // Test title-case command
             "!Test",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::command,
-                    .m_token_text = "Test",
+            std::vector<lexeme>{
+                command{
+                    .m_text = "Test",
                 },
             },
         },
         {
             // Test lex stop character: whitespace
             "1.24 ",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "1.24",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "1.24",
                 },
             },
         },
         {
             // Test lex stop character: eof
             "1.24",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "1.24",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "1.24",
                 },
             },
         },
         {
             // Test lex stop character: list open
             "1.24[",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "1.24"},
-                lexeme{
-                    .m_token_type = token_types::list_open,
-                    .m_token_text = "[",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "1.24",
                 },
+                list_open{},
             },
         },
         {
             // Test lex stop character: list close
             "1.24]",
-            std::vector{
-                lexeme{
-                    .m_token_type = token_types::atom,
-                    .m_token_text = "1.24"},
-                lexeme{
-                    .m_token_type = token_types::list_close,
-                    .m_token_text = "]",
+            std::vector<lexeme>{
+                atom{
+                    .m_text = "1.24",
                 },
+                list_close{},
             },
         },
     };
@@ -1423,12 +1046,12 @@ void test_lexer_extract_lexeme()
     }
 }
 
-int test_lexer_main()
+void test_lexer_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     TEST(test_lexer_escape);
     TEST(test_lexer_extract_lexeme);
 
-    return 0;
+    return;
 }
