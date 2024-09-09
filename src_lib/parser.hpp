@@ -55,6 +55,10 @@ namespace unilog
         statement;
 
     std::istream &operator>>(std::istream &a_istream, prolog_expression &a_prolog_expression);
+    std::istream &operator>>(std::istream &a_istream, axiom_statement &a_axiom_statement);
+    std::istream &operator>>(std::istream &a_istream, guide_statement &a_guide_statement);
+    std::istream &operator>>(std::istream &a_istream, infer_statement &a_infer_statement);
+    std::istream &operator>>(std::istream &a_istream, refer_statement &a_refer_statement);
     std::istream &operator>>(std::istream &a_istream, statement &a_statement);
 
 }

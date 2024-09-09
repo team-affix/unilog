@@ -586,6 +586,32 @@ void test_parser_extract_prolog_expression()
                     },
                 },
             },
+            {
+                "[[[] abc] 123]",
+                prolog_expression{
+                    std::list<prolog_expression>{
+                        prolog_expression{
+                            std::list<prolog_expression>{
+                                prolog_expression{
+                                    std::list<prolog_expression>{
+
+                                    },
+                                },
+                                prolog_expression{
+                                    atom{
+                                        "abc",
+                                    },
+                                },
+                            },
+                        },
+                        prolog_expression{
+                            atom{
+                                "123",
+                            },
+                        },
+                    },
+                },
+            },
         };
 
     for (const auto &[l_key, l_value] : l_test_cases)
@@ -629,11 +655,148 @@ void test_parser_extract_prolog_expression()
     }
 }
 
+void test_parser_extract_axiom_statement()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::atom;
+    using unilog::axiom_statement;
+    using unilog::command;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::prolog_expression;
+    using unilog::variable;
+
+    std::map<std::string, axiom_statement> l_test_cases =
+        {
+            {
+                "a0 x",
+                axiom_statement{
+                    .m_tag =
+                        prolog_expression{
+                            atom{
+                                "a0",
+                            },
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            atom{
+                                "x",
+                            },
+                        },
+                },
+            },
+            {
+                "add_bc_0 [add [] L L]",
+                axiom_statement{
+                    .m_tag =
+                        prolog_expression{
+                            atom{
+                                "add_bc_0",
+                            },
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            std::list<prolog_expression>{
+                                prolog_expression{
+                                    atom{
+                                        "add",
+                                    },
+                                },
+                                prolog_expression{
+                                    std::list<prolog_expression>{
+
+                                    },
+                                },
+                                prolog_expression{
+                                    variable{
+                                        "L",
+                                    },
+                                },
+                                prolog_expression{
+                                    variable{
+                                        "L",
+                                    },
+                                },
+                            },
+                        },
+                },
+            },
+            {
+                "[a0 X] [awesome X]",
+                axiom_statement{
+                    .m_tag =
+                        prolog_expression{
+                            std::list<prolog_expression>{
+                                prolog_expression{
+                                    atom{
+                                        "a0",
+                                    },
+                                },
+                                prolog_expression{
+                                    variable{
+                                        "X",
+                                    },
+                                },
+                            },
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            std::list<prolog_expression>{
+                                prolog_expression{
+                                    atom{
+                                        "awesome",
+                                    },
+                                },
+                                prolog_expression{
+                                    variable{
+                                        "X",
+                                    },
+                                },
+                            },
+                        },
+                },
+            },
+            {
+                "_ _",
+                axiom_statement{
+                    .m_tag =
+                        prolog_expression{
+                            variable{
+                                "_",
+                            },
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            variable{
+                                "_",
+                            },
+                        },
+                },
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_test_cases)
+    {
+        std::stringstream l_ss(l_key);
+
+        axiom_statement l_exp;
+
+        l_ss >> l_exp;
+
+        assert(l_exp == l_value);
+
+        LOG("success, case: \"" << l_key << "\"" << std::endl);
+    }
+}
+
 int test_parser_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     TEST(test_parser_extract_prolog_expression);
+    TEST(test_parser_extract_axiom_statement);
 
     return 0;
 }
