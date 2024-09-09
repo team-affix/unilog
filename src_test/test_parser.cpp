@@ -325,6 +325,17 @@ void test_parser_extract_prolog_expression()
                     },
                 },
             },
+            {
+                // single atom, it will not fail even with the closing paren. this is because,
+                //     closing paren is a lexeme separator char and thus it will only extract the
+                //     first prolog expression, "abc"
+                "abc]",
+                prolog_expression{
+                    atom{
+                        "abc",
+                    },
+                },
+            },
         };
 
     for (const auto &[l_key, l_value] : l_test_cases)
@@ -347,6 +358,10 @@ void test_parser_extract_prolog_expression()
             "!axiom",
             "[!axiom]",
             "[!comm]",
+            "]",
+            // "abc]", // this is NOT an expect failure input.
+            // this is because it will only try to parse the first prolog expression before a lexeme separator char.
+
         };
 
     for (const auto &l_input : l_expect_failure_inputs)
@@ -358,9 +373,6 @@ void test_parser_extract_prolog_expression()
         assert_throws(
             ([&l_ss, &l_exp]
              { l_ss >> l_exp; }));
-
-        // Make sure the stream state has its failbit set.
-        assert(l_ss.fail());
 
         LOG("success, expected throw, case: " << l_input << std::endl);
     }

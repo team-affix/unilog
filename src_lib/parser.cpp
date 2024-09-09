@@ -31,7 +31,7 @@ namespace unilog
                a_lhs.m_file_path == a_rhs.m_file_path;
     }
 
-    std::istream &operator>>(std::istream &a_istream, prolog_expression &a_prolog_expression)
+    std::istream &extract_prolog_expression(std::istream &a_istream, prolog_expression &a_prolog_expression, int &a_list_depth)
     {
         lexeme l_lexeme;
 
@@ -52,17 +52,16 @@ namespace unilog
         {
             std::list<prolog_expression> l_list;
 
+            // increment list depth BEFORE while loop.
+            //     this is to avoid repeatedly incrementing each iteration
+            ++a_list_depth;
+
+            prolog_expression l_prolog_subexpression;
+
             // extract until failure, this does NOT have to come from
             //     eof. It will come from a list_close lexeme or command as well.
-            std::copy(
-                std::istream_iterator<prolog_expression>(a_istream),
-                std::istream_iterator<prolog_expression>(),
-                std::back_inserter(l_list));
-
-            if (a_istream.eof())
-                // we do expect the failbit to be set, but NOT EOF.
-                //     if EOF is set, that means we did not find a closing brace.
-                throw std::runtime_error("Failed to find closing bracket when extracting list, reached EOF.");
+            while (extract_prolog_expression(a_istream, l_prolog_subexpression, a_list_depth))
+                l_list.push_back(l_prolog_subexpression);
 
             // reset the state flags for the stream
             a_istream.clear();
@@ -71,6 +70,7 @@ namespace unilog
         }
         else if (std::holds_alternative<list_close>(l_lexeme))
         {
+            --a_list_depth;
             // indicate that iterative extraction should stop
             a_istream.setstate(std::ios::failbit);
         }
@@ -82,6 +82,21 @@ namespace unilog
         }
 
         return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, prolog_expression &a_prolog_expression)
+    {
+        // the paren stack
+        int l_list_depth = 0;
+
+        std::istream &l_result = extract_prolog_expression(a_istream, a_prolog_expression, l_list_depth);
+
+        if (l_list_depth > 0)
+            throw std::runtime_error("Failed to extract prolog expression: Not enough closing brackets.");
+        else if (l_list_depth < 0)
+            throw std::runtime_error("Failed to extract prolog expression: Too many closing brackets.");
+
+        return l_result;
     }
 
     std::istream &operator>>(std::istream &a_istream, statement &a_statement)
