@@ -1,13 +1,7 @@
 #include <iostream>
 #include <SWI-Prolog.h>
 
-#define LOG(x)             \
-    if (ENABLE_DEBUG_LOGS) \
-        std::cout << x;
-
-#define TEST(void_fn) \
-    void_fn();        \
-    LOG("TEST COMPLETED: " << #void_fn << std::endl);
+#include "test_utils.hpp"
 
 extern void test_lexer_main();
 extern void test_parser_main();

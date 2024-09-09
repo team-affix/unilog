@@ -15,7 +15,7 @@ $(LIBSWIPL):
 	# Copy libswipl.so.9 to the pwd
 	cp -f $(REMOTE_LIBSWIPL) build/
 
-$(LIBUNI): $(LIBSWIPL) $(wildcard src_lib/*.cpp) $(wildcard src_lib/*.pl)
+$(LIBUNI): $(LIBSWIPL) $(wildcard src_lib/*.cpp) $(wildcard src_lib/*.hpp) $(wildcard src_lib/*.pl)
 	##########################
 	#### COMPILE UNI LIB #####
 	##########################
@@ -26,7 +26,7 @@ $(LIBUNI): $(LIBSWIPL) $(wildcard src_lib/*.cpp) $(wildcard src_lib/*.pl)
 	##########################
 	##########################
 
-$(MAINBIN): $(wildcard src_main/*.cpp) $(LIBUNI) $(LIBSWIPL)
+$(MAINBIN): $(wildcard src_main/*.cpp) $(wildcard src_main/*.hpp) $(LIBUNI) $(LIBSWIPL)
 	##########################
 	#### COMPILE UNI MAIN ####
 	##########################
@@ -40,7 +40,7 @@ $(MAINBIN): $(wildcard src_main/*.cpp) $(LIBUNI) $(LIBSWIPL)
 	##########################
 	##########################
 
-$(TESTBIN): $(wildcard src_test/*.cpp) $(LIBUNI) $(LIBSWIPL)
+$(TESTBIN): $(wildcard src_test/*.cpp) $(wildcard src_test/*.hpp) $(LIBUNI) $(LIBSWIPL)
 	###########################
 	#### COMPILE UNI TESTS ####
 	###########################
