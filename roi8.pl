@@ -23,11 +23,11 @@ query_entry(Guide, DescopedTheorem) :-
     query([], Guide, DescopedTheorem, []).
 
 query(Scope, Guide, DescopedTheorem, Conds) :-
-    unilog(guide(Guide), theorem(Scope, DescopedTheorem), conditions(Conds))
+    unilog(guide(Guide), rule(theorem(Scope, DescopedTheorem), conditions(Conds)))
     ;
     (
         % a fact will not have conditions, or a tscope
-        unilog(guide(Guide), theorem(Theorem)),
+        unilog(guide(Guide), fact(theorem(Theorem))),
         scope(Scope, Theorem, DescopedTheorem),
         Conds = []
     ).
@@ -44,43 +44,43 @@ query_all(_, [], [], []) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Begin built-ins (zero-arity)
 
-unilog(guide(cons), theorem(_, [cons, [X|Tail], X, Tail]), conditions([])).
+unilog(guide(cons), rule(theorem(_, [cons, [X|Tail], X, Tail]), conditions([]))).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Begin ROI
 
-unilog(guide([enter, EnteredScope, NextGuide]), theorem(CurrentScope, [scope, EnteredScope, R]), conditions(ScopedConds)) :-
+unilog(guide([enter, EnteredScope, NextGuide]), rule(theorem(CurrentScope, [scope, EnteredScope, R]), conditions(ScopedConds))) :-
     append(CurrentScope, [EnteredScope], NewScope),
     query(NewScope, NextGuide, R, DescopedConds),
     scope_all([EnteredScope], ScopedConds, DescopedConds).
 
-unilog(guide(cond), theorem(_, Thm), conditions([Thm])).
+unilog(guide(cond), rule(theorem(_, Thm), conditions([Thm]))).
 
-unilog(guide([discharge, Guide]), theorem(Scope, [if, Thm, [and | Conds]]), conditions([])) :-
+unilog(guide([discharge, Guide]), rule(theorem(Scope, [if, Thm, [and | Conds]]), conditions([]))) :-
     query(Scope, Guide, Thm, Conds).
 
-unilog(guide([gor, FirstGuide | NextGuides]), theorem(Scope, R), conditions(Conds)) :-
+unilog(guide([gor, FirstGuide | NextGuides]), rule(theorem(Scope, R), conditions(Conds))) :-
     query(Scope, FirstGuide, R, Conds);
     query(Scope, [gor | NextGuides], R, Conds).
 
-unilog(guide([mp, G0, G1]), theorem(Scope, YDescope), conditions(Conds)) :-
+unilog(guide([mp, G0, G1]), rule(theorem(Scope, YDescope), conditions(Conds))) :-
     query(Scope, G0, [if, YDescope, XDescope], ImpConds),
     query(Scope, G1, XDescope, AntConds),
     append(ImpConds, AntConds, Conds).
 
-unilog(guide([conj]), theorem(_, [and]), conditions([])).
+unilog(guide([conj]), rule(theorem(_, [and]), conditions([]))).
 
-unilog(guide([conj | Guides]), theorem(Scope, [and | DescopedTheorems]), conditions(Conds)) :-
+unilog(guide([conj | Guides]), rule(theorem(Scope, [and | DescopedTheorems]), conditions(Conds))) :-
     query_all(Scope, Guides, DescopedTheorems, Conds).
 
-unilog(guide([simpl, Guide]), theorem(Scope, Thm), conditions(Conds)) :-
+unilog(guide([simpl, Guide]), rule(theorem(Scope, Thm), conditions(Conds))) :-
     query(Scope, Guide, [and, Thm | _], Conds).
 
 %%%%%%%%%%%%%%%%%%%%%%%
 % GUIDES
 %%%%%%%%%%%%%%%%%%%%%%%
 
-unilog(guide(g_last), theorem(Scope, R), conditions(Conds)) :-
+unilog(guide(g_last), rule(theorem(Scope, R), conditions(Conds))) :-
     query(
         Scope,
         [gor,
@@ -94,29 +94,29 @@ unilog(guide(g_last), theorem(Scope, R), conditions(Conds)) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Theorems listed here.
 
-unilog(guide(a0), theorem([scope, m1, [if, y, x]])).
-unilog(guide(a1), theorem([scope, m1, x])).
-unilog(guide(a2), theorem([scope, m1, z])).
+unilog(guide(a0), fact(theorem([scope, m1, [if, y, x]]))).
+unilog(guide(a1), fact(theorem([scope, m1, x]))).
+unilog(guide(a2), fact(theorem([scope, m1, z]))).
 
 unilog(
     guide(a3),
-    theorem(
+    fact(theorem(
         [scope, m1,
         [if,
             z,
             [cons, [a, b], a, [b]]
         ]
-    ])
+    ]))
 ).
 
 unilog(
     guide(g_last_bc),
-    theorem([scope, alg, [last, [X], X]])
+    fact(theorem([scope, alg, [last, [X], X]]))
 ).
 
 unilog(
     guide(g_last_gc),
-    theorem(
+    fact(theorem(
         [scope, alg,
             [if,
                 [last, L, X],
@@ -126,5 +126,5 @@ unilog(
                 ]
             ]
         ]
-    )
+    ))
 ).
