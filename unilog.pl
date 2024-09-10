@@ -46,7 +46,6 @@ query_all(guide(_, []), theorem(_, []), conditions([])) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 :- multifile unilog/2.
-:- dynamic unilog/2.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Begin built-ins (zero-arity)
