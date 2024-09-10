@@ -32,6 +32,8 @@ void test_parser_extract_prolog_expression()
     using unilog::list_close;
     using unilog::list_open;
     using unilog::prolog_expression;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
     using unilog::variable;
 
     std::map<std::string, prolog_expression> l_test_cases =
@@ -39,7 +41,7 @@ void test_parser_extract_prolog_expression()
             {
                 "if",
                 prolog_expression{
-                    atom{
+                    unquoted_atom{
                         .m_text = "if",
                     },
                 },
@@ -90,7 +92,7 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "abc",
                             },
                         },
@@ -102,7 +104,7 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "abc",
                             },
                         },
@@ -119,7 +121,7 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "abc",
                             },
                         },
@@ -129,7 +131,7 @@ void test_parser_extract_prolog_expression()
                             },
                         },
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "def",
                             },
                         },
@@ -153,7 +155,7 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "abc",
                             },
                         },
@@ -170,7 +172,7 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "abc",
                             },
                         },
@@ -180,7 +182,7 @@ void test_parser_extract_prolog_expression()
                             },
                         },
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "def",
                             },
                         },
@@ -192,21 +194,21 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "abc",
                             },
                         },
                         prolog_expression{
                             std::list<prolog_expression>{
                                 prolog_expression{
-                                    atom{
+                                    unquoted_atom{
                                         "123",
                                     },
                                 },
                             },
                         },
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "def",
                             },
                         },
@@ -216,7 +218,7 @@ void test_parser_extract_prolog_expression()
             {
                 "abc []",
                 prolog_expression{
-                    atom{
+                    unquoted_atom{
                         "abc",
                     },
                 },
@@ -226,35 +228,35 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "abc",
                             },
                         },
                         prolog_expression{
                             std::list<prolog_expression>{
                                 prolog_expression{
-                                    atom{
+                                    unquoted_atom{
                                         "123",
                                     },
                                 },
                                 prolog_expression{
                                     std::list<prolog_expression>{
                                         prolog_expression{
-                                            atom{
+                                            unquoted_atom{
                                                 "def",
                                             },
                                         },
                                         prolog_expression{
                                             std::list<prolog_expression>{
                                                 prolog_expression{
-                                                    atom{
+                                                    unquoted_atom{
                                                         "456",
                                                     },
                                                 },
                                                 prolog_expression{
                                                     std::list<prolog_expression>{
                                                         prolog_expression{
-                                                            atom{
+                                                            unquoted_atom{
                                                                 "ghi",
                                                             },
                                                         },
@@ -274,7 +276,7 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "abc",
                             },
                         },
@@ -295,7 +297,7 @@ void test_parser_extract_prolog_expression()
                         prolog_expression{
                             std::list<prolog_expression>{
                                 prolog_expression{
-                                    atom{
+                                    unquoted_atom{
                                         "def",
                                     },
                                 },
@@ -313,7 +315,7 @@ void test_parser_extract_prolog_expression()
                 // Single atom, with special characters
                 "test!@.$^&*()",
                 prolog_expression{
-                    atom{
+                    unquoted_atom{
                         "test!@.$^&*()",
                     },
                 },
@@ -324,7 +326,7 @@ void test_parser_extract_prolog_expression()
                 //     first prolog expression, "abc"
                 "abc]",
                 prolog_expression{
-                    atom{
+                    unquoted_atom{
                         "abc",
                     },
                 },
@@ -334,17 +336,17 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "123",
                             },
                         },
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "456",
                             },
                         },
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "7.89",
                             },
                         },
@@ -356,17 +358,17 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "123",
                             },
                         },
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "456",
                             },
                         },
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "7.89",
                             },
                         },
@@ -407,14 +409,14 @@ void test_parser_extract_prolog_expression()
                 prolog_expression{
                     std::list<prolog_expression>{
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "if",
                             },
                         },
                         prolog_expression{
                             std::list<prolog_expression>{
                                 prolog_expression{
-                                    atom{
+                                    unquoted_atom{
                                         "add",
                                     },
                                 },
@@ -438,14 +440,14 @@ void test_parser_extract_prolog_expression()
                         prolog_expression{
                             std::list<prolog_expression>{
                                 prolog_expression{
-                                    atom{
+                                    unquoted_atom{
                                         "and",
                                     },
                                 },
                                 prolog_expression{
                                     std::list<prolog_expression>{
                                         prolog_expression{
-                                            atom{
+                                            unquoted_atom{
                                                 "cons",
                                             },
                                         },
@@ -469,7 +471,7 @@ void test_parser_extract_prolog_expression()
                                 prolog_expression{
                                     std::list<prolog_expression>{
                                         prolog_expression{
-                                            atom{
+                                            unquoted_atom{
                                                 "cons",
                                             },
                                         },
@@ -493,7 +495,7 @@ void test_parser_extract_prolog_expression()
                                 prolog_expression{
                                     std::list<prolog_expression>{
                                         prolog_expression{
-                                            atom{
+                                            unquoted_atom{
                                                 "add",
                                             },
                                         },
@@ -529,7 +531,7 @@ void test_parser_extract_prolog_expression()
                                 prolog_expression{
                                     std::list<prolog_expression>{
                                         prolog_expression{
-                                            atom{
+                                            unquoted_atom{
                                                 "add",
                                             },
                                         },
@@ -553,7 +555,7 @@ void test_parser_extract_prolog_expression()
                                 prolog_expression{
                                     std::list<prolog_expression>{
                                         prolog_expression{
-                                            atom{
+                                            unquoted_atom{
                                                 "cons",
                                             },
                                         },
@@ -591,14 +593,14 @@ void test_parser_extract_prolog_expression()
                                     },
                                 },
                                 prolog_expression{
-                                    atom{
+                                    unquoted_atom{
                                         "abc",
                                     },
                                 },
                             },
                         },
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "123",
                             },
                         },
@@ -659,6 +661,8 @@ void test_parser_extract_axiom_statement()
     using unilog::list_close;
     using unilog::list_open;
     using unilog::prolog_expression;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
     using unilog::variable;
 
     std::map<std::string, axiom_statement> l_test_cases =
@@ -668,13 +672,13 @@ void test_parser_extract_axiom_statement()
                 axiom_statement{
                     .m_tag =
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "a0",
                             },
                         },
                     .m_theorem =
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "x",
                             },
                         },
@@ -685,7 +689,7 @@ void test_parser_extract_axiom_statement()
                 axiom_statement{
                     .m_tag =
                         prolog_expression{
-                            atom{
+                            unquoted_atom{
                                 "add_bc_0",
                             },
                         },
@@ -693,7 +697,7 @@ void test_parser_extract_axiom_statement()
                         prolog_expression{
                             std::list<prolog_expression>{
                                 prolog_expression{
-                                    atom{
+                                    unquoted_atom{
                                         "add",
                                     },
                                 },
@@ -723,7 +727,7 @@ void test_parser_extract_axiom_statement()
                         prolog_expression{
                             std::list<prolog_expression>{
                                 prolog_expression{
-                                    atom{
+                                    unquoted_atom{
                                         "a0",
                                     },
                                 },
@@ -738,7 +742,7 @@ void test_parser_extract_axiom_statement()
                         prolog_expression{
                             std::list<prolog_expression>{
                                 prolog_expression{
-                                    atom{
+                                    unquoted_atom{
                                         "awesome",
                                     },
                                 },

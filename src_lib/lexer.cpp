@@ -4,13 +4,6 @@
 #include <cctype>
 #include "lexer.hpp"
 
-// Lexer special characters
-#define COMMAND_CHAR '!'
-#define LIST_OPEN_CHAR '['
-#define LIST_CLOSE_CHAR ']'
-
-#define UNNAMED_VARIABLE_CHAR '_'
-
 std::istream &escape(std::istream &a_istream, char &a_char)
 {
     char l_char;
@@ -69,7 +62,10 @@ std::istream &escape(std::istream &a_istream, char &a_char)
             break;
 
         if (std::isxdigit(l_upper_hex_digit) == 0 || std::isxdigit(l_lower_hex_digit) == 0)
-            throw std::runtime_error("Expected hex character.");
+        {
+            a_istream.setstate(std::ios::failbit);
+            break;
+        }
 
         int l_hex_value;
 
@@ -89,11 +85,6 @@ std::istream &escape(std::istream &a_istream, char &a_char)
     break;
     }
 
-    if (a_istream.fail())
-    {
-        throw std::runtime_error("Failed to escape character.");
-    }
-
     return a_istream;
 }
 
@@ -101,40 +92,351 @@ namespace unilog
 {
 
     // Comparison operators for lexeme types.
-    bool operator==(const list_open &a_lhs, const list_open &a_rhs)
-    {
-        return true;
-    }
-    bool operator==(const list_close &a_lhs, const list_close &a_rhs)
-    {
-        return true;
-    }
     bool operator==(const command &a_lhs, const command &a_rhs)
     {
         return a_lhs.m_text == a_rhs.m_text;
     }
+
+    bool operator==(const list_open &a_lhs, const list_open &a_rhs)
+    {
+        return true;
+    }
+
+    bool operator==(const list_close &a_lhs, const list_close &a_rhs)
+    {
+        return true;
+    }
+
     bool operator==(const variable &a_lhs, const variable &a_rhs)
     {
         return a_lhs.m_identifier == a_rhs.m_identifier;
     }
-    bool operator==(const atom &a_lhs, const atom &a_rhs)
+
+    bool operator==(const quoted_atom &a_lhs, const quoted_atom &a_rhs)
     {
         return a_lhs.m_text == a_rhs.m_text;
     }
 
-    bool is_quote(int c)
+    bool operator==(const unquoted_atom &a_lhs, const unquoted_atom &a_rhs)
+    {
+        return a_lhs.m_text == a_rhs.m_text;
+    }
+
+    bool is_command_indicator_char(int c)
+    {
+        return c == '!';
+    }
+
+    bool is_list_open_indicator_char(int c)
+    {
+        return c == '[';
+    }
+
+    bool is_list_close_indicator_char(int c)
+    {
+        return c == ']';
+    }
+
+    bool is_variable_indicator_char(int c)
+    {
+        return isupper(c) ||
+               c == '_';
+    }
+
+    bool is_quoted_atom_indicator_char(int c)
     {
         // single OR double-quote.
         return c == '\'' ||
                c == '\"';
     }
 
-    bool is_lex_stop_character(int c)
+    bool is_unquoted_atom_indicator_char(int c)
     {
-        return std::isspace(c) != 0 ||
-               c == std::istream::traits_type::eof() ||
-               c == LIST_OPEN_CHAR ||
-               c == LIST_CLOSE_CHAR;
+        return !is_command_indicator_char(c) &&
+               !is_list_open_indicator_char(c) &&
+               !is_list_close_indicator_char(c) &&
+               !is_variable_indicator_char(c) &&
+               !is_quoted_atom_indicator_char(c);
+    }
+
+    bool is_atom_indicator_char(int c)
+    {
+        return is_quoted_atom_indicator_char(c) ||
+               is_unquoted_atom_indicator_char(c);
+    }
+
+    bool is_command_text_char(int c)
+    {
+        return isalnum(c);
+    }
+
+    bool is_variable_text_char(int c)
+    {
+        return isalnum(c) ||
+               c == '_';
+    }
+
+    bool is_unquoted_atom_text_char(int c)
+    {
+        return !is_command_indicator_char(c) &&
+               !is_list_open_indicator_char(c) &&
+               !is_list_close_indicator_char(c) &&
+               !is_quoted_atom_indicator_char(c) &&
+               std::isspace(c) == 0 &&
+               c != std::istream::traits_type::eof();
+    }
+
+    std::istream &consume_whitespace(std::istream &a_istream)
+    {
+        char l_char;
+
+        // Extract character (read until first non-whitespace)
+        while (std::isspace(a_istream.peek()) != 0 && a_istream.get(l_char))
+            ;
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, command &a_command)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_command_indicator_char(a_istream.peek()))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        // pop the indicator character
+        a_istream.get();
+
+        ////////////////////////////////////
+        /////////// TEXT SECTION ///////////
+        ////////////////////////////////////
+
+        // clear the text in the resulting command
+        a_command.m_text.clear();
+
+        char l_char;
+
+        while (
+            // conditions for consumption
+            is_command_text_char(a_istream.peek()) &&
+            // Consume char now
+            a_istream.get(l_char))
+        {
+            a_command.m_text.push_back(l_char);
+        }
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, list_open &a_list_open)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_list_open_indicator_char(a_istream.peek()))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        // pop the indicator character
+        a_istream.get();
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, list_close &a_list_close)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_list_close_indicator_char(a_istream.peek()))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        // pop the indicator character
+        a_istream.get();
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, variable &a_variable)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_variable_indicator_char(a_istream.peek()))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        ////////////////////////////////////
+        /////////// TEXT SECTION ///////////
+        ////////////////////////////////////
+
+        a_variable.m_identifier.clear();
+
+        char l_char;
+
+        // Variable lexemes must only contain alphanumeric chars,
+        //     beginning with an upper-case letter or underscore.
+
+        while (
+            // conditions for consumption
+            is_variable_text_char(a_istream.peek()) &&
+            // Consume char now
+            a_istream.get(l_char))
+        {
+            a_variable.m_identifier.push_back(l_char);
+        }
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, quoted_atom &a_quoted_atom)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_quoted_atom_indicator_char(a_istream.peek()))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        ////////////////////////////////////
+        /////////// TEXT SECTION ///////////
+        ////////////////////////////////////
+
+        a_quoted_atom.m_text.clear();
+
+        // save the type of quotation. then we can match for closing quote.
+        char l_quote_char;
+
+        // pop the indicator character
+        a_istream.get(l_quote_char);
+
+        char l_char;
+
+        // The input was a quote character. Thus we should scan until the closing quote
+        //     to produce a valid lexeme.
+        while (
+            // Consume char now
+            a_istream.get(l_char))
+        {
+            if (l_char == l_quote_char)
+                break;
+
+            if (l_char == '\\')
+                escape(a_istream, l_char);
+
+            a_quoted_atom.m_text.push_back(l_char);
+        }
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, unquoted_atom &a_unquoted_atom)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_unquoted_atom_indicator_char(a_istream.peek()))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        ////////////////////////////////////
+        /////////// TEXT SECTION ///////////
+        ////////////////////////////////////
+
+        a_unquoted_atom.m_text.clear();
+
+        char l_char;
+
+        // The input was unquoted. Thus it should be treated as text,
+        //     and we must terminate the text at a lexeme separator character OR
+        //     when we reach EOF.
+
+        // NOTE: Since we may simply hit EOF before any lexeme separator, we
+        //     should not consume the EOF so as to prevent setting the failbit.
+        while (
+            // conditions for consumption
+            is_unquoted_atom_text_char(a_istream.peek()) &&
+            // Get the char now
+            a_istream.get(l_char))
+        {
+            a_unquoted_atom.m_text.push_back(l_char);
+        }
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, atom &a_atom)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_atom_indicator_char(a_istream.peek()))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        ////////////////////////////////////
+        /////////// TEXT SECTION ///////////
+        ////////////////////////////////////
+
+        if (is_quoted_atom_indicator_char(a_istream.peek()))
+        {
+            quoted_atom l_quoted_atom;
+            a_istream >> l_quoted_atom;
+            a_atom = l_quoted_atom;
+        }
+        else
+        {
+            unquoted_atom l_unquoted_atom;
+            a_istream >> l_unquoted_atom;
+            a_atom = l_unquoted_atom;
+        }
+
+        return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, lexeme &a_lexeme)
@@ -150,132 +452,55 @@ namespace unilog
         ///     istream_iterator will only terminate extraction once an extraction FAILS. in other words, simply enabling eofbit is NOT
         ///     enough to terminate extraction. failbit is required to terminate, I am NOT sure if eofbit is required however.
 
-        char l_char;
-
-        // Extract character (read until first non-whitespace)
-        while (a_istream.get(l_char) && std::isspace(l_char) != 0)
-            ;
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
 
         // If reading the character failed, just early return.
         //     Extracting lexeme failed.
         if (!a_istream.good())
+        {
+            a_istream.setstate(std::ios::failbit);
             return a_istream;
+        }
 
         // 1. command `!`
-        if (l_char == COMMAND_CHAR)
+        if (is_command_indicator_char(a_istream.peek()))
         {
-            std::string l_text;
-
-            // Command lexemes must only contain alphanumeric chars.
-
-            while (
-                // Conditions for consumption
-                !is_lex_stop_character(a_istream.peek()) &&
-                // Consume char now
-                a_istream.get(l_char))
-            {
-                if (!isalnum(l_char))
-                {
-                    a_istream.setstate(std::ios::failbit);
-                    throw std::runtime_error("Failed to parse command: non-alphanumeric character read.");
-                }
-
-                l_text.push_back(l_char);
-            }
-
-            a_lexeme = command{
-                .m_text = l_text,
-            };
+            command l_command;
+            a_istream >> l_command;
+            a_lexeme = l_command;
         }
         // 2. list_open `[`
-        else if (l_char == LIST_OPEN_CHAR)
+        else if (is_list_open_indicator_char(a_istream.peek()))
         {
-            a_lexeme = list_open{};
+            list_open l_list_open;
+            a_istream >> l_list_open;
+            a_lexeme = l_list_open;
         }
         // 3. list_close `]`
-        else if (l_char == LIST_CLOSE_CHAR)
+        else if (is_list_close_indicator_char(a_istream.peek()))
         {
-            a_lexeme = list_close{};
+            list_close l_list_close;
+            a_istream >> l_list_close;
+            a_lexeme = l_list_close;
         }
         // 4. variable
-        else if (isupper(l_char) || l_char == UNNAMED_VARIABLE_CHAR)
+        else if (is_variable_indicator_char(a_istream.peek()))
         {
-            std::string l_identifier;
-
-            l_identifier.push_back(l_char);
-
-            // Variable lexemes must only contain alphanumeric chars,
-            //     beginning with an upper-case letter or underscore.
-
-            while (
-                // Conditions for consumption
-                !is_lex_stop_character(a_istream.peek()) &&
-                // Consume char now
-                a_istream.get(l_char))
-            {
-                if (!isalnum(l_char) && l_char != UNNAMED_VARIABLE_CHAR)
-                {
-                    a_istream.setstate(std::ios::failbit);
-                    throw std::runtime_error("Failed to parse variable: non-alphanumeric, non-underscore (_) character read.");
-                }
-
-                l_identifier.push_back(l_char);
-            }
-
-            a_lexeme = variable{
-                .m_identifier = l_identifier,
-            };
+            variable l_variable;
+            a_istream >> l_variable;
+            a_lexeme = l_variable;
         }
-        // 5. quoted atom
-        else if (is_quote(l_char))
+        // 6. atom
+        else if (is_atom_indicator_char(a_istream.peek()))
         {
-            std::string l_text;
-
-            // Save the type of quotation. This allows us to match for closing quote.
-            char l_quote_char = l_char;
-
-            // The input was a quote character. Thus we should scan until the closing quote
-            //     to produce a valid lexeme.
-            while (
-                // Consume char now
-                a_istream.get(l_char) &&
-                l_char != l_quote_char)
-            {
-                if (l_char == '\\')
-                    escape(a_istream, l_char);
-
-                l_text.push_back(l_char);
-            }
-
-            a_lexeme = atom{
-                .m_text = l_text,
-            };
+            atom l_atom;
+            a_istream >> l_atom;
+            a_lexeme = l_atom;
         }
-        // 6. unquoted atom
         else
         {
-            std::string l_text;
-
-            l_text.push_back(l_char);
-
-            // The input was unquoted. Thus it should be treated as text,
-            //     and we must terminate the text at a lexeme separator character OR
-            //     when we reach EOF.
-
-            // NOTE: Since we may simply hit EOF before any lexeme separator, we
-            //     should not consume the EOF so as to prevent setting the failbit.
-            while (
-                // Chars we DO NOT want to consume
-                !is_lex_stop_character(a_istream.peek()) &&
-                // Get the char now
-                a_istream.get(l_char))
-            {
-                l_text.push_back(l_char);
-            }
-
-            a_lexeme = atom{
-                .m_text = l_text,
-            };
+            a_istream.setstate(std::ios::failbit);
         }
 
         return a_istream;

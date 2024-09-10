@@ -86,9 +86,10 @@ void test_lexer_escape()
 
         char l_escaped_char;
 
-        assert_throws(
-            ([&l_ss, &l_escaped_char]
-             { escape(l_ss, l_escaped_char); }));
+        escape(l_ss, l_escaped_char);
+
+        // expect failure state of extraction
+        assert(l_ss.fail());
 
         LOG("success, expected throw, case: " << l_input << std::endl);
     }
@@ -103,6 +104,8 @@ void test_lexer_extract_lexeme()
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
     using unilog::variable;
 
     // Cases where content should be left alone:
@@ -132,7 +135,7 @@ void test_lexer_extract_lexeme()
             // Single unquoted atom
             "test",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test",
                 },
             },
@@ -144,7 +147,7 @@ void test_lexer_extract_lexeme()
                 command{
                     .m_text = "test1",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "test2",
                 },
             },
@@ -153,7 +156,7 @@ void test_lexer_extract_lexeme()
             // atom followed by command
             "test1 !test2",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test1",
                 },
                 command{
@@ -165,10 +168,10 @@ void test_lexer_extract_lexeme()
             // Multiple atoms all unquoted
             "test 123",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "123",
                 },
             },
@@ -177,10 +180,10 @@ void test_lexer_extract_lexeme()
             // space escape fails outside quotes
             "test\\ 123",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test\\",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "123",
                 },
             },
@@ -189,13 +192,13 @@ void test_lexer_extract_lexeme()
             // testing multiple failed escape sequences
             "test\\ 123\\ abc",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test\\",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "123\\",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
             },
@@ -204,13 +207,13 @@ void test_lexer_extract_lexeme()
             // three atoms, with irregular whitespace
             "test\\\t123\\\nabc",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test\\",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "123\\",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
             },
@@ -219,13 +222,13 @@ void test_lexer_extract_lexeme()
             // Multiple atoms unquoted
             "test 123 456",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "123",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "456",
                 },
             },
@@ -234,7 +237,7 @@ void test_lexer_extract_lexeme()
             // Single unquoted atom
             "test_",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test_",
                 },
             },
@@ -291,7 +294,7 @@ void test_lexer_extract_lexeme()
             // Test single quoted atom
             "\'test\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test",
                 },
             },
@@ -300,7 +303,7 @@ void test_lexer_extract_lexeme()
             // Test single lexeme quote
             "\"test\"",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test",
                 },
             },
@@ -309,7 +312,7 @@ void test_lexer_extract_lexeme()
             // Test lexeme with both quotation types
             "\"test \' test\"",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test \' test",
                 },
             },
@@ -318,7 +321,7 @@ void test_lexer_extract_lexeme()
             // Test lexeme with both quotation types
             "\'test \" test\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test \" test",
                 },
             },
@@ -327,13 +330,13 @@ void test_lexer_extract_lexeme()
             // Test lexeme with single quotation type
             "\'test \' test \'\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test ",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "test",
                 },
-                atom{
+                quoted_atom{
                     .m_text = "",
                 },
             },
@@ -342,7 +345,7 @@ void test_lexer_extract_lexeme()
             // Test single lexeme quote WITH UPPERCASE
             "\'Test\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "Test",
                 },
             },
@@ -351,7 +354,7 @@ void test_lexer_extract_lexeme()
             // Test spaces in quote
             "\'test blah blah\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test blah blah",
                 },
             },
@@ -360,13 +363,13 @@ void test_lexer_extract_lexeme()
             // Test spaces BETWEEN quotes
             "\'test\' \'blah\' \'blah\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test",
                 },
-                atom{
+                quoted_atom{
                     .m_text = "blah",
                 },
-                atom{
+                quoted_atom{
                     .m_text = "blah",
                 },
             },
@@ -375,7 +378,7 @@ void test_lexer_extract_lexeme()
             // Test embedding a backslash by escaping with another backslash
             "\'test\\\\\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test\\",
                 },
             },
@@ -384,7 +387,7 @@ void test_lexer_extract_lexeme()
             // Test embedding a \n by escape sequence
             "\'test\\n\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test\n",
                 },
             },
@@ -393,7 +396,7 @@ void test_lexer_extract_lexeme()
             // Test embedding a hex escape sequence
             "\'test\\x12\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test\x12",
                 },
             },
@@ -402,7 +405,7 @@ void test_lexer_extract_lexeme()
             // Test embedding a hex escape sequence
             "\'test\\x123\'",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test\x12"
                               "3",
                 },
@@ -412,10 +415,10 @@ void test_lexer_extract_lexeme()
             // Test quoted escape sequence, followed by unquoted text
             "\'test\\x12\' test12",
             std::vector<lexeme>{
-                atom{
+                quoted_atom{
                     .m_text = "test\x12",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "test12",
                 },
             },
@@ -467,7 +470,7 @@ void test_lexer_extract_lexeme()
             "[abc]",
             std::vector<lexeme>{
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -478,7 +481,7 @@ void test_lexer_extract_lexeme()
             "[abc][]",
             std::vector<lexeme>{
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -491,12 +494,12 @@ void test_lexer_extract_lexeme()
             "[abc] [def]",
             std::vector<lexeme>{
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_close{},
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "def",
                 },
                 list_close{},
@@ -507,12 +510,12 @@ void test_lexer_extract_lexeme()
             "[abc] [def []]",
             std::vector<lexeme>{
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_close{},
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "def",
                 },
                 list_open{},
@@ -570,7 +573,7 @@ void test_lexer_extract_lexeme()
                 variable{
                     .m_identifier = "B",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -587,7 +590,7 @@ void test_lexer_extract_lexeme()
                 variable{
                     .m_identifier = "_",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -598,7 +601,7 @@ void test_lexer_extract_lexeme()
             "[abc [_ _] [def A]]",
             std::vector<lexeme>{
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_open{},
@@ -610,7 +613,7 @@ void test_lexer_extract_lexeme()
                 },
                 list_close{},
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "def",
                 },
                 variable{
@@ -624,10 +627,10 @@ void test_lexer_extract_lexeme()
             // Test unconventional white-space
             "abc\ndef\nA\n\t_",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "def",
                 },
                 variable{
@@ -642,11 +645,11 @@ void test_lexer_extract_lexeme()
             // Test unconventional white-space
             "abc\t[\ndef\nA\n\t_",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "def",
                 },
                 variable{
@@ -661,11 +664,11 @@ void test_lexer_extract_lexeme()
             // Test unconventional white-space
             "abc\t[\n\'\\n \\t \\\\\'\nA\n\t_",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_open{},
-                atom{
+                quoted_atom{
                     .m_text = "\n \t \\",
                 },
                 variable{
@@ -680,7 +683,7 @@ void test_lexer_extract_lexeme()
             // Single atom, failing to escape the interpreter's separation of lexemes
             "test\\[",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test\\",
                 },
                 list_open{},
@@ -690,18 +693,24 @@ void test_lexer_extract_lexeme()
             // Single atom, failing to escape the interpreter's separation of lexemes
             "test\\xa4\\[",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "test\\xa4\\",
                 },
                 list_open{},
             },
         },
         {
-            // Single atom, with special characters
+            // single atom, without separation of command indicator
             "test!@.$^&*()",
             std::vector<lexeme>{
-                atom{
-                    .m_text = "test!@.$^&*()",
+                unquoted_atom{
+                    .m_text = "test",
+                },
+                command{
+                    .m_text = "",
+                },
+                unquoted_atom{
+                    .m_text = "@.$^&*()",
                 },
             },
         },
@@ -709,7 +718,7 @@ void test_lexer_extract_lexeme()
             // Single atom, with special characters
             "1.24",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "1.24",
                 },
             },
@@ -721,7 +730,7 @@ void test_lexer_extract_lexeme()
                 list_open{},
                 list_open{},
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "1.24",
                 },
                 list_close{},
@@ -733,7 +742,7 @@ void test_lexer_extract_lexeme()
             // Single atom, with special characters
             "@",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "@",
                 },
             },
@@ -742,7 +751,7 @@ void test_lexer_extract_lexeme()
             // Single atom, with special characters
             "+",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "+",
                 },
             },
@@ -751,7 +760,7 @@ void test_lexer_extract_lexeme()
             // Single atom, with special characters
             "<-",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "<-",
                 },
             },
@@ -763,11 +772,11 @@ void test_lexer_extract_lexeme()
                 command{
                     .m_text = "axiom",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "add_bc_0",
                 },
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "add",
                 },
                 list_open{},
@@ -798,15 +807,15 @@ void test_lexer_extract_lexeme()
                 command{
                     .m_text = "axiom",
                 },
-                atom{
+                unquoted_atom{
                     .m_text = "add_gc",
                 },
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "if",
                 },
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "add",
                 },
                 variable{
@@ -820,12 +829,12 @@ void test_lexer_extract_lexeme()
                 },
                 list_close{},
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "and",
                 },
 
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "cons",
                 },
                 variable{
@@ -840,7 +849,7 @@ void test_lexer_extract_lexeme()
                 list_close{},
 
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "cons",
                 },
                 variable{
@@ -855,7 +864,7 @@ void test_lexer_extract_lexeme()
                 list_close{},
 
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "add",
                 },
 
@@ -880,7 +889,7 @@ void test_lexer_extract_lexeme()
                 list_close{},
 
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "add",
                 },
                 variable{
@@ -895,7 +904,7 @@ void test_lexer_extract_lexeme()
                 list_close{},
 
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "cons",
                 },
                 variable{
@@ -922,7 +931,7 @@ void test_lexer_extract_lexeme()
                     .m_text = "test1",
                 },
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -938,7 +947,7 @@ void test_lexer_extract_lexeme()
                 },
                 list_close{},
                 list_open{},
-                atom{
+                unquoted_atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -957,7 +966,7 @@ void test_lexer_extract_lexeme()
             // Test lex stop character: whitespace
             "1.24 ",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "1.24",
                 },
             },
@@ -966,7 +975,7 @@ void test_lexer_extract_lexeme()
             // Test lex stop character: eof
             "1.24",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "1.24",
                 },
             },
@@ -975,7 +984,7 @@ void test_lexer_extract_lexeme()
             // Test lex stop character: list open
             "1.24[",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "1.24",
                 },
                 list_open{},
@@ -985,10 +994,96 @@ void test_lexer_extract_lexeme()
             // Test lex stop character: list close
             "1.24]",
             std::vector<lexeme>{
-                atom{
+                unquoted_atom{
                     .m_text = "1.24",
                 },
                 list_close{},
+            },
+        },
+        {
+            "Test@",
+            std::vector<lexeme>{
+                variable{
+                    "Test",
+                },
+                unquoted_atom{
+                    "@",
+                },
+            },
+        },
+        {
+            "Test#",
+            std::vector<lexeme>{
+                variable{
+                    "Test",
+                },
+                unquoted_atom{
+                    "#",
+                },
+            },
+        },
+        {
+            "_#",
+            std::vector<lexeme>{
+                variable{
+                    "_",
+                },
+                unquoted_atom{
+                    "#",
+                },
+            },
+        },
+        {
+            "Test1 Test_ Test_#",
+            std::vector<lexeme>{
+                variable{
+                    "Test1",
+                },
+                variable{
+                    "Test_",
+                },
+                variable{
+                    "Test_",
+                },
+                unquoted_atom{
+                    "#",
+                },
+            },
+        },
+        {
+            "!tes@t",
+            std::vector<lexeme>{
+                command{
+                    "tes",
+                },
+                unquoted_atom{
+                    "@t",
+                },
+            },
+        },
+        {
+            "!test1\\!test2",
+            std::vector<lexeme>{
+                command{
+                    "test1",
+                },
+                unquoted_atom{
+                    "\\",
+                },
+                command{
+                    "test2",
+                },
+            },
+        },
+        {
+            "!test1!test2",
+            std::vector<lexeme>{
+                command{
+                    "test1",
+                },
+                command{
+                    "test2",
+                },
             },
         },
     };
@@ -1013,29 +1108,22 @@ void test_lexer_extract_lexeme()
 
     std::vector<std::string> l_expect_failure_inputs =
         {
-            "Test@",
-            "Test#",
-            "_#",
-            "Test1 Test_ Test_#",
-            "!tes@t",
-            "!test1\\!test2",
-            "!test1!test2",
+            "\'hello, this is an unclosed quote",
+            "\"hello, this is an unclosed quote",
         };
 
     for (const auto &l_input : l_expect_failure_inputs)
     {
         std::stringstream l_ss(l_input);
 
-        std::vector<lexeme> l_lexemes;
+        lexeme l_lexeme;
 
-        assert_throws(
-            ([&l_ss, &l_lexemes]
-             { std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes)); }));
+        l_ss >> l_lexeme;
 
         // Make sure the stream state has its failbit set.
         assert(l_ss.fail());
 
-        LOG("success, expected throw, case: " << l_input << std::endl);
+        LOG("success, expected stream fail state, case: " << l_input << std::endl);
     }
 }
 
