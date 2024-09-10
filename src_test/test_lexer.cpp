@@ -95,6 +95,1098 @@ void test_lexer_escape()
     }
 }
 
+void test_lexer_command_equivalence()
+{
+    using unilog::command;
+
+    data_points<std::pair<command, command>, bool> l_desired =
+        {
+            {
+                {
+                    command{
+                        "abc",
+                    },
+                    command{
+                        "abc",
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    command{
+                        "abc",
+                    },
+                    command{
+                        "abc1",
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    command{
+                        "",
+                    },
+                    command{
+                        "",
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    command{
+                        "abc",
+                    },
+                    command{
+                        "",
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    command{
+                        "",
+                    },
+                    command{
+                        "abc",
+                    },
+                },
+                false,
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
+void test_lexer_list_open_equivalence()
+{
+    using unilog::list_open;
+
+    data_points<std::pair<list_open, list_open>, bool> l_desired =
+        {
+            {
+                {
+                    list_open{},
+                    list_open{},
+                },
+                true,
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
+void test_lexer_list_close_equivalence()
+{
+    using unilog::list_close;
+
+    data_points<std::pair<list_close, list_close>, bool> l_desired =
+        {
+            {
+                {
+                    list_close{},
+                    list_close{},
+                },
+                true,
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
+void test_lexer_variable_equivalence()
+{
+    using unilog::variable;
+
+    data_points<std::pair<variable, variable>, bool> l_desired =
+        {
+            {
+                {
+                    variable{
+                        "abc",
+                    },
+                    variable{
+                        "abc",
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    variable{
+                        "abc",
+                    },
+                    variable{
+                        "abc1",
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    variable{
+                        "",
+                    },
+                    variable{
+                        "",
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    variable{
+                        "abc",
+                    },
+                    variable{
+                        "",
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    variable{
+                        "",
+                    },
+                    variable{
+                        "abc",
+                    },
+                },
+                false,
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
+void test_lexer_quoted_atom_equivalence()
+{
+    using unilog::quoted_atom;
+
+    data_points<std::pair<quoted_atom, quoted_atom>, bool> l_desired =
+        {
+            {
+                {
+                    quoted_atom{
+                        "abc",
+                    },
+                    quoted_atom{
+                        "abc",
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    quoted_atom{
+                        "abc",
+                    },
+                    quoted_atom{
+                        "abc1",
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    quoted_atom{
+                        "",
+                    },
+                    quoted_atom{
+                        "",
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    quoted_atom{
+                        "abc",
+                    },
+                    quoted_atom{
+                        "",
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    quoted_atom{
+                        "",
+                    },
+                    quoted_atom{
+                        "abc",
+                    },
+                },
+                false,
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
+void test_lexer_unquoted_atom_equivalence()
+{
+    using unilog::unquoted_atom;
+
+    data_points<std::pair<unquoted_atom, unquoted_atom>, bool> l_desired =
+        {
+            {
+                {
+                    unquoted_atom{
+                        "abc",
+                    },
+                    unquoted_atom{
+                        "abc",
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    unquoted_atom{
+                        "abc",
+                    },
+                    unquoted_atom{
+                        "abc1",
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    unquoted_atom{
+                        "",
+                    },
+                    unquoted_atom{
+                        "",
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    unquoted_atom{
+                        "abc",
+                    },
+                    unquoted_atom{
+                        "",
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    unquoted_atom{
+                        "",
+                    },
+                    unquoted_atom{
+                        "abc",
+                    },
+                },
+                false,
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
+void test_lexer_extract_command()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::command;
+
+    data_points<std::string, command> l_desired =
+        {
+            {
+                "!thisIsACommand10",
+                command{
+                    "thisIsACommand10",
+                },
+            },
+            {
+                "!!thisIsACommand10",
+                command{
+                    "",
+                },
+            },
+            {
+                "!thisIsACommand10\'",
+                command{
+                    "thisIsACommand10",
+                },
+            },
+            {
+                "!10 ",
+                command{
+                    "10",
+                },
+            },
+            {
+                "!1ABCdEfG",
+                command{
+                    "1ABCdEfG",
+                },
+            },
+            {
+                "!comman_d",
+                command{
+                    "comman",
+                },
+            },
+            {
+                "!command@atom",
+                command{
+                    "command",
+                },
+            },
+            {
+                "!command1!command2",
+                command{
+                    "command1",
+                },
+            },
+            {
+                "!command1\\atom",
+                command{
+                    "command1",
+                },
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        std::stringstream l_ss(l_key);
+
+        command l_command;
+        l_ss >> l_command;
+
+        // make sure the extraction was successful
+        assert(!l_ss.fail());
+
+        assert(l_command == l_value);
+
+        // make sure it did not extract more than it needs to
+        l_ss.unget();
+        assert(l_command.m_text.size() == 0 || l_ss.peek() == l_command.m_text.back());
+
+        LOG("success, case: extracted command: " << l_key << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "",
+            "[",
+            "]",
+            "[]",
+            "Variable",
+            "_Variable",
+            "\'quoted\'",
+            "unquoted",
+            "@unquoted",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        command l_command;
+        l_ss >> l_command;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting command: " << l_input << std::endl);
+    }
+}
+
+void test_lexer_extract_list_open()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::list_open;
+
+    data_points<std::string, list_open> l_desired =
+        {
+            {
+                "[",
+                list_open{},
+            },
+            {
+                "[ ",
+                list_open{},
+            },
+            {
+                "[list]",
+                list_open{},
+            },
+            {
+                "[ list ]",
+                list_open{},
+            },
+            {
+                "[ \'quote\' ]",
+                list_open{},
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        std::stringstream l_ss(l_key);
+
+        list_open l_list_open;
+        l_ss >> l_list_open;
+
+        // make sure the extraction was successful
+        assert(!l_ss.fail());
+
+        assert(l_list_open == l_value);
+
+        // make sure it did not extract more than it needs to
+        l_ss.unget();
+        assert(l_ss.peek() == '[');
+
+        LOG("success, case: extracted list_open: " << l_key << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "",
+            "!command",
+            "!",
+            "]",
+            "Variable",
+            "_Variable",
+            "\'quoted\'",
+            "unquoted",
+            "@unquoted",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        list_open l_list_open;
+        l_ss >> l_list_open;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting list_open: " << l_input << std::endl);
+    }
+}
+
+void test_lexer_extract_list_close()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::list_close;
+
+    data_points<std::string, list_close> l_desired =
+        {
+            {
+                "]",
+                list_close{},
+            },
+            {
+                "] ",
+                list_close{},
+            },
+            {
+                "] list]",
+                list_close{},
+            },
+            {
+                "] list ]",
+                list_close{},
+            },
+            {
+                "] \'quote\' ]",
+                list_close{},
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        std::stringstream l_ss(l_key);
+
+        list_close l_list_close;
+        l_ss >> l_list_close;
+
+        // make sure the extraction was successful
+        assert(!l_ss.fail());
+
+        assert(l_list_close == l_value);
+
+        // make sure it did not extract more than it needs to
+        l_ss.unget();
+        assert(l_ss.peek() == ']');
+
+        LOG("success, case: extracted list_close: " << l_key << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "",
+            "!command",
+            "!",
+            "[",
+            "[]",
+            "Variable",
+            "_Variable",
+            "\'quoted\'",
+            "unquoted",
+            "@unquoted",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        list_close l_list_close;
+        l_ss >> l_list_close;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting list_close: " << l_input << std::endl);
+    }
+}
+
+void test_lexer_extract_variable()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::variable;
+
+    data_points<std::string, variable> l_desired =
+        {
+            {
+                "_",
+                variable{
+                    "_",
+                },
+            },
+            {
+                "_ ",
+                variable{
+                    "_",
+                },
+            },
+            {
+                "_@",
+                variable{
+                    "_",
+                },
+            },
+            {
+                "_\'\'",
+                variable{
+                    "_",
+                },
+            },
+            {
+                "Variable!command",
+                variable{
+                    "Variable",
+                },
+            },
+            {
+                "Variable#sdfgsdfg",
+                variable{
+                    "Variable",
+                },
+            },
+            {
+                "_test",
+                variable{
+                    "_test",
+                },
+            },
+            {
+                "_test ",
+                variable{
+                    "_test",
+                },
+            },
+            {
+                "Test",
+                variable{
+                    "Test",
+                },
+            },
+            {
+                "Test ",
+                variable{
+                    "Test",
+                },
+            },
+            {
+                "Var123",
+                variable{
+                    "Var123",
+                },
+            },
+            {
+                "Var123_456k",
+                variable{
+                    "Var123_456k",
+                },
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        std::stringstream l_ss(l_key);
+
+        variable l_variable;
+        l_ss >> l_variable;
+
+        // make sure the extraction was successful
+        assert(!l_ss.fail());
+
+        assert(l_variable == l_value);
+
+        // make sure it did not extract more than it needs to
+        l_ss.unget();
+        assert(l_variable.m_identifier.size() == 0 || l_ss.peek() == l_variable.m_identifier.back());
+
+        LOG("success, case: extracted variable: " << l_key << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "",
+            "!command",
+            "!",
+            "[",
+            "]",
+            "[]",
+            "\'quoted\'",
+            "unquoted",
+            "@unquoted",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        variable l_variable;
+        l_ss >> l_variable;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting variable: " << l_input << std::endl);
+    }
+}
+
+void test_lexer_extract_quoted_atom()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::quoted_atom;
+
+    data_points<std::string, quoted_atom> l_desired =
+        {
+            {
+                "\'\'",
+                quoted_atom{
+                    "",
+                },
+            },
+            {
+                "\'[\'",
+                quoted_atom{
+                    "[",
+                },
+            },
+            {
+                "\']\'",
+                quoted_atom{
+                    "]",
+                },
+            },
+            {
+                "\'!\'",
+                quoted_atom{
+                    "!",
+                },
+            },
+            {
+                "\'a A \t\n b 1 3 zz\'",
+                quoted_atom{
+                    "a A \t\n b 1 3 zz",
+                },
+            },
+            {
+                "\'\\n\'",
+                quoted_atom{
+                    "\n",
+                },
+            },
+            {
+                "\'\\t\'",
+                quoted_atom{
+                    "\t",
+                },
+            },
+            {
+                "\'\\r\'",
+                quoted_atom{
+                    "\r",
+                },
+            },
+            {
+                "\'\\x88\'",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+            {
+                "\'\\x88\'!command",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+            {
+                "\'\\x88\'[list]",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+            {
+                "\'\\x88\'\'quote2\'",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+            {
+                "\'\\x88\'\"quote2\"",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+
+            {
+                "\"\"",
+                quoted_atom{
+                    "",
+                },
+            },
+            {
+                "\"[\"",
+                quoted_atom{
+                    "[",
+                },
+            },
+            {
+                "\"]\"",
+                quoted_atom{
+                    "]",
+                },
+            },
+            {
+                "\"!\"",
+                quoted_atom{
+                    "!",
+                },
+            },
+            {
+                "\"a A \t\n b 1 3 zz\"",
+                quoted_atom{
+                    "a A \t\n b 1 3 zz",
+                },
+            },
+            {
+                "\"\\n\"",
+                quoted_atom{
+                    "\n",
+                },
+            },
+            {
+                "\"\\t\"",
+                quoted_atom{
+                    "\t",
+                },
+            },
+            {
+                "\"\\r\"",
+                quoted_atom{
+                    "\r",
+                },
+            },
+            {
+                "\"\\x88\"",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+            {
+                "\"\\x88\"!command",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+            {
+                "\"\\x88\"[list]",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+            {
+                "\"\\x88\"\'quote2\'",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+            {
+                "\"\\x88\"\"quote2\"",
+                quoted_atom{
+                    "\x88",
+                },
+            },
+
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        std::stringstream l_ss(l_key);
+
+        quoted_atom l_quoted_atom;
+        l_ss >> l_quoted_atom;
+
+        // make sure the extraction was successful
+        assert(!l_ss.fail());
+
+        assert(l_quoted_atom == l_value);
+
+        // ensure the trailing quote was consumed
+        l_ss.unget();
+        assert(l_ss.peek() == '\'' || l_ss.peek() == '\"');
+
+        LOG("success, case: extracted quoted_atom: " << l_key << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "",
+            "!command",
+            "!",
+            "[",
+            "]",
+            "[]",
+            "_",
+            "_ ",
+            "_Variable",
+            "Variable",
+            "#",
+            "$",
+            "\'halfquote",
+            "\"halfquote",
+            "unquoted",
+            "@unquoted",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        quoted_atom l_quoted_atom;
+        l_ss >> l_quoted_atom;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting quoted_atom: " << l_input << std::endl);
+    }
+}
+
+void test_lexer_extract_unquoted_atom()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::unquoted_atom;
+
+    data_points<std::string, unquoted_atom> l_desired =
+        {
+            {
+                "x",
+                unquoted_atom{
+                    "x",
+                },
+            },
+            {
+                "a ",
+                unquoted_atom{
+                    "a",
+                },
+            },
+            {
+                "a1 ",
+                unquoted_atom{
+                    "a1",
+                },
+            },
+            {
+                "a1@",
+                unquoted_atom{
+                    "a1@",
+                },
+            },
+            {
+                "a1.",
+                unquoted_atom{
+                    "a1.",
+                },
+            },
+            {
+                "1.24",
+                unquoted_atom{
+                    "1.24",
+                },
+            },
+            {
+                "atom!",
+                unquoted_atom{
+                    "atom",
+                },
+            },
+            {
+                "at\\",
+                unquoted_atom{
+                    "at\\",
+                },
+            },
+            {
+                "at@#$%^&*()-_=+",
+                unquoted_atom{
+                    "at@#$%^&*()-_=+",
+                },
+            },
+            {
+                "at\'quote\'",
+                unquoted_atom{
+                    "at",
+                },
+            },
+            {
+                "at\"quote\"",
+                unquoted_atom{
+                    "at",
+                },
+            },
+            {
+                "aTOM\"quote\"",
+                unquoted_atom{
+                    "aTOM",
+                },
+            },
+            {
+                "a123\"quote\"",
+                unquoted_atom{
+                    "a123",
+                },
+            },
+            {
+                "a\\\\\"quote\"",
+                unquoted_atom{
+                    "a\\\\",
+                },
+            },
+            {
+                "a|/\"quote\"",
+                unquoted_atom{
+                    "a|/",
+                },
+            },
+            {
+                "123",
+                unquoted_atom{
+                    "123",
+                },
+            },
+            {
+                "@#$%^&*()",
+                unquoted_atom{
+                    "@#$%^&*()",
+                },
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        std::stringstream l_ss(l_key);
+
+        unquoted_atom l_unquoted_atom;
+        l_ss >> l_unquoted_atom;
+
+        // make sure the extraction was successful
+        assert(!l_ss.fail());
+
+        assert(l_unquoted_atom == l_value);
+
+        // make sure it did not extract more than it needs to
+        l_ss.unget();
+        assert(l_unquoted_atom.m_text.size() == 0 || l_ss.peek() == l_unquoted_atom.m_text.back());
+
+        LOG("success, case: extracted unquoted_atom: " << l_key << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "",
+            "!command",
+            "!",
+            "[",
+            "]",
+            "[]",
+            "_",
+            "_ ",
+            "Variable",
+            "Var123",
+            "X",
+            "\'quoted\'",
+            "\"quoted\"",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        unquoted_atom l_unquoted_atom;
+        l_ss >> l_unquoted_atom;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting unquoted_atom: " << l_input << std::endl);
+    }
+}
+
 void test_lexer_extract_lexeme()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
@@ -1132,6 +2224,18 @@ void test_lexer_main()
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     TEST(test_lexer_escape);
+    TEST(test_lexer_command_equivalence);
+    TEST(test_lexer_list_open_equivalence);
+    TEST(test_lexer_list_close_equivalence);
+    TEST(test_lexer_variable_equivalence);
+    TEST(test_lexer_quoted_atom_equivalence);
+    TEST(test_lexer_unquoted_atom_equivalence);
+    TEST(test_lexer_extract_command);
+    TEST(test_lexer_extract_list_open);
+    TEST(test_lexer_extract_list_close);
+    TEST(test_lexer_extract_variable);
+    TEST(test_lexer_extract_quoted_atom);
+    TEST(test_lexer_extract_unquoted_atom);
     TEST(test_lexer_extract_lexeme);
 
     return;
