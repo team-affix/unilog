@@ -22,19 +22,19 @@ scope_all(Scope, [TFirst | TRest], [DFirst | DRest]) :-
 query_entry(Guide, DescopedTheorem) :-
     query(guide(Guide), theorem([], DescopedTheorem), conditions([])).
 
-query(guide(Guide), theorem(Scope, DescopedTheorem), conditions(Conds)) :-
-    unilog(guide(Guide), rule(theorem(Scope, DescopedTheorem), conditions(Conds)))
+query(guide(Guide), theorem(TScope, DescopedTheorem), conditions(Conds)) :-
+    unilog(guide(Guide), rule(theorem(TScope, DescopedTheorem), conditions(Conds)))
     ;
     (
         % a fact will not have conditions, or a tscope
         unilog(guide(Guide), fact(theorem(Theorem))),
-        scope(Scope, Theorem, DescopedTheorem),
+        scope(TScope, Theorem, DescopedTheorem),
         Conds = []
     ).
 
-query_all(guide([G0|GuideRest]), theorem(Scope, [T0|TheoremRest]), conditions(Conds)) :-
-    query(guide(G0), theorem(Scope, T0), conditions(CondsFirst)),
-    query_all(guide(GuideRest), theorem(Scope, TheoremRest), conditions(CondsRest)),
+query_all(guide([G0|GuideRest]), theorem(TScope, [T0|TheoremRest]), conditions(Conds)) :-
+    query(guide(G0), theorem(TScope, T0), conditions(CondsFirst)),
+    query_all(guide(GuideRest), theorem(TScope, TheoremRest), conditions(CondsRest)),
     append(CondsFirst, CondsRest, Conds),
     !.
 
@@ -49,38 +49,38 @@ unilog(guide(cons), rule(theorem(_, [cons, [X|Tail], X, Tail]), conditions([])))
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Begin ROI
 
-unilog(guide([enter, EnteredScope, NextGuide]), rule(theorem(CurrentScope, [scope, EnteredScope, R]), conditions(ScopedConds))) :-
-    append(CurrentScope, [EnteredScope], NewScope),
-    query(guide(NextGuide), theorem(NewScope, R), conditions(DescopedConds)),
+unilog(guide([enter, EnteredScope, NextGuide]), rule(theorem(CurrentTScope, [scope, EnteredScope, R]), conditions(ScopedConds))) :-
+    append(CurrentTScope, [EnteredScope], NewTScope),
+    query(guide(NextGuide), theorem(NewTScope, R), conditions(DescopedConds)),
     scope_all([EnteredScope], ScopedConds, DescopedConds).
 
 unilog(guide(cond), rule(theorem(_, Thm), conditions([Thm]))).
 
-unilog(guide([discharge, Guide]), rule(theorem(Scope, [if, Thm, [and | Conds]]), conditions([]))) :-
-    query(guide(Guide), theorem(Scope, Thm), conditions(Conds)).
+unilog(guide([discharge, Guide]), rule(theorem(TScope, [if, Thm, [and | Conds]]), conditions([]))) :-
+    query(guide(Guide), theorem(TScope, Thm), conditions(Conds)).
 
-unilog(guide([gor, FirstGuide | NextGuides]), rule(theorem(Scope, R), conditions(Conds))) :-
-    query(guide(FirstGuide), theorem(Scope, R), conditions(Conds));
-    query(guide([gor | NextGuides]), theorem(Scope, R), conditions(Conds)).
+unilog(guide([gor, FirstGuide | NextGuides]), rule(theorem(TScope, R), conditions(Conds))) :-
+    query(guide(FirstGuide), theorem(TScope, R), conditions(Conds));
+    query(guide([gor | NextGuides]), theorem(TScope, R), conditions(Conds)).
 
-unilog(guide([mp, G0, G1]), rule(theorem(Scope, YDescope), conditions(Conds))) :-
-    query(guide(G0), theorem(Scope, [if, YDescope, XDescope]), conditions(ImpConds)),
-    query(guide(G1), theorem(Scope, XDescope), conditions(AntConds)),
+unilog(guide([mp, G0, G1]), rule(theorem(TScope, YDescope), conditions(Conds))) :-
+    query(guide(G0), theorem(TScope, [if, YDescope, XDescope]), conditions(ImpConds)),
+    query(guide(G1), theorem(TScope, XDescope), conditions(AntConds)),
     append(ImpConds, AntConds, Conds).
 
 unilog(guide([conj]), rule(theorem(_, [and]), conditions([]))).
 
-unilog(guide([conj | Guides]), rule(theorem(Scope, [and | DescopedTheorems]), conditions(Conds))) :-
-    query_all(guide(Guides), theorem(Scope, DescopedTheorems), conditions(Conds)).
+unilog(guide([conj | Guides]), rule(theorem(TScope, [and | DescopedTheorems]), conditions(Conds))) :-
+    query_all(guide(Guides), theorem(TScope, DescopedTheorems), conditions(Conds)).
 
-unilog(guide([simpl, Guide]), rule(theorem(Scope, Thm), conditions(Conds))) :-
-    query(guide(Guide), theorem(Scope, [and, Thm | _]), conditions(Conds)).
+unilog(guide([simpl, Guide]), rule(theorem(TScope, Thm), conditions(Conds))) :-
+    query(guide(Guide), theorem(TScope, [and, Thm | _]), conditions(Conds)).
 
 %%%%%%%%%%%%%%%%%%%%%%%
 % GUIDES
 %%%%%%%%%%%%%%%%%%%%%%%
 
-unilog(guide(g_last), rule(theorem(Scope, R), conditions(Conds))) :-
+unilog(guide(g_last), rule(theorem(TScope, R), conditions(Conds))) :-
     query(
         guide(
             [gor,
@@ -89,7 +89,7 @@ unilog(guide(g_last), rule(theorem(Scope, R), conditions(Conds))) :-
             ]
         ),
         theorem(
-            Scope,
+            TScope,
             R
         ),
         conditions(
@@ -106,13 +106,16 @@ unilog(guide(a2), fact(theorem([scope, m1, z]))).
 
 unilog(
     guide(a3),
-    fact(theorem(
-        [scope, m1,
-        [if,
-            z,
-            [cons, [a, b], a, [b]]
-        ]
-    ]))
+    fact(
+        theorem(
+            [scope, m1,
+                [if,
+                    z,
+                    [cons, [a, b], a, [b]]
+                ]
+            ]
+        )
+    )
 ).
 
 unilog(
@@ -122,15 +125,17 @@ unilog(
 
 unilog(
     guide(g_last_gc),
-    fact(theorem(
-        [scope, alg,
-            [if,
-                [last, L, X],
-                [and,
-                    [cons, L, _, T],
-                    [last, T, X]
+    fact(
+        theorem(
+            [scope, alg,
+                [if,
+                    [last, L, X],
+                    [and,
+                        [cons, L, _, T],
+                        [last, T, X]
+                    ]
                 ]
             ]
-        ]
-    ))
+        )
+    )
 ).
