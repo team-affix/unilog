@@ -1,49 +1,52 @@
-:- [roi8].
+:- consult('unilog.pl').
+:- multifile unilog/2.
 
-tc_0 :-
+%%%%%%%%%%%%%%%%%%%%%%%
+% DECLARATIONS (axioms and guides)
+%%%%%%%%%%%%%%%%%%%%%%%
+
+unilog(guide([], a0), fact(theorem(thm0))).
+unilog(guide([], a1), fact(theorem([thm0, thm1]))).
+unilog(guide([], a2), fact(theorem([_, abc, []]))).
+unilog(guide([], a3), fact(theorem([]))).
+unilog(guide([], a4), fact(theorem('quoted atom'))).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Test cases listed here
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+tc_query_fact_in_root_namespace_0 :-
     query_entry(a0, R),
-    R = [scope, m1, [if, y, x]].
+    R = thm0.
 
-tc_1 :-
+tc_query_fact_in_root_namespace_1 :-
     query_entry(a1, R),
-    R = [scope, m1, x].
+    R = [thm0, thm1].
 
-tc_2 :-
-    query_entry([tenter, m1, a0], R),
-    R = [scope, m1, [if, y, x]].
+tc_query_fact_in_root_namespace_2 :-
+    query_entry(a2, R),
+    R = [_, abc, []].
 
-tc_3 :-
-    query_entry([conj, a0, a1], R),
-    R = [and,
-            [scope, m1, [if, y, x]],
-            [scope, m1, x]
-        ].
+tc_query_fact_in_root_namespace_3 :-
+    query_entry(a3, R),
+    R = [].
 
-tc_4 :-
-    query_entry([tenter, m1, [conj, a0, a1]], R),
-    R = [scope, m1, [and, [if, y, x], x]].
+tc_query_fact_in_root_namespace_4 :-
+    query_entry(a4, R),
+    R = 'quoted atom'.
 
-tc_5 :-
-    query_entry([tenter, m1, [mp, a0, a1]], R),
-    R = [scope, m1, y].
+test_query_facts_in_root_namespace :-
+    tc_query_fact_in_root_namespace_0,
+    tc_query_fact_in_root_namespace_1,
+    tc_query_fact_in_root_namespace_2,
+    tc_query_fact_in_root_namespace_3,
+    tc_query_fact_in_root_namespace_4.
 
-tc_6 :-
-    query_entry([tenter, m1, [discharge, [mp, a0, cond]]], R),
-    R = [scope, m1, [if, y, [and, x]]].
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-tc_7 :-
-    query_entry([tenter, alg, g_last], [scope, alg, [last, [a, b, c], R]]),
-    R = c.
 
 % run main test
 unit_test_main :-
-    tc_0,
-    tc_1,
-    tc_2,
-    tc_3,
-    tc_4,
-    tc_5,
-    tc_6,
-    tc_7.
+    test_query_facts_in_root_namespace.
 
 :- unit_test_main.
