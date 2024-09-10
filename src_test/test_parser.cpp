@@ -36,7 +36,7 @@ void test_parser_extract_prolog_expression()
     using unilog::unquoted_atom;
     using unilog::variable;
 
-    std::map<std::string, prolog_expression> l_test_cases =
+    data_points<std::string, prolog_expression> l_test_cases =
         {
             {
                 "if",
@@ -665,16 +665,14 @@ void test_parser_extract_axiom_statement()
     using unilog::unquoted_atom;
     using unilog::variable;
 
-    std::map<std::string, axiom_statement> l_test_cases =
+    data_points<std::string, axiom_statement> l_test_cases =
         {
             {
                 "a0 x",
                 axiom_statement{
                     .m_tag =
-                        prolog_expression{
-                            unquoted_atom{
-                                "a0",
-                            },
+                        unquoted_atom{
+                            "a0",
                         },
                     .m_theorem =
                         prolog_expression{
@@ -688,10 +686,8 @@ void test_parser_extract_axiom_statement()
                 "add_bc_0 [add [] L L]",
                 axiom_statement{
                     .m_tag =
-                        prolog_expression{
-                            unquoted_atom{
-                                "add_bc_0",
-                            },
+                        unquoted_atom{
+                            "add_bc_0",
                         },
                     .m_theorem =
                         prolog_expression{
@@ -721,22 +717,11 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "[a0 X] [awesome X]",
+                "@tag [awesome X]",
                 axiom_statement{
                     .m_tag =
-                        prolog_expression{
-                            std::list<prolog_expression>{
-                                prolog_expression{
-                                    unquoted_atom{
-                                        "a0",
-                                    },
-                                },
-                                prolog_expression{
-                                    variable{
-                                        "X",
-                                    },
-                                },
-                            },
+                        unquoted_atom{
+                            "@tag",
                         },
                     .m_theorem =
                         prolog_expression{
@@ -756,18 +741,142 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "_ _",
+                "tAg123@#$%^&*() _",
                 axiom_statement{
                     .m_tag =
-                        prolog_expression{
-                            variable{
-                                "_",
-                            },
+                        unquoted_atom{
+                            "tAg123@#$%^&*()",
                         },
                     .m_theorem =
                         prolog_expression{
                             variable{
                                 "_",
+                            },
+                        },
+                },
+            },
+            {
+                "tag[theorem]",
+                axiom_statement{
+                    .m_tag =
+                        unquoted_atom{
+                            "tag",
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            std::list<prolog_expression>{
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "theorem",
+                                    },
+                                },
+                            },
+                        },
+                },
+            },
+            {
+                "abc 123",
+                axiom_statement{
+                    .m_tag =
+                        unquoted_atom{
+                            "abc",
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            unquoted_atom{
+                                "123",
+                            },
+                        },
+                },
+            },
+            {
+                "123 [[[]] a 123]",
+                axiom_statement{
+                    .m_tag =
+                        unquoted_atom{
+                            "123",
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            std::list<prolog_expression>{
+                                prolog_expression{
+                                    std::list<prolog_expression>{
+
+                                        prolog_expression{
+                                            std::list<prolog_expression>{
+
+                                            },
+                                        },
+                                    },
+                                },
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "a",
+                                    },
+                                },
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "123",
+                                    },
+                                },
+                            },
+                        },
+                },
+            },
+            {
+                "+/bc/0\n"
+                "[+\n"
+                "    []\n"
+                "    L\n"
+                "    L\n"
+                "]",
+                axiom_statement{
+                    .m_tag =
+                        unquoted_atom{
+                            "+/bc/0",
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            std::list<prolog_expression>{
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "+",
+                                    },
+                                },
+                                prolog_expression{
+                                    std::list<prolog_expression>{
+
+                                    },
+                                },
+                                prolog_expression{
+                                    variable{
+                                        "L",
+                                    },
+                                },
+                                prolog_expression{
+                                    variable{
+                                        "L",
+                                    },
+                                },
+                            },
+                        },
+                },
+            },
+            {
+                "123[\'! this is a \\t quotation\']",
+                axiom_statement{
+                    .m_tag =
+                        unquoted_atom{
+                            "123",
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            std::list<prolog_expression>{
+                                prolog_expression{
+                                    quoted_atom{
+                                        "! this is a \t quotation",
+                                    },
+                                },
                             },
                         },
                 },
@@ -784,7 +893,37 @@ void test_parser_extract_axiom_statement()
 
         assert(l_exp == l_value);
 
+        // make sure the stringstream is not in failstate
+        assert(!l_ss.fail());
+
         LOG("success, case: \"" << l_key << "\"" << std::endl);
+    }
+
+    std::vector<std::string> l_fail_cases =
+        {
+            "_ _",
+            "VariableTag Theorem",
+            "VariableTag atom",
+            "VariableTag [elem0 elem1]",
+            "[] theorem",
+            "[X] theorem",
+            "[atom] theorem",
+            "\'atom\' theorem",
+            "\"atom\" theorem",
+        };
+
+    for (const auto &l_input : l_fail_cases)
+    {
+        std::stringstream l_ss(l_input);
+
+        axiom_statement l_axiom_statement;
+
+        l_ss >> l_axiom_statement;
+
+        // ensure failure of extraction
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
     }
 }
 

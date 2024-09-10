@@ -18,7 +18,7 @@ namespace unilog
 
     struct axiom_statement
     {
-        prolog_expression m_tag;
+        unquoted_atom m_tag;
         prolog_expression m_theorem;
     };
 
@@ -30,15 +30,15 @@ namespace unilog
 
     struct infer_statement
     {
-        prolog_expression m_tag;
+        unquoted_atom m_tag;
         prolog_expression m_theorem;
         prolog_expression m_guide;
     };
 
     struct refer_statement
     {
-        prolog_expression m_tag;
-        atom m_file_path;
+        unquoted_atom m_tag;
+        quoted_atom m_file_path;
     };
 
     bool operator==(const prolog_expression &a_lhs, const prolog_expression &a_rhs);

@@ -10,26 +10,31 @@
 
 namespace unilog
 {
+
     bool operator==(const prolog_expression &a_lhs, const prolog_expression &a_rhs)
     {
         return a_lhs.m_variant == a_rhs.m_variant;
     }
+
     bool operator==(const axiom_statement &a_lhs, const axiom_statement &a_rhs)
     {
         return a_lhs.m_tag == a_rhs.m_tag &&
                a_lhs.m_theorem == a_rhs.m_theorem;
     }
+
     bool operator==(const guide_statement &a_lhs, const guide_statement &a_rhs)
     {
         return a_lhs.m_tag == a_rhs.m_tag &&
                a_lhs.m_guide == a_rhs.m_guide;
     }
+
     bool operator==(const infer_statement &a_lhs, const infer_statement &a_rhs)
     {
         return a_lhs.m_tag == a_rhs.m_tag &&
                a_lhs.m_theorem == a_rhs.m_theorem &&
                a_lhs.m_guide == a_rhs.m_guide;
     }
+
     bool operator==(const refer_statement &a_lhs, const refer_statement &a_rhs)
     {
         return a_lhs.m_tag == a_rhs.m_tag &&
@@ -129,28 +134,16 @@ namespace unilog
     std::istream &operator>>(std::istream &a_istream, refer_statement &a_refer_statement)
     {
         a_istream >> a_refer_statement.m_tag;
-
-        lexeme l_file_path_lexeme;
-
-        a_istream >> l_file_path_lexeme;
-
-        if (!std::holds_alternative<atom>(l_file_path_lexeme))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
-        a_refer_statement.m_file_path = std::get<atom>(l_file_path_lexeme);
-
+        a_istream >> a_refer_statement.m_file_path;
         return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, statement &a_statement)
     {
-        lexeme l_lexeme;
+        command l_command;
 
-        // Try to extract a lexeme.
-        a_istream >> l_lexeme;
+        // Try to extract a command.
+        a_istream >> l_command;
 
         // NOTE:
         //     here, we cannot check !good(), because EOFbit might be set due to peek()ing EOF
@@ -158,33 +151,25 @@ namespace unilog
         if (a_istream.fail())
             return a_istream;
 
-        if (!std::holds_alternative<command>(l_lexeme))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
-        const std::string &l_command_text = std::get<command>(l_lexeme).m_text;
-
-        if (l_command_text == AXIOM_COMMAND_KEYWORD)
+        if (l_command.m_text == AXIOM_COMMAND_KEYWORD)
         {
             axiom_statement l_axiom_statement;
             a_istream >> l_axiom_statement;
             a_statement = l_axiom_statement;
         }
-        else if (l_command_text == GUIDE_COMMAND_KEYWORD)
+        else if (l_command.m_text == GUIDE_COMMAND_KEYWORD)
         {
             guide_statement l_guide_statement;
             a_istream >> l_guide_statement;
             a_statement = l_guide_statement;
         }
-        else if (l_command_text == INFER_COMMAND_KEYWORD)
+        else if (l_command.m_text == INFER_COMMAND_KEYWORD)
         {
             infer_statement l_infer_statement;
             a_istream >> l_infer_statement;
             a_statement = l_infer_statement;
         }
-        else if (l_command_text == REFER_COMMAND_KEYWORD)
+        else if (l_command.m_text == REFER_COMMAND_KEYWORD)
         {
             refer_statement l_refer_statement;
             a_istream >> l_refer_statement;
