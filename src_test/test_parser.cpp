@@ -881,6 +881,21 @@ void test_parser_extract_axiom_statement()
                         },
                 },
             },
+            {
+                "\'tag\' theorem",
+                axiom_statement{
+                    .m_tag =
+                        quoted_atom{
+                            "tag",
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            unquoted_atom{
+                                "theorem",
+                            },
+                        },
+                },
+            },
         };
 
     for (const auto &[l_key, l_value] : l_test_cases)
@@ -901,6 +916,8 @@ void test_parser_extract_axiom_statement()
 
     std::vector<std::string> l_fail_cases =
         {
+            "",
+            "abc",
             "_ _",
             "VariableTag Theorem",
             "VariableTag atom",
@@ -908,8 +925,6 @@ void test_parser_extract_axiom_statement()
             "[] theorem",
             "[X] theorem",
             "[atom] theorem",
-            "\'atom\' theorem",
-            "\"atom\" theorem",
         };
 
     for (const auto &l_input : l_fail_cases)
@@ -927,12 +942,128 @@ void test_parser_extract_axiom_statement()
     }
 }
 
+void test_parser_extract_guide_statement()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::atom;
+    using unilog::command;
+    using unilog::guide_statement;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::prolog_expression;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    data_points<std::string, guide_statement> l_test_cases =
+        {
+            {
+                "g_add_bc\n"
+                "[gor\n"
+                "    add_bc_0\n"
+                "    add_bc_1\n"
+                "    add_bc_2\n"
+                "    add_bc_3\n"
+                "    add_bc_4\n"
+                "    add_bc_5\n"
+                "]\n",
+                guide_statement{
+                    .m_tag =
+                        prolog_expression{
+                            unquoted_atom{
+                                "g_add_bc",
+                            },
+                        },
+                    .m_guide =
+                        prolog_expression{
+                            std::list<prolog_expression>{
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "gor",
+                                    },
+                                },
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "add_bc_0",
+                                    },
+                                },
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "add_bc_1",
+                                    },
+                                },
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "add_bc_2",
+                                    },
+                                },
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "add_bc_3",
+                                    },
+                                },
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "add_bc_4",
+                                    },
+                                },
+                                prolog_expression{
+                                    unquoted_atom{
+                                        "add_bc_5",
+                                    },
+                                },
+                            },
+                        },
+                },
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_test_cases)
+    {
+        std::stringstream l_ss(l_key);
+
+        guide_statement l_exp;
+
+        l_ss >> l_exp;
+
+        assert(l_exp == l_value);
+
+        // make sure the stringstream is not in failstate
+        assert(!l_ss.fail());
+
+        LOG("success, case: \"" << l_key << "\"" << std::endl);
+    }
+
+    std::vector<std::string> l_fail_cases =
+        {
+            "_",
+            "abc",
+        };
+
+    for (const auto &l_input : l_fail_cases)
+    {
+        std::stringstream l_ss(l_input);
+
+        guide_statement l_statement;
+
+        l_ss >> l_statement;
+
+        // ensure failure of extraction
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
+    }
+}
+
 int test_parser_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     TEST(test_parser_extract_prolog_expression);
     TEST(test_parser_extract_axiom_statement);
+    TEST(test_parser_extract_guide_statement);
 
     return 0;
 }
