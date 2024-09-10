@@ -316,7 +316,7 @@ void test_parser_extract_prolog_expression()
                 "test!@.$^&*()",
                 prolog_expression{
                     unquoted_atom{
-                        "test!@.$^&*()",
+                        "test",
                     },
                 },
             },
