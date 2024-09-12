@@ -34,6 +34,7 @@ unilog(guide([m1, m2], a1), fact(theorem([if, d, c]))).
 
 unilog(guide([], g0), guide([gor, a0, a1, a2, a3, a4])).
 
+% 'last' function definition, in root namespace
 unilog(guide([], root_last_bc), fact(theorem([last, [X], X]))).
 unilog(guide([], root_last_gc), fact(theorem(
     [if,
@@ -44,11 +45,30 @@ unilog(guide([], root_last_gc), fact(theorem(
         ]
     ]
 ))).
-
 unilog(guide([], root_last), guide(
     [gor,
         root_last_bc,
         [mp, root_last_gc, [conj, cons, root_last]]
+    ]
+)).
+
+% 'last' function definition, in alg, declared in root namespace
+unilog(guide([], root_alg_last_bc), fact(theorem([scope, alg, [last, [X], X]]))).
+unilog(guide([], root_alg_last_gc), fact(theorem(
+    [scope, alg,
+        [if,
+            [last, L, Last],
+            [and,
+                [cons, L, _, Rest],
+                [last, Rest, Last]
+            ]
+        ]
+    ]
+))).
+unilog(guide([], root_alg_last), guide(
+    [gor,
+        root_alg_last_bc,
+        [mp, root_alg_last_gc, [conj, cons, root_alg_last]]
     ]
 )).
 
@@ -338,16 +358,35 @@ tc_guide_g0_2 :-
 tc_guide_g0_3_expect_failure :-
     \+ query_entry(g0, [thm4, _]).
 
-tc_guide_last_0 :-
+tc_guide_root_last_0 :-
     query_entry(root_last, [last, [a], R]),
     R = a.
+
+tc_guide_root_last_1 :-
+    query_entry(root_last, [last, [a, b, c, d], R]),
+    R = d.
+
+tc_guide_root_last_2_expect_failure :-
+    \+ query_entry(root_last, [last, [], _]).
+
+tc_guide_root_alg_last_0 :-
+    query_entry([tenter, alg, root_alg_last], [scope, alg, [last, [a], R]]),
+    R = a.
+
+%tc_guide_root_alg_last_1 :-
+%    query_entry([tenter, alg, root_alg_last], [scope, alg, [last, [a, b, c], R]]),
+%    R = c.
 
 test_guides :-
     test_case(tc_guide_g0_0),
     test_case(tc_guide_g0_1),
     test_case(tc_guide_g0_2),
     test_case(tc_guide_g0_3_expect_failure),
-    test_case(tc_guide_last_0).
+    test_case(tc_guide_root_last_0),
+    test_case(tc_guide_root_last_1),
+    test_case(tc_guide_root_last_2_expect_failure),
+    test_case(tc_guide_root_alg_last_0).
+%    test_case(tc_guide_root_alg_last_1).
 
 % run main test
 unit_test_main :-
