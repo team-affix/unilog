@@ -32,7 +32,7 @@ unilog(guide([m1], a2), fact(theorem([scope, m2, [if, d, c]]))).
 unilog(guide([m1, m2], a0), fact(theorem(c))).
 unilog(guide([m1, m2], a1), fact(theorem([if, d, c]))).
 
-unilog(guide([], g0), guide([gor, a0, a1, a2, a3, a4])).
+unilog(guide([], g0), fact(guide([gor, a0, a1, a2, a3, a4]))).
 
 % 'last' function definition, in root namespace
 unilog(guide([], root_last_bc), fact(theorem([last, [X], X]))).
@@ -45,12 +45,12 @@ unilog(guide([], root_last_gc), fact(theorem(
         ]
     ]
 ))).
-unilog(guide([], root_last), guide(
+unilog(guide([], root_last), fact(guide(
     [gor,
         root_last_bc,
         [mp, root_last_gc, [conj, cons, root_last]]
     ]
-)).
+))).
 
 % 'last' function definition, in alg, declared in root namespace
 unilog(guide([], root_alg_last_bc), fact(theorem([scope, alg, [last, [X], X]]))).
@@ -65,12 +65,12 @@ unilog(guide([], root_alg_last_gc), fact(theorem(
         ]
     ]
 ))).
-unilog(guide([], root_alg_last), guide(
+unilog(guide([], root_alg_last), fact(guide(
     [gor,
         root_alg_last_bc,
         [mp, root_alg_last_gc, [conj, cons, root_alg_last]]
     ]
-)).
+))).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Test helpers listed here

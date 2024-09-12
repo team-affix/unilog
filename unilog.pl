@@ -42,7 +42,7 @@ query(guide(GScope, Guide), theorem(TScope, TDescopedTheorem), conditions(Conds)
     )
     ;
     (
-        unilog(guide(GScope, Guide), guide(RecurGuide)),
+        unilog(guide(GScope, Guide), fact(guide(RecurGuide))),
         query(guide(GScope, RecurGuide), theorem(TScope, TDescopedTheorem), conditions(Conds))
     ).
 
