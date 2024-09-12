@@ -32,7 +32,25 @@ unilog(guide([m1], a2), fact(theorem([scope, m2, [if, d, c]]))).
 unilog(guide([m1, m2], a0), fact(theorem(c))).
 unilog(guide([m1, m2], a1), fact(theorem([if, d, c]))).
 
+unilog(guide([], g0), guide([gor, a0, a1, a2, a3, a4])).
 
+unilog(guide([], root_last_bc), fact(theorem([last, [X], X]))).
+unilog(guide([], root_last_gc), fact(theorem(
+    [if,
+        [last, L, Last],
+        [and,
+            [cons, L, _, Rest],
+            [last, Rest, Last]
+        ]
+    ]
+))).
+
+unilog(guide([], root_last), guide(
+    [gor,
+        root_last_bc,
+        [mp, root_last_gc, [conj, cons, root_last]]
+    ]
+)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Test helpers listed here
@@ -90,6 +108,29 @@ test_facts :-
     test_case(tc_fact_expect_failure_1).
 
 
+tc_gor_facts_0 :-
+    query_entry([gor, a0, a1], thm0).
+
+tc_gor_facts_1 :-
+    query_entry([gor, a0, a1], [thm0, thm1]).
+
+tc_gor_facts_2 :-
+    query_entry([gor, a0, a1, a2, a3, a4], 'quoted atom').
+
+tc_gor_facts_3_expect_failure :-
+    \+ query_entry([gor, a0, a1, a2, a3, a4], 'quoted atom1').
+
+tc_gor_facts_4_expect_failure :-
+    \+ query_entry([gor, a0, a1, a2, a3, a4], thm3).
+
+test_gor :-
+    test_case(tc_gor_facts_0),
+    test_case(tc_gor_facts_1),
+    test_case(tc_gor_facts_2),
+    test_case(tc_gor_facts_3_expect_failure),
+    test_case(tc_gor_facts_4_expect_failure).
+
+
 tc_empty_discharge_cond :-
     query_entry([discharge, cond], R),
     R = [if, X, [and, X]].
@@ -139,7 +180,6 @@ test_tenter :-
     test_case(tc_tenter_fact_depth_2),
     test_case(tc_tenter_mp_depth_1),
     test_case(tc_tenter_mp_depth_2).
-
 
 tc_genter_fact_depth_1 :-
     query_entry([genter, m1, a0], R),
@@ -284,13 +324,40 @@ test_mp :-
     test_case(tc_mp_2),
     test_case(tc_mp_3).
 
+
+tc_guide_g0_0 :-
+    query_entry(g0, thm0).
+
+tc_guide_g0_1 :-
+    query_entry(g0, 'quoted atom').
+
+tc_guide_g0_2 :-
+    query_entry(g0, [thm0, R]),
+    R = thm1.
+
+tc_guide_g0_3_expect_failure :-
+    \+ query_entry(g0, [thm4, _]).
+
+tc_guide_last_0 :-
+    query_entry(root_last, [last, [a], R]),
+    R = a.
+
+test_guides :-
+    test_case(tc_guide_g0_0),
+    test_case(tc_guide_g0_1),
+    test_case(tc_guide_g0_2),
+    test_case(tc_guide_g0_3_expect_failure),
+    test_case(tc_guide_last_0).
+
 % run main test
 unit_test_main :-
     test(test_facts),
+    test(test_gor),
     test(test_discharge_cond),
     test(test_tenter),
     test(test_genter_and_gleave),
     test(test_conj),
-    test(test_mp).
+    test(test_mp),
+    test(test_guides).
 
 :- test(unit_test_main).

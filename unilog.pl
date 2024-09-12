@@ -39,6 +39,11 @@ query(guide(GScope, Guide), theorem(TScope, TDescopedTheorem), conditions(Conds)
         scope(GScope, GScopedTheorem, RawTheorem),
         scope(TScope, GScopedTheorem, TDescopedTheorem),
         Conds = []
+    )
+    ;
+    (
+        unilog(guide(GScope, Guide), guide(RecurGuide)),
+        query(guide(GScope, RecurGuide), theorem(TScope, TDescopedTheorem), conditions(Conds))
     ).
 
 query_all(guide(GScope, [G0|GuideRest]), theorem(TScope, [T0|TheoremRest]), conditions(Conds)) :-
