@@ -68,3 +68,5 @@ unilog(
 unilog(guide([m2], z0), fact(theorem([if, y, x]))).
 unilog(guide([m2], z1), fact(theorem(x))).
 unilog(guide([m2], z2), fact(theorem(z))).
+
+unilog(guide([], z3), fact(theorem([scope, m2, x]))).
