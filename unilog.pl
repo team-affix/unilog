@@ -31,19 +31,24 @@ query_entry(Guide, DescopedTheorem) :-
     query(guide([], Guide), theorem([], DescopedTheorem), conditions([])).
 
 query(guide(GScope, Guide), theorem(TScope, TDescopedTheorem), conditions(Conds)) :-
-    unilog(guide(GScope, Guide), rule(theorem(TScope, TDescopedTheorem), conditions(Conds)))
+    (
+        unilog(guide(GScope, Guide), rule(theorem(TScope, TDescopedTheorem), conditions(Conds))),
+        !
+    )
     ;
     (
         % a fact will not have conditions, or a tscope
         unilog(guide(GScope, Guide), fact(theorem(RawTheorem))),
         scope(GScope, GScopedTheorem, RawTheorem),
         scope(TScope, GScopedTheorem, TDescopedTheorem),
-        Conds = []
+        Conds = [],
+        !
     )
     ;
     (
         unilog(guide(GScope, Guide), fact(guide(RecurGuide))),
-        query(guide(GScope, RecurGuide), theorem(TScope, TDescopedTheorem), conditions(Conds))
+        query(guide(GScope, RecurGuide), theorem(TScope, TDescopedTheorem), conditions(Conds)),
+        !
     ).
 
 query_all(guide(GScope, [G0|GuideRest]), theorem(TScope, [T0|TheoremRest]), conditions(Conds)) :-
@@ -71,8 +76,8 @@ unilog(guide(_, cons), rule(theorem(_, [cons, [X|Tail], X, Tail]), conditions([]
 
 unilog(guide(GScope, [tenter, EnteredTScope, NextGuide]), rule(theorem(CurrentTScope, TScopedTheorem), conditions(TScopedConds))) :-
     append(CurrentTScope, [EnteredTScope], NewTScope),
-    query(guide(GScope, NextGuide), theorem(NewTScope, TDescopedTheorem), conditions(TDescopedConds)),
     scope([EnteredTScope], TScopedTheorem, TDescopedTheorem),
+    query(guide(GScope, NextGuide), theorem(NewTScope, TDescopedTheorem), conditions(TDescopedConds)),
     scope_all([EnteredTScope], TScopedConds, TDescopedConds).
 
 unilog(guide(CurrentGScope, [genter, EnteredGScope, NextGuide]), rule(theorem(TScope, R), conditions(Conds))) :-

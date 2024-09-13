@@ -72,6 +72,24 @@ unilog(guide([], root_alg_last), fact(guide(
     ]
 ))).
 
+% 'last' function definition, in alg, declared in alg namespace
+unilog(guide([alg], alg_last_bc), fact(theorem([last, [X], X]))).
+unilog(guide([alg], alg_last_gc), fact(theorem(
+    [if,
+        [last, L, Last],
+        [and,
+            [cons, L, _, Rest],
+            [last, Rest, Last]
+        ]
+    ]
+))).
+unilog(guide([alg], alg_last), fact(guide(
+    [gor,
+        alg_last_bc,
+        [mp, alg_last_gc, [conj, cons, alg_last]]
+    ]
+))).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Test helpers listed here
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -369,13 +387,35 @@ tc_guide_root_last_1 :-
 tc_guide_root_last_2_expect_failure :-
     \+ query_entry(root_last, [last, [], _]).
 
-tc_guide_root_alg_last_0 :-
+tc_guide_tenter_root_alg_last_0 :-
     query_entry([tenter, alg, root_alg_last], [scope, alg, [last, [a], R]]),
     R = a.
 
-%tc_guide_root_alg_last_1 :-
-%    query_entry([tenter, alg, root_alg_last], [scope, alg, [last, [a, b, c], R]]),
-%    R = c.
+tc_guide_tenter_root_alg_last_1 :-
+    query_entry([tenter, alg, root_alg_last], [scope, alg, [last, [a, b, c], R]]),
+    R = c.
+
+tc_guide_tenter_root_alg_last_2 :-
+    query_entry([tenter, alg, root_alg_last], [scope, alg, [last, [a, b, c, 123, d], R]]),
+    R = d.
+
+tc_guide_tenter_root_alg_last_3_expect_failure :-
+    \+ query_entry([tenter, alg, root_alg_last], [scope, alg, [last, [], _]]).
+
+tc_guide_tenter_genter_alg_last_0 :-
+    query_entry([tenter, alg, [genter, alg, alg_last]], [scope, alg, [last, [a], R]]),
+    R = a.
+
+tc_guide_tenter_genter_alg_last_1 :-
+    query_entry([tenter, alg, [genter, alg, alg_last]], [scope, alg, [last, [a, b, c], R]]),
+    R = c.
+
+tc_guide_tenter_genter_alg_last_2 :-
+    query_entry([tenter, alg, [genter, alg, alg_last]], [scope, alg, [last, [a, b, c, 123, d], R]]),
+    R = d.
+
+tc_guide_tenter_genter_alg_last_3_expect_failure :-
+    \+ query_entry([tenter, alg, [genter, alg, alg_last]], [scope, alg, [last, [], _]]).
 
 test_guides :-
     test_case(tc_guide_g0_0),
@@ -385,8 +425,14 @@ test_guides :-
     test_case(tc_guide_root_last_0),
     test_case(tc_guide_root_last_1),
     test_case(tc_guide_root_last_2_expect_failure),
-    test_case(tc_guide_root_alg_last_0).
-%    test_case(tc_guide_root_alg_last_1).
+    test_case(tc_guide_tenter_root_alg_last_0),
+    test_case(tc_guide_tenter_root_alg_last_1),
+    test_case(tc_guide_tenter_root_alg_last_2),
+    test_case(tc_guide_tenter_root_alg_last_3_expect_failure),
+    test_case(tc_guide_tenter_genter_alg_last_0),
+    test_case(tc_guide_tenter_genter_alg_last_1),
+    test_case(tc_guide_tenter_genter_alg_last_2),
+    test_case(tc_guide_tenter_genter_alg_last_3_expect_failure).
 
 % run main test
 unit_test_main :-
