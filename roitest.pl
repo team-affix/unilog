@@ -90,6 +90,45 @@ unilog(guide([alg], alg_last), fact(guide(
     ]
 ))).
 
+% 'all' function definition, in alg, declared in alg namespace
+unilog(guide([alg], alg_all_bc), fact(theorem([all, [], _]))).
+unilog(guide([alg], alg_all_gc), fact(theorem(
+    [if,
+        [all, L, U],
+        [and,
+            [cons, L, X, Rest],
+            [U, X],
+            [all, Rest, U]
+        ]
+    ]
+))).
+unilog(guide([alg], [alg_all, UG]), fact(guide(
+    [gor,
+        alg_all_bc,
+        [mp, alg_all_gc, [conj, cons, UG, [alg_all, UG]]]
+    ]
+))).
+
+unilog(guide([], starts_with_c), fact(theorem(
+    [if,
+        [swc, S],
+        [and,
+            [chars, S, CL],
+            [cons, CL, 'c', _]
+        ]
+    ]
+))).
+
+:-
+    query_entry(
+        [tenter, alg, [genter, alg,
+            [alg_all, [gleave, [tleave, starts_with_c]]]
+        ]],
+        [scope, alg,
+            [all, ['cabc', 'c123'], [descope, swc]]
+        ]
+    ).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Test helpers listed here
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

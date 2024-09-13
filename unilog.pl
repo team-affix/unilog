@@ -11,10 +11,12 @@ without_last([X|Rest], [X|RestWithoutLast]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle Scoping
 
-scope([Scope|RemainingScopes], [scope, Scope, Exp], Descoped) :-
-    scope(RemainingScopes, Exp, Descoped).
+scope([Scope|RemainingScopes], [scope, Scope, InExp], OutExp) :-
+    scope(RemainingScopes, InExp, OutExp),
+    !.
 
-scope([], Exp, Exp).
+scope([], Exp, Exp) :-
+    !.
 
 scope_all(_, [], []) :-
     !.
@@ -74,11 +76,14 @@ unilog(guide(_, cons), rule(theorem(_, [cons, [X|Tail], X, Tail]), conditions([]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Begin ROI
 
-unilog(guide(GScope, [tenter, EnteredTScope, NextGuide]), rule(theorem(CurrentTScope, TScopedTheorem), conditions(TScopedConds))) :-
+unilog(guide(GScope, [tenter, EnteredTScope, NextGuide]), rule(theorem(CurrentTScope, [scope, EnteredTScope, TDescopedTheorem]), conditions(TScopedConds))) :-
     append(CurrentTScope, [EnteredTScope], NewTScope),
-    scope([EnteredTScope], TScopedTheorem, TDescopedTheorem),
     query(guide(GScope, NextGuide), theorem(NewTScope, TDescopedTheorem), conditions(TDescopedConds)),
     scope_all([EnteredTScope], TScopedConds, TDescopedConds).
+
+unilog(guide(GScope, [tleave, NextGuide]), rule(theorem(CurrentTScope, [descope, Thm]), conditions(Conds))) :-
+    without_last(CurrentTScope, NewTScope),
+    query(guide(GScope, NextGuide), theorem(NewTScope, Thm), conditions(Conds)).
 
 unilog(guide(CurrentGScope, [genter, EnteredGScope, NextGuide]), rule(theorem(TScope, R), conditions(Conds))) :-
     append(CurrentGScope, [EnteredGScope], NewGScope),
