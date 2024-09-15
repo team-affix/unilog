@@ -34,6 +34,24 @@ unilog(guide([m1, m2], a1), fact(theorem([if, d, c]))).
 
 unilog(guide([], g0), fact(guide([gor, a0, a1, a2, a3, a4]))).
 
+unilog(guide([], imp_m1_consequent), fact(theorem(
+    [if,
+        [scope, m1, b],
+        a
+    ]
+))).
+
+unilog(guide([], jus_m1_consequent), fact(theorem(a))).
+
+unilog(guide([], imp_m2_consequent), fact(theorem(
+    [scope, m1,
+        [if,
+            c,
+            b
+        ]
+    ]
+))).
+
 % 'last' function definition, in root namespace
 unilog(guide([], root_last_bc), fact(theorem([last, [X], X]))).
 unilog(guide([], root_last_gc), fact(theorem(

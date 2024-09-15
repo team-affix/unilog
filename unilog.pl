@@ -97,9 +97,9 @@ unilog(guide(GScope, [tenter, EnteredTScope, NextGuide]), rule(theorem(CurrentTS
     query(guide(GScope, NextGuide), theorem(NewTScope, TDescopedTheorem), conditions(TDescopedConds)),
     scope_all([EnteredTScope], TScopedConds, TDescopedConds).
 
-%unilog(guide(GScope, [tleave, NextGuide]), rule(theorem(CurrentTScope, [descope, Thm]), conditions(Conds))) :-
-%    without_last(CurrentTScope, NewTScope),
-%    query(guide(GScope, NextGuide), theorem(NewTScope, Thm), conditions(Conds)).
+unilog(guide(GScope, [tleave, NextGuide]), rule(theorem(CurrentTScope, [descope, Thm]), conditions(Conds))) :-
+    without_last(CurrentTScope, NewTScope),
+    query(guide(GScope, NextGuide), theorem(NewTScope, Thm), conditions(Conds)).
 
 unilog(guide(CurrentGScope, [genter, EnteredGScope, NextGuide]), rule(theorem(TScope, R), conditions(Conds))) :-
     append(CurrentGScope, [EnteredGScope], NewGScope),
