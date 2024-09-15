@@ -11,6 +11,22 @@ without_last([X|Rest], [X|RestWithoutLast]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle Scoping
 
+% base case
+resolve(theorem([], Thm), theorem([], Thm)).
+
+% subtract scope from both TScope lists
+resolve(theorem([S|TScope0Rest], Thm0), theorem([S|TScope1Rest], Thm1)) :-
+    resolve(theorem(TScope0Rest, Thm0), theorem(TScope1Rest, Thm1)).
+
+% if left list empty, subtract from left theorem
+resolve(theorem([], [scope, S, Thm0]), theorem([S|TScope1Rest], Thm1)) :-
+    resolve(theorem([], Thm0), theorem(TScope1Rest, Thm1)).
+
+% if right list empty, subtract from right theorem
+resolve(theorem([S|TScope0Rest], Thm0), theorem([], [scope, S, Thm1])) :-
+    resolve(theorem(TScope0Rest, Thm0), theorem([], Thm1)).
+
+    
 scope([Scope|RemainingScopes], [scope, Scope, InExp], OutExp) :-
     scope(RemainingScopes, InExp, OutExp),
     !.
