@@ -15,6 +15,22 @@ namespace unilog
         std::string m_text;
     };
 
+    /////////////////////////////////
+    // SCOPING
+
+    struct scope_separator
+    {
+    };
+
+    /////////////////////////////////
+
+    /////////////////////////////////
+    // PROLOG
+
+    struct list_separator
+    {
+    };
+
     struct list_open
     {
     };
@@ -43,8 +59,12 @@ namespace unilog
         unquoted_atom>
         atom;
 
+    /////////////////////////////////
+
     // Comparisons for lexeme types.
     bool operator==(const command &a_lhs, const command &a_rhs);
+    bool operator==(const scope_separator &a_lhs, const scope_separator &a_rhs);
+    bool operator==(const list_separator &a_lhs, const list_separator &a_rhs);
     bool operator==(const list_open &a_lhs, const list_open &a_rhs);
     bool operator==(const list_close &a_lhs, const list_close &a_rhs);
     bool operator==(const variable &a_lhs, const variable &a_rhs);
@@ -52,14 +72,20 @@ namespace unilog
     bool operator==(const quoted_atom &a_lhs, const quoted_atom &a_rhs);
 
     typedef std::variant<
+        command,
+        scope_separator,
+        list_separator,
         list_open,
         list_close,
-        command,
         variable,
         atom>
         lexeme;
 
     std::istream &operator>>(std::istream &a_istream, command &a_command);
+
+    std::istream &operator>>(std::istream &a_istream, scope_separator &a_command);
+    std::istream &operator>>(std::istream &a_istream, list_separator &a_command);
+
     std::istream &operator>>(std::istream &a_istream, list_open &a_list_open);
     std::istream &operator>>(std::istream &a_istream, list_close &a_list_close);
     std::istream &operator>>(std::istream &a_istream, variable &a_variable);

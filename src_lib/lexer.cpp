@@ -97,6 +97,16 @@ namespace unilog
         return a_lhs.m_text == a_rhs.m_text;
     }
 
+    bool operator==(const scope_separator &a_lhs, const scope_separator &a_rhs)
+    {
+        return true;
+    }
+
+    bool operator==(const list_separator &a_lhs, const list_separator &a_rhs)
+    {
+        return true;
+    }
+
     bool operator==(const list_open &a_lhs, const list_open &a_rhs)
     {
         return true;
@@ -127,6 +137,16 @@ namespace unilog
         return c == '!';
     }
 
+    bool is_scope_separator_indicator_char(int c)
+    {
+        return c == ':';
+    }
+
+    bool is_list_separator_indicator_char(int c)
+    {
+        return c == '|';
+    }
+
     bool is_list_open_indicator_char(int c)
     {
         return c == '[';
@@ -153,6 +173,8 @@ namespace unilog
     bool is_unquoted_atom_indicator_char(int c)
     {
         return !is_command_indicator_char(c) &&
+               !is_scope_separator_indicator_char(c) &&
+               !is_list_separator_indicator_char(c) &&
                !is_list_open_indicator_char(c) &&
                !is_list_close_indicator_char(c) &&
                !is_variable_indicator_char(c) &&
@@ -179,6 +201,8 @@ namespace unilog
     bool is_unquoted_atom_text_char(int c)
     {
         return !is_command_indicator_char(c) &&
+               !is_scope_separator_indicator_char(c) &&
+               !is_list_separator_indicator_char(c) &&
                !is_list_open_indicator_char(c) &&
                !is_list_close_indicator_char(c) &&
                !is_quoted_atom_indicator_char(c) &&
@@ -232,6 +256,48 @@ namespace unilog
         {
             a_command.m_text.push_back(l_char);
         }
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, scope_separator &a_scope_separator)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_scope_separator_indicator_char(a_istream.peek()))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        // pop the indicator character
+        a_istream.get();
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, list_separator &a_list_separator)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_list_separator_indicator_char(a_istream.peek()))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        // pop the indicator character
+        a_istream.get();
 
         return a_istream;
     }
@@ -463,35 +529,49 @@ namespace unilog
             return a_istream;
         }
 
-        // 1. command `!`
+        // command `!`
         if (is_command_indicator_char(a_istream.peek()))
         {
             command l_command;
             a_istream >> l_command;
             a_lexeme = l_command;
         }
-        // 2. list_open `[`
+        // scope_separator `:`
+        else if (is_scope_separator_indicator_char(a_istream.peek()))
+        {
+            scope_separator l_scope_separator;
+            a_istream >> l_scope_separator;
+            a_lexeme = l_scope_separator;
+        }
+        // list_separator `|`
+        else if (is_list_separator_indicator_char(a_istream.peek()))
+        {
+            list_separator l_list_separator;
+            a_istream >> l_list_separator;
+            a_lexeme = l_list_separator;
+        }
+        // list_open `[`
         else if (is_list_open_indicator_char(a_istream.peek()))
         {
             list_open l_list_open;
             a_istream >> l_list_open;
             a_lexeme = l_list_open;
         }
-        // 3. list_close `]`
+        // list_close `]`
         else if (is_list_close_indicator_char(a_istream.peek()))
         {
             list_close l_list_close;
             a_istream >> l_list_close;
             a_lexeme = l_list_close;
         }
-        // 4. variable
+        // variable
         else if (is_variable_indicator_char(a_istream.peek()))
         {
             variable l_variable;
             a_istream >> l_variable;
             a_lexeme = l_variable;
         }
-        // 6. atom
+        // atom
         else if (is_atom_indicator_char(a_istream.peek()))
         {
             atom l_atom;

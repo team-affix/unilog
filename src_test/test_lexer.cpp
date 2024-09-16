@@ -164,6 +164,48 @@ void test_lexer_command_equivalence()
     }
 }
 
+void test_lexer_scope_separator_equivalence()
+{
+    using unilog::scope_separator;
+
+    data_points<std::pair<scope_separator, scope_separator>, bool> l_desired =
+        {
+            {
+                {
+                    scope_separator{},
+                    scope_separator{},
+                },
+                true,
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
+void test_lexer_list_separator_equivalence()
+{
+    using unilog::list_separator;
+
+    data_points<std::pair<list_separator, list_separator>, bool> l_desired =
+        {
+            {
+                {
+                    list_separator{},
+                    list_separator{},
+                },
+                true,
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
 void test_lexer_list_open_equivalence()
 {
     using unilog::list_open;
@@ -499,6 +541,12 @@ void test_lexer_extract_command()
     std::vector<std::string> l_expect_failure_inputs =
         {
             "",
+            ":",
+            ":alg",
+            ": ",
+            "|",
+            "|[]",
+            "| [a]",
             "[",
             "]",
             "[]",
@@ -520,6 +568,164 @@ void test_lexer_extract_command()
         assert(l_ss.fail());
 
         LOG("success, case: expected failure extracting command: " << l_input << std::endl);
+    }
+}
+
+void test_lexer_extract_scope_separator()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::scope_separator;
+
+    data_points<std::string, scope_separator> l_desired =
+        {
+            {
+                ":",
+                scope_separator{},
+            },
+            {
+                ":m2",
+                scope_separator{},
+            },
+            {
+                ":math",
+                scope_separator{},
+            },
+            {
+                ": alg",
+                scope_separator{},
+            },
+            {
+                ":[ \'quote\' ]",
+                scope_separator{},
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        std::stringstream l_ss(l_key);
+
+        scope_separator l_scope_separator;
+        l_ss >> l_scope_separator;
+
+        // make sure the extraction was successful
+        assert(!l_ss.fail());
+
+        assert(l_scope_separator == l_value);
+
+        // make sure it did not extract more than it needs to
+        l_ss.unget();
+        assert(l_ss.peek() == ':');
+
+        LOG("success, case: extracted scope_separator: " << l_key << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "",
+            "!command",
+            "!",
+            "|",
+            "|[]",
+            "| [a]",
+            "]",
+            "Variable",
+            "_Variable",
+            "\'quoted\'",
+            "unquoted",
+            "@unquoted",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        scope_separator l_scope_separator;
+        l_ss >> l_scope_separator;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting scope_separator: " << l_input << std::endl);
+    }
+}
+
+void test_lexer_extract_list_separator()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::list_separator;
+
+    data_points<std::string, list_separator> l_desired =
+        {
+            {
+                "|",
+                list_separator{},
+            },
+            {
+                "| []",
+                list_separator{},
+            },
+            {
+                "| [z]",
+                list_separator{},
+            },
+            {
+                "| [a b c]",
+                list_separator{},
+            },
+            {
+                "|[ \'quote\' ]",
+                list_separator{},
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        std::stringstream l_ss(l_key);
+
+        list_separator l_list_separator;
+        l_ss >> l_list_separator;
+
+        // make sure the extraction was successful
+        assert(!l_ss.fail());
+
+        assert(l_list_separator == l_value);
+
+        // make sure it did not extract more than it needs to
+        l_ss.unget();
+        assert(l_ss.peek() == '|');
+
+        LOG("success, case: extracted list_separator: " << l_key << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "",
+            "!command",
+            "!",
+            ":",
+            ":alg",
+            ": ",
+            "]",
+            "Variable",
+            "_Variable",
+            "\'quoted\'",
+            "unquoted",
+            "@unquoted",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        list_separator l_list_separator;
+        l_ss >> l_list_separator;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting list_separator: " << l_input << std::endl);
     }
 }
 
@@ -576,6 +782,12 @@ void test_lexer_extract_list_open()
         {
             "",
             "!command",
+            ":",
+            ":alg",
+            ": ",
+            "|",
+            "|[]",
+            "| [a]",
             "!",
             "]",
             "Variable",
@@ -652,6 +864,12 @@ void test_lexer_extract_list_close()
         {
             "",
             "!command",
+            ":",
+            ":alg",
+            ": ",
+            "|",
+            "|[]",
+            "| [a]",
             "!",
             "[",
             "[]",
@@ -781,6 +999,12 @@ void test_lexer_extract_variable()
         {
             "",
             "!command",
+            ":",
+            ":alg",
+            ": ",
+            "|",
+            "|[]",
+            "| [a]",
             "!",
             "[",
             "]",
@@ -996,6 +1220,12 @@ void test_lexer_extract_quoted_atom()
             "",
             "!command",
             "!",
+            ":",
+            ":alg",
+            ": ",
+            "|",
+            "|[]",
+            "| [a]",
             "[",
             "]",
             "[]",
@@ -1118,9 +1348,9 @@ void test_lexer_extract_unquoted_atom()
                 },
             },
             {
-                "a|/\"quote\"",
+                "a/\"quote\"",
                 unquoted_atom{
-                    "a|/",
+                    "a/",
                 },
             },
             {
@@ -1161,6 +1391,12 @@ void test_lexer_extract_unquoted_atom()
             "",
             "!command",
             "!",
+            ":",
+            ":alg",
+            ": ",
+            "|",
+            "|[]",
+            "| [a]",
             "[",
             "]",
             "[]",
@@ -1196,12 +1432,14 @@ void test_lexer_extract_lexeme()
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
+    using unilog::list_separator;
     using unilog::quoted_atom;
+    using unilog::scope_separator;
     using unilog::unquoted_atom;
     using unilog::variable;
 
     // Cases where content should be left alone:
-    std::map<std::string, std::vector<lexeme>> l_desired_map = {
+    data_points<std::string, std::vector<lexeme>> l_desired_map = {
         {
             // Single command lexeme
             "!test",
@@ -1221,6 +1459,145 @@ void test_lexer_extract_lexeme()
                 command{
                     .m_text = "test2",
                 },
+            },
+        },
+        {
+            ":",
+            std::vector<lexeme>{
+                scope_separator{},
+            },
+        },
+        {
+            ":m2",
+            std::vector<lexeme>{
+                scope_separator{},
+                unquoted_atom{
+                    "m2",
+                },
+            },
+        },
+        {
+            "m1:m2",
+            std::vector<lexeme>{
+                unquoted_atom{
+                    "m1",
+                },
+                scope_separator{},
+                unquoted_atom{
+                    "m2",
+                },
+            },
+        },
+        {
+            "m1:X",
+            std::vector<lexeme>{
+                unquoted_atom{
+                    "m1",
+                },
+                scope_separator{},
+                variable{
+                    "X",
+                },
+            },
+        },
+        {
+            "m1::[a b c]",
+            std::vector<lexeme>{
+                unquoted_atom{
+                    "m1",
+                },
+                scope_separator{},
+                scope_separator{},
+                list_open{},
+                unquoted_atom{
+                    "a",
+                },
+                unquoted_atom{
+                    "b",
+                },
+                unquoted_atom{
+                    "c",
+                },
+                list_close{},
+            },
+        },
+        {
+            "!axiom [m1::a m1::b m1::c]",
+            std::vector<lexeme>{
+                command{
+                    "axiom",
+                },
+                list_open{},
+                unquoted_atom{
+                    "m1",
+                },
+                scope_separator{},
+                scope_separator{},
+                unquoted_atom{
+                    "a",
+                },
+                unquoted_atom{
+                    "m1",
+                },
+                scope_separator{},
+                scope_separator{},
+                unquoted_atom{
+                    "b",
+                },
+                unquoted_atom{
+                    "m1",
+                },
+                scope_separator{},
+                scope_separator{},
+                unquoted_atom{
+                    "c",
+                },
+                list_close{},
+            },
+        },
+        {
+            "a|",
+            std::vector<lexeme>{
+                unquoted_atom{
+                    "a",
+                },
+                list_separator{},
+            },
+        },
+        {
+            "a|[]",
+            std::vector<lexeme>{
+                unquoted_atom{
+                    "a",
+                },
+                list_separator{},
+                list_open{},
+                list_close{},
+            },
+        },
+        {
+            "[a|[] b|[] c|[]]",
+            std::vector<lexeme>{
+                list_open{},
+                unquoted_atom{
+                    "a",
+                },
+                list_separator{},
+                list_open{},
+                list_close{},
+                unquoted_atom{
+                    "b",
+                },
+                list_separator{},
+                list_open{},
+                list_close{},
+                unquoted_atom{
+                    "c",
+                },
+                list_separator{},
+                list_open{},
+                list_close{},
+                list_close{},
             },
         },
         {
@@ -2225,12 +2602,16 @@ void test_lexer_main()
 
     TEST(test_lexer_escape);
     TEST(test_lexer_command_equivalence);
+    TEST(test_lexer_scope_separator_equivalence);
+    TEST(test_lexer_list_separator_equivalence);
     TEST(test_lexer_list_open_equivalence);
     TEST(test_lexer_list_close_equivalence);
     TEST(test_lexer_variable_equivalence);
     TEST(test_lexer_quoted_atom_equivalence);
     TEST(test_lexer_unquoted_atom_equivalence);
     TEST(test_lexer_extract_command);
+    TEST(test_lexer_extract_scope_separator);
+    TEST(test_lexer_extract_list_separator);
     TEST(test_lexer_extract_list_open);
     TEST(test_lexer_extract_list_close);
     TEST(test_lexer_extract_variable);
