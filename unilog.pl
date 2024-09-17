@@ -11,125 +11,17 @@ without_last([X|Rest], [X|RestWithoutLast]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle Scoping
 
-% base case
-resolve(theorem([], Thm), theorem([], Thm)).
+% Recursive case: split the left and right side of the colon and convert each part to a list.
+resolve(H:T, [H|Rest], SExpr) :-
+    resolve(T, Rest, SExpr).
 
-% subtract scope from both TScope lists
-resolve(theorem([S|TScope0Rest], Thm0), theorem([S|TScope1Rest], Thm1)) :-
-    resolve(theorem(TScope0Rest, Thm0), theorem(TScope1Rest, Thm1)).
-
-% if left list empty, subtract from left theorem
-resolve(theorem([], [scope, S, Thm0]), theorem([S|TScope1Rest], Thm1)) :-
-    resolve(theorem([], Thm0), theorem(TScope1Rest, Thm1)).
-
-% if right list empty, subtract from right theorem
-resolve(theorem([S|TScope0Rest], Thm0), theorem([], [scope, S, Thm1])) :-
-    resolve(theorem(TScope0Rest, Thm0), theorem([], Thm1)).
-
-    
-scope([Scope|RemainingScopes], [scope, Scope, InExp], OutExp) :-
-    scope(RemainingScopes, InExp, OutExp),
-    !.
-
-scope([], Exp, Exp) :-
-    !.
-
-scope_all(_, [], []) :-
-    !.
-
-scope_all(Scope, [TFirst | TRest], [DFirst | DRest]) :-
-    scope(Scope, TFirst, DFirst),
-    scope_all(Scope, TRest, DRest),
-    !.
+% Base case: a single expression belonging to the root scope.
+resolve(SExpr, [], SExpr).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
 
-query_entry(Guide, DescopedTheorem) :-
-    query(guide([], Guide), theorem([], DescopedTheorem), conditions([])).
-
-query(guide(GScope, Guide), theorem(TScope, TDescopedTheorem), conditions(Conds)) :-
-    (
-        unilog(guide(GScope, Guide), rule(theorem(TScope, TDescopedTheorem), conditions(Conds))),
-        !
-    )
-    ;
-    (
-        % a fact will not have conditions, or a tscope
-        unilog(guide(GScope, Guide), fact(theorem(RawTheorem))),
-        scope(GScope, GScopedTheorem, RawTheorem),
-        scope(TScope, GScopedTheorem, TDescopedTheorem),
-        Conds = [],
-        !
-    )
-    ;
-    (
-        unilog(guide(GScope, Guide), fact(guide(RecurGuide))),
-        query(guide(GScope, RecurGuide), theorem(TScope, TDescopedTheorem), conditions(Conds)),
-        !
-    ).
-
-query_all(guide(GScope, [G0|GuideRest]), theorem(TScope, [T0|TheoremRest]), conditions(Conds)) :-
-    query(guide(GScope, G0), theorem(TScope, T0), conditions(CondsFirst)),
-    query_all(guide(GScope, GuideRest), theorem(TScope, TheoremRest), conditions(CondsRest)),
-    append(CondsFirst, CondsRest, Conds),
-    !.
-
-query_all(guide(_, []), theorem(_, []), conditions([])) :-
-    !.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%% begin defining unilog predicate
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-:- multifile unilog/2.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Begin built-ins (zero-arity)
-
-unilog(guide(_, cons), rule(theorem(_, [cons, [X|Tail], X, Tail]), conditions([]))).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Begin ROI
-
-unilog(guide(GScope, [tenter, EnteredTScope, NextGuide]), rule(theorem(CurrentTScope, [scope, EnteredTScope, TDescopedTheorem]), conditions(TScopedConds))) :-
-    append(CurrentTScope, [EnteredTScope], NewTScope),
-    query(guide(GScope, NextGuide), theorem(NewTScope, TDescopedTheorem), conditions(TDescopedConds)),
-    scope_all([EnteredTScope], TScopedConds, TDescopedConds).
-
-unilog(guide(GScope, [tleave, NextGuide]), rule(theorem(CurrentTScope, [descope, Thm]), conditions(Conds))) :-
-    without_last(CurrentTScope, NewTScope),
-    query(guide(GScope, NextGuide), theorem(NewTScope, Thm), conditions(Conds)).
-
-unilog(guide(CurrentGScope, [genter, EnteredGScope, NextGuide]), rule(theorem(TScope, R), conditions(Conds))) :-
-    append(CurrentGScope, [EnteredGScope], NewGScope),
-    query(guide(NewGScope, NextGuide), theorem(TScope, R), conditions(Conds)).
-
-unilog(guide(CurrentGScope, [gleave, NextGuide]), rule(theorem(TScope, R), conditions(Conds))) :-
-    without_last(CurrentGScope, NewGScope),
-    query(guide(NewGScope, NextGuide), theorem(TScope, R), conditions(Conds)).
-
-unilog(guide(_, cond), rule(theorem(_, Thm), conditions([Thm]))).
-
-unilog(guide(GScope, [discharge, Guide]), rule(theorem(TScope, [if, Thm, [and | Conds]]), conditions([]))) :-
-    query(guide(GScope, Guide), theorem(TScope, Thm), conditions(Conds)).
-
-unilog(guide(GScope, eval), rule(theorem(TScope, [eval, NextGuide, Thm]), conditions(Conds))) :-
-    query(guide(GScope, NextGuide), theorem(TScope, Thm), conditions(Conds)).
-
-unilog(guide(GScope, [gor, FirstGuide | NextGuides]), rule(theorem(TScope, R), conditions(Conds))) :-
-    query(guide(GScope, FirstGuide), theorem(TScope, R), conditions(Conds));
-    query(guide(GScope, [gor | NextGuides]), theorem(TScope, R), conditions(Conds)).
-
-unilog(guide(GScope, [mp, G0, G1]), rule(theorem(TScope, YDescope), conditions(Conds))) :-
-    query(guide(GScope, G0), theorem(TScope, [if, YDescope, XDescope]), conditions(ImpConds)),
-    query(guide(GScope, G1), theorem(TScope, XDescope), conditions(AntConds)),
-    append(ImpConds, AntConds, Conds).
-
-unilog(guide(_, [conj]), rule(theorem(_, [and]), conditions([]))).
-
-unilog(guide(GScope, [conj | Guides]), rule(theorem(TScope, [and | DescopedTheorems]), conditions(Conds))) :-
-    query_all(guide(GScope, Guides), theorem(TScope, DescopedTheorems), conditions(Conds)).
-
-unilog(guide(GScope, [simpl, Guide]), rule(theorem(TScope, Thm), conditions(Conds))) :-
-    query(guide(GScope, Guide), theorem(TScope, [and, Thm | _]), conditions(Conds)).
+unilog(tag(RScope, [mp, ImpGuide, JusGuide]), theorem(SScope, Symbol)) :-
+    unilog(tag(RScope, ImpGuide), theorem(SScope, ImpSExpr)),
+    unilog(tag(RScope, JusGuide), theorem(SScope, ImpSExpr)),
+    
