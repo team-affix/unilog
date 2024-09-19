@@ -11,17 +11,47 @@ without_last([X|Rest], [X|RestWithoutLast]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle Scoping
 
-% Recursive case: split the left and right side of the colon and convert each part to a list.
-resolve(H:T, [H|Rest], SExpr) :-
-    resolve(T, Rest, SExpr).
+universal([]).
+universal(if).
+universal(and).
+universal(or).
+universal(cons).
 
-% Base case: a single expression belonging to the root scope.
-resolve(SExpr, [], SExpr).
+% standard unification of two expressions
+unify(Expr, Expr) :-
+    !.
+% empty list is a universal symbol
+unify(Expr, Expr:_) :-
+    universal(Expr),
+    !.
+unify(Expr:_, Expr) :-
+    universal(Expr),
+    !.
+unify(Expr:_, Expr:_) :-
+    universal(Expr),
+    !.
+% if both outermost expressions are lists, distribute scope then element-wise unify.
+unify([XH|XT], [YH|YT]) :-
+    !,
+    unify(XH, YH),
+    unify(XT, YT).
+unify([XH|XT], [YH|YT]:S) :-
+    !,
+    unify(XH, YH:S),
+    unify(XT, YT:S).
+unify([XH|XT]:S, [YH|YT]) :-
+    !,
+    unify(XH:S, YH),
+    unify(XT:S, YT).
+unify([XH|XT]:S, [YH|YT]:S) :-
+    !,
+    unify(XH:S, YH:S),
+    unify(XT:S, YT:S).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
 
-unilog(tag(RScope, [mp, ImpGuide, JusGuide]), theorem(SScope, Symbol)) :-
-    unilog(tag(RScope, ImpGuide), theorem(SScope, ImpSExpr)),
-    unilog(tag(RScope, JusGuide), theorem(SScope, ImpSExpr)),
+%unilog(tag(RScope, [mp, ImpGuide, JusGuide]), theorem(SScope, Symbol)) :-
+%    unilog(tag(RScope, ImpGuide), theorem(SScope, ImpSExpr)),
+%    unilog(tag(RScope, JusGuide), theorem(SScope, ImpSExpr)),
     
