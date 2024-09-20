@@ -32,7 +32,6 @@ unify_helper([], [], Expr, Expr) :-
 unify_helper(_, _, Expr, Expr) :-
     universal(Expr),
     !.
-
 % pop from scope
 unify_helper([S|XScopeRest], YScope, X, S:Y) :-
     !,
@@ -40,13 +39,11 @@ unify_helper([S|XScopeRest], YScope, X, S:Y) :-
 unify_helper(XScope, [S|YScopeRest], S:X, Y) :-
     !,
     unify_helper(XScope, YScopeRest, X, Y).
-
 % element-wise unify lists
 unify_helper(XScope, YScope, [XH|XT], [YH|YT]) :-
     !,
     unify_helper(XScope, YScope, XH, YH),
     unify_helper(XScope, YScope, XT, YT).
-
 % push onto scope
 unify_helper([], YScope, X, SY) :-
     nonvar(SY), % we should never just 'generate' a scope out of thin air.
