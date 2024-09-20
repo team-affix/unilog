@@ -11,46 +11,60 @@ without_last([X|Rest], [X|RestWithoutLast]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle Scoping
 
-universal([]).
-universal(if).
-universal(and).
-universal(or).
-universal(cons).
-universal(believe).
+universal(X) :-
+    ground(X),
+    u_case(X).
+
+u_case([]).
+u_case(if).
+u_case(and).
+u_case(or).
+u_case(cons).
+u_case(believe).
+
+unify(X, Y) :-
+    unify_helper([], [], X, Y).
 
 % standard unification of two expressions
-unify(Expr, Expr) :-
+unify_helper([], [], Expr, Expr) :-
     !.
 % empty list is a universal symbol
-unify(Expr, Expr:_) :-
+unify_helper(_, _, Expr, Expr) :-
     universal(Expr),
     !.
-unify(Expr:_, Expr) :-
-    universal(Expr),
-    !.
-unify(Expr:_, Expr:_) :-
-    universal(Expr),
-    !.
-% if both outermost expressions are lists, distribute scope then element-wise unify.
-unify([XH|XT], [YH|YT]) :-
+
+% pop from scope
+unify_helper([S|XScopeRest], YScope, X, S:Y) :-
     !,
-    unify(XH, YH),
-    unify(XT, YT).
-unify([XH|XT], [YH|YT]:S) :-
+    unify_helper(XScopeRest, YScope, X, Y).
+unify_helper(XScope, [S|YScopeRest], S:X, Y) :-
     !,
-    unify(XH, YH:S),
-    unify(XT, YT:S).
-unify([XH|XT]:S, [YH|YT]) :-
+    unify_helper(XScope, YScopeRest, X, Y).
+
+% element-wise unify lists
+unify_helper(XScope, YScope, [XH|XT], [YH|YT]) :-
     !,
-    unify(XH:S, YH),
-    unify(XT:S, YT).
-unify([XH|XT]:S, [YH|YT]:S) :-
+    unify_helper(XScope, YScope, XH, YH),
+    unify_helper(XScope, YScope, XT, YT).
+
+% push onto scope
+unify_helper([], YScope, X, SY) :-
+    nonvar(SY), % we should never just 'generate' a scope out of thin air.
+    SY = S:Y,
     !,
-    unify(XH:S, YH:S),
-    unify(XT:S, YT:S).
+    append(YScope, [S], NewYScope),
+    unify_helper([], NewYScope, X, Y).
+unify_helper(XScope, [], SX, Y) :-
+    nonvar(SX), % we should never just 'generate' a scope out of thin air.
+    SX = S:X,
+    !,
+    append(XScope, [S], NewXScope),
+    unify_helper(NewXScope, [], X, Y).
+
+
 
 bscope(X, [S|NextBScope], Descoped) :-
-    unify(X, [believe, S, Theorem]),
+    unify_helper(X, [believe, S, Theorem]),
     bscope(Theorem, NextBScope, Descoped),
     !.
 bscope(Theorem, [], Theorem) :-
@@ -60,7 +74,7 @@ rscope(X, RScope, Descoped) :-
     reverse(RScope, ReversedRScope),
     rscope_helper(X, ReversedRScope, Descoped).
 rscope_helper(X, [S|NextRScope], Descoped) :-
-    unify(X, RScoped:S),
+    unify_helper(X, RScoped:S),
     rscope_helper(RScoped, NextRScope, Descoped),
     !.
 rscope_helper(Theorem, [], Theorem) :-
@@ -93,7 +107,7 @@ query(tag(RScope, GuideTag), theorem(BScope, Sexpr)) :-
 query_fact(tag(RScope, GuideTag), theorem(BScope, InSexpr)) :-
     unilog(tag(RScope, GuideTag), fact(theorem(FactSexpr))),
     bscope(FactSexpr, BScope, BDescoped),
-    unify(BDescoped, InSexpr).
+    unify_helper(BDescoped, InSexpr).
     
 unilog(tag([], a0), fact(theorem([awesome, _]))).
 
