@@ -16,6 +16,7 @@ universal(if).
 universal(and).
 universal(or).
 universal(cons).
+universal(believe).
 
 % standard unification of two expressions
 unify(Expr, Expr) :-
@@ -48,10 +49,52 @@ unify([XH|XT]:S, [YH|YT]:S) :-
     unify(XH:S, YH:S),
     unify(XT:S, YT:S).
 
+bscope(X, [S|NextBScope], Descoped) :-
+    unify(X, [believe, S, Theorem]),
+    bscope(Theorem, NextBScope, Descoped),
+    !.
+bscope(Theorem, [], Theorem) :-
+    !.
+
+rscope(X, RScope, Descoped) :-
+    reverse(RScope, ReversedRScope),
+    rscope_helper(X, ReversedRScope, Descoped).
+rscope_helper(X, [S|NextRScope], Descoped) :-
+    unify(X, RScoped:S),
+    rscope_helper(RScoped, NextRScope, Descoped),
+    !.
+rscope_helper(Theorem, [], Theorem) :-
+    !.
+
+fully_qualify(Unqualified, RScope, BScope, Qualified) :-
+    bscope(BQualified, BScope, Unqualified),
+    bscope(Qualified, RScope, BQualified).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
+
+query(tag(RScope, GuideTag), theorem(BScope, Sexpr)) :-
+    (
+        query_fact(tag(RScope, GuideTag), theorem(BScope, Thm));
+        unilog(tag(RScope, GuideTag), rule(theorem(Thm)));
+        unilog(tag(RScope, GuideTag), guide(theorem(Thm)))
+    ),
+    (
+
+    )
+.
 
 %unilog(tag(RScope, [mp, ImpGuide, JusGuide]), theorem(SScope, Symbol)) :-
 %    unilog(tag(RScope, ImpGuide), theorem(SScope, ImpSExpr)),
 %    unilog(tag(RScope, JusGuide), theorem(SScope, ImpSExpr)),
     
+
+% example theorem
+query_fact(tag(RScope, GuideTag), theorem(BScope, InSexpr)) :-
+    unilog(tag(RScope, GuideTag), fact(theorem(FactSexpr))),
+    bscope(FactSexpr, BScope, BDescoped),
+    unify(BDescoped, InSexpr).
+    
+unilog(tag([], a0), fact(theorem([awesome, _]))).
+
+unilog(tag([m1], a0), fact(theorem([awesome, _]:m1))).
