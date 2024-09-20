@@ -61,20 +61,17 @@ unify_helper(XScope, [], SX, Y) :-
 
 
 bscope(X, [S|NextBScope], Descoped) :-
-    unify_helper(X, [believe, S, Theorem]),
+    unify(X, [believe, S, Theorem]),
     bscope(Theorem, NextBScope, Descoped),
     !.
 bscope(Theorem, [], Theorem) :-
     !.
 
-rscope(X, RScope, Descoped) :-
-    reverse(RScope, ReversedRScope),
-    rscope_helper(X, ReversedRScope, Descoped).
-rscope_helper(X, [S|NextRScope], Descoped) :-
-    unify_helper(X, RScoped:S),
-    rscope_helper(RScoped, NextRScope, Descoped),
+rscope(X, [S|NextRScope], Descoped) :-
+    unify(X, S:RScoped),
+    rscope(RScoped, NextRScope, Descoped),
     !.
-rscope_helper(Theorem, [], Theorem) :-
+rscope(Theorem, [], Theorem) :-
     !.
 
 fully_qualify(Unqualified, RScope, BScope, Qualified) :-
@@ -84,28 +81,35 @@ fully_qualify(Unqualified, RScope, BScope, Qualified) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
 
+query_entry(GuideTag, Sexpr) :-
+    query(tag([], GuideTag), theorem([], Sexpr)).
+
 query(tag(RScope, GuideTag), theorem(BScope, Sexpr)) :-
     (
-        query_fact(tag(RScope, GuideTag), theorem(BScope, Thm));
-        unilog(tag(RScope, GuideTag), rule(theorem(Thm)));
-        unilog(tag(RScope, GuideTag), guide(theorem(Thm)))
-    ),
-    (
-
-    )
-.
-
-%unilog(tag(RScope, [mp, ImpGuide, JusGuide]), theorem(SScope, Symbol)) :-
-%    unilog(tag(RScope, ImpGuide), theorem(SScope, ImpSExpr)),
-%    unilog(tag(RScope, JusGuide), theorem(SScope, ImpSExpr)),
-    
+        unilog(tag(RScope, GuideTag), rule(theorem(BScope, Sexpr)));
+        query_fact(tag(RScope, GuideTag), theorem(BScope, Sexpr));
+        unilog(tag(RScope, GuideTag), guide(theorem(BScope, Sexpr)))
+    ).
 
 % example theorem
 query_fact(tag(RScope, GuideTag), theorem(BScope, InSexpr)) :-
     unilog(tag(RScope, GuideTag), fact(theorem(FactSexpr))),
-    bscope(FactSexpr, BScope, BDescoped),
-    unify_helper(BDescoped, InSexpr).
+    rscope(RScoped, RScope, FactSexpr),
+    bscope(BRScoped, RScope, RScoped),
+    bscope(BRScoped, BScope, BDescoped),
+    unify(BDescoped, InSexpr).
     
-unilog(tag([], a0), fact(theorem([awesome, _]))).
+unilog(tag(RScope, [tenter, S, NextGuide]), rule(theorem(BScope, BScopedY))) :-
+    append(BScope, [S], NewBScope),
+    query(tag(RScope, NextGuide), theorem(NewBScope, Y)),
+    bscope(BScopedY, [S], Y).
 
-unilog(tag([m1], a0), fact(theorem([awesome, _]:m1))).
+unilog(tag(RScope, [mp, ImpGuide, JusGuide]), rule(theorem(BScope, Y))) :-
+    query(tag(RScope, ImpGuide), theorem(BScope, [if, Y, X])),
+    query(tag(RScope, JusGuide), theorem(BScope, X)).
+
+unilog(tag([], a0), fact(theorem([awesome, _]))).
+unilog(tag([m1], a0), fact(theorem([awesome, _]))).
+
+unilog(tag([], a1), fact(theorem([if, b, a]))).
+unilog(tag([], a2), fact(theorem(a))).
