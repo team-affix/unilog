@@ -136,11 +136,14 @@ unilog(tag(RScope, [mp, ImpGuide, JusGuide]), theorem(BScope, Y)) :-
     unilog(tag(RScope, ImpGuide), theorem(BScope, [if, Y, X])),
     unilog(tag(RScope, JusGuide), theorem(BScope, X)).
 
-unilog(tag(RScope, [bleave, NextGuide]), theorem(BScope, [believe, S, Internal])) :-
+unilog(tag(RScope, [bout, NextGuide]), theorem(BScope, [believe, S, Internal])) :-
     unilog(tag(RScope, NextGuide), theorem([S|BScope], Internal)).
 
-unilog(tag(RScope, [benter, NextGuide]), theorem([S|BScope], Internal)) :-
+unilog(tag(RScope, [bin, NextGuide]), theorem([S|BScope], Internal)) :-
     unilog(tag(RScope, NextGuide), theorem(BScope, [believe, S, Internal])).
+
+unilog(tag(RScope, [bpov, NextGuide]), Theorem) :-
+    unilog(tag(RScope, [bout, [dist, bin, NextGuide]]), Theorem).
 
 unilog(tag(RScope, [dist, UnaryGuide, NextGuide]), Theorem) :-
     (
@@ -163,7 +166,9 @@ unilog(tag(RScope, [dist, UnaryGuide, NextGuide]), Theorem) :-
 
 :- 
     \+ query([mp, a4, a3], _),
-    query([bleave, [mp, [benter, a4], [benter, a3]]], _),
-    query([bleave, [dist, benter, [mp, a4, a3]]], R1),
-        R1 = [believe, m1, y]
+    query([bout, [mp, [bin, a4], [bin, a3]]], _),
+    query([bout, [dist, bin, [mp, a4, a3]]], R1),
+        R1 = [believe, m1, y],
+    query([bpov, [mp, a4, a3]], R2),
+        R2 = [believe, m1, y]
     .
