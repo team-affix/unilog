@@ -81,35 +81,53 @@ fully_qualify(Unqualified, RScope, BScope, Qualified) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
 
-query_entry(GuideTag, Sexpr) :-
-    query(tag([], GuideTag), theorem([], Sexpr)).
-
-query(tag(RScope, GuideTag), theorem(BScope, Sexpr)) :-
+decl(Tag, Expression) :-
+    %%% make sure unilog tag cannot unify with a pre-existing one.
+    \+ clause(unilog(Tag, _), _),
     (
-        unilog(tag(RScope, GuideTag), rule(theorem(BScope, Sexpr)));
-        query_fact(tag(RScope, GuideTag), theorem(BScope, Sexpr));
-        unilog(tag(RScope, GuideTag), guide(theorem(BScope, Sexpr)))
+        (
+            Expression = theorem(Sexpr),
+            decl_theorem(Tag, Sexpr),
+            !
+        )
+        ;
+        (
+            Expression = guide(Sexpr),
+            decl_guide(Tag, Sexpr),
+            !
+        )
     ).
 
-% example theorem
-query_fact(tag(RScope, GuideTag), theorem(BScope, InSexpr)) :-
-    unilog(tag(RScope, GuideTag), fact(theorem(FactSexpr))),
-    rscope(RScoped, RScope, FactSexpr),
-    bscope(BRScoped, RScope, RScoped),
-    bscope(BRScoped, BScope, BDescoped),
-    unify(BDescoped, InSexpr).
-    
-unilog(tag(RScope, [tenter, S, NextGuide]), rule(theorem(BScope, BScopedY))) :-
-    append(BScope, [S], NewBScope),
-    query(tag(RScope, NextGuide), theorem(NewBScope, Y)),
-    bscope(BScopedY, [S], Y).
+decl_theorem(tag(RScope, GuideTag), Sexpr) :-
+    rscope(RScoped, RScope, Sexpr),
+    bscope(BScoped, RScope, RScoped),
+    assertz((
+        unilog(tag(RScope, GuideTag), theorem([], InSexpr)) :-
+            unify(InSexpr, BScoped)
+    )).
 
-unilog(tag(RScope, [mp, ImpGuide, JusGuide]), rule(theorem(BScope, Y))) :-
-    query(tag(RScope, ImpGuide), theorem(BScope, [if, Y, X])),
-    query(tag(RScope, JusGuide), theorem(BScope, X)).
+decl_guide(tag(RScope, GuideTag), Redirect) :-
+    assertz((
+        unilog(tag(RScope, GuideTag), Theorem) :-
+            unilog(tag(RScope, Redirect), Theorem)
+    )).
 
-unilog(tag([], a0), fact(theorem([awesome, _]))).
-unilog(tag([m1], a0), fact(theorem([awesome, _]))).
+query(Tag, Theorem) :-
+    unilog(tag([], Tag), theorem([], Theorem)).
 
-unilog(tag([], a1), fact(theorem([if, b, a]))).
-unilog(tag([], a2), fact(theorem(a))).
+:- multifile unilog/2.
+:- dynamic unilog/2.
+
+unilog(tag(RScope, [mp, ImpGuide, JusGuide]), theorem(BScope, Y)) :-
+    unilog(tag(RScope, ImpGuide), theorem(BScope, [if, Y, X])),
+    unilog(tag(RScope, JusGuide), theorem(BScope, X)).
+
+unilog(tag([], a0), theorem([], InSexpr)) :-
+    unify(InSexpr, [awesome, _]).
+unilog(tag([m1], a0), theorem([], InSexpr)) :-
+    unify(InSexpr, [believe, m1, m1:[awesome, _]]).
+
+unilog(tag([], a1), theorem([], InSexpr)) :-
+    unify(InSexpr, [if, b, a]).
+unilog(tag([], a2), theorem([], InSexpr)) :-
+    unify(InSexpr, a).
