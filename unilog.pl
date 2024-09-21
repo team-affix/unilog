@@ -77,49 +77,32 @@ rscope(Theorem, [], Theorem) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle theorem/guide declarations
 
-decl(Tag, Expression) :-
+axiom(RScope, GuideTag, Sexpr) :-
     %%% make sure unilog tag cannot unify with a pre-existing one.
-    \+ clause(unilog(Tag, _), _),
-    (
-        (
-            Expression = axiom(Sexpr),
-            decl_axiom(Tag, Sexpr),
-            !
-        )
-        ;
-        (
-            Expression = guide(Sexpr),
-            decl_guide(Tag, Sexpr),
-            !
-        )
-        ;
-        (
-            Expression = infer(Sexpr, Guide),
-            decl_infer(Tag, Sexpr, Guide),
-            !
-        )
-    ).
-
-decl_axiom(tag(RScope, GuideTag), Sexpr) :-
+    \+ clause(unilog(RScope, GuideTag, _), _),
     rscope(RScoped, RScope, Sexpr),
     bscope(BScoped, RScope, RScoped),
     assertz((
-        unilog(tag(RScope, GuideTag), theorem([], InSexpr)) :-
+        unilog(RScope, GuideTag, theorem([], InSexpr)) :-
             unify(InSexpr, BScoped)
     )).
 
-decl_guide(tag(RScope, GuideTag), Redirect) :-
+guide(RScope, GuideTag, Redirect) :-
+    %%% make sure unilog tag cannot unify with a pre-existing one.
+    \+ clause(unilog(RScope, GuideTag, _), _),
     assertz((
-        unilog(tag(RScope, GuideTag), Theorem) :-
-            unilog(tag(RScope, Redirect), Theorem)
+        unilog(RScope, GuideTag, Theorem) :-
+            unilog(RScope, Redirect, Theorem)
     )).
 
-%decl_infer(tag(RScope, GuideTag), Sexpr, Guide) :-
+%infer(RScope, GuideTag, Sexpr, Guide) :-
+%    %%% make sure unilog tag cannot unify with a pre-existing one.
+%    \+ clause(unilog(RScope, GuideTag, _), _),
 %    rscope(RScoped, RScope, Sexpr),
 %    bscope(BScoped, RScope, RScoped),
-%    unilog(tag(RScope, GuideTag), )
+%    unilog(RScope, GuideTag, )
 %    assertz((
-%        unilog(tag(RScope, GuideTag), theorem([], InSexpr)) :-
+%        unilog(RScope, GuideTag, theorem([], InSexpr)) :-
 %            unify(InSexpr, BScoped)
 %    )).
 
@@ -127,55 +110,55 @@ decl_guide(tag(RScope, GuideTag), Redirect) :-
 % Handle querying
 
 query(Tag, Theorem) :-
-    unilog(tag([], Tag), theorem([], Theorem)).
+    unilog([], Tag, theorem([], Theorem)).
 
-:- multifile unilog/2.
-:- dynamic unilog/2.
+:- multifile unilog/3.
+:- dynamic unilog/3.
 
-unilog(tag(RScope, [mp, ImpGuide, JusGuide]), theorem(BScope, Y)) :-
-    unilog(tag(RScope, ImpGuide), theorem(BScope, [if, Y, X])),
-    unilog(tag(RScope, JusGuide), theorem(BScope, X)).
+unilog(RScope, [mp, ImpGuide, JusGuide], theorem(BScope, Y)) :-
+    unilog(RScope, ImpGuide, theorem(BScope, [if, Y, X])),
+    unilog(RScope, JusGuide, theorem(BScope, X)).
 
-unilog(tag(RScope, [bout, NextGuide]), theorem(BScope, [believe, S, Internal])) :-
-    unilog(tag(RScope, NextGuide), theorem([S|BScope], Internal)).
+unilog(RScope, [bout, NextGuide], theorem(BScope, [believe, S, Internal])) :-
+    unilog(RScope, NextGuide, theorem([S|BScope], Internal)).
 
-unilog(tag(RScope, [bin, NextGuide]), theorem([S|BScope], Internal)) :-
-    unilog(tag(RScope, NextGuide), theorem(BScope, [believe, S, Internal])).
+unilog(RScope, [bin, NextGuide], theorem([S|BScope], Internal)) :-
+    unilog(RScope, NextGuide, theorem(BScope, [believe, S, Internal])).
 
-unilog(tag(RScope, [bpov, NextGuide]), Theorem) :-
-    unilog(tag(RScope, [bout, [dist, bin, NextGuide]]), Theorem).
+unilog(RScope, [bpov, NextGuide], Theorem) :-
+    unilog(RScope, [bout, [dist, bin, NextGuide]], Theorem).
 
-unilog(tag(RScope, [dist, UnaryGuide, NextGuide]), Theorem) :-
+unilog(RScope, [dist, UnaryGuide, NextGuide], Theorem) :-
     (
         NextGuide = [mp, G0, G1],
         !,
-        unilog(tag(RScope, [mp, [dist, UnaryGuide, G0], [dist, UnaryGuide, G1]]), Theorem)
+        unilog(RScope, [mp, [dist, UnaryGuide, G0], [dist, UnaryGuide, G1]], Theorem)
     );
     %(
     %    NextGuide = [dist, G0, G1],
     %    !,
-    %    unilog(tag(RScope, [dist, ]), Theorem)
+    %    unilog(RScope, [dist, ], Theorem)
     %);
     (
         % distributing unary onto terminal guide (execute unary)
-        unilog(tag(RScope, [UnaryGuide, NextGuide]), Theorem)
+        unilog(RScope, [UnaryGuide, NextGuide], Theorem)
     ).
 
 :-
-    decl(tag([], a0), axiom([awesome, jake])),
-    decl(tag([], a1), axiom([if, y, x])),
-    decl(tag([], a2), axiom(x)),
-    decl(tag([], a3), axiom([believe, m1, x])),
-    decl(tag([], a4), axiom([believe, m1, [if, y, x]])),
-    decl(tag([], a5), axiom(
+    axiom([], a0, [awesome, jake]),
+    axiom([], a1, [if, y, x]),
+    axiom([], a2, x),
+    axiom([], a3, [believe, m1, x]),
+    axiom([], a4, [believe, m1, [if, y, x]]),
+    axiom([], a5, 
         [believe, m1,
             [if,
                 [believe, m2, b],
                 a
             ]
-        ])),
-    decl(tag([], a6), axiom([believe, m1, a])),
-    decl(tag([], a7), axiom(
+        ]),
+    axiom([], a6, [believe, m1, a]),
+    axiom([], a7, 
         [believe, m1,
             [believe, m2,
                 [if,
@@ -183,7 +166,7 @@ unilog(tag(RScope, [dist, UnaryGuide, NextGuide]), Theorem) :-
                     b
                 ]
             ]
-        ]))
+        ])
     .
 
 :-
