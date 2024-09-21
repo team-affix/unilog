@@ -151,6 +151,11 @@ unilog(tag(RScope, [dist, UnaryGuide, NextGuide]), Theorem) :-
         !,
         unilog(tag(RScope, [mp, [dist, UnaryGuide, G0], [dist, UnaryGuide, G1]]), Theorem)
     );
+    %(
+    %    NextGuide = [dist, G0, G1],
+    %    !,
+    %    unilog(tag(RScope, [dist, ]), Theorem)
+    %);
     (
         % distributing unary onto terminal guide (execute unary)
         unilog(tag(RScope, [UnaryGuide, NextGuide]), Theorem)
@@ -161,14 +166,32 @@ unilog(tag(RScope, [dist, UnaryGuide, NextGuide]), Theorem) :-
     decl(tag([], a1), axiom([if, y, x])),
     decl(tag([], a2), axiom(x)),
     decl(tag([], a3), axiom([believe, m1, x])),
-    decl(tag([], a4), axiom([believe, m1, [if, y, x]]))
+    decl(tag([], a4), axiom([believe, m1, [if, y, x]])),
+    decl(tag([], a5), axiom(
+        [believe, m1,
+            [if,
+                [believe, m2, b],
+                a
+            ]
+        ])),
+    decl(tag([], a6), axiom([believe, m1, a])),
+    decl(tag([], a7), axiom(
+        [believe, m1,
+            [believe, m2,
+                [if,
+                    c,
+                    b
+                ]
+            ]
+        ]))
     .
 
-:- 
+:-
     \+ query([mp, a4, a3], _),
     query([bout, [mp, [bin, a4], [bin, a3]]], _),
     query([bout, [dist, bin, [mp, a4, a3]]], R1),
         R1 = [believe, m1, y],
     query([bpov, [mp, a4, a3]], R2),
         R2 = [believe, m1, y]
+    %query([bpov, ])
     .
