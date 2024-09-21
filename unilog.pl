@@ -122,12 +122,34 @@ unilog(tag(RScope, [mp, ImpGuide, JusGuide]), theorem(BScope, Y)) :-
     unilog(tag(RScope, ImpGuide), theorem(BScope, [if, Y, X])),
     unilog(tag(RScope, JusGuide), theorem(BScope, X)).
 
-unilog(tag([], a0), theorem([], InSexpr)) :-
-    unify(InSexpr, [awesome, _]).
-unilog(tag([m1], a0), theorem([], InSexpr)) :-
-    unify(InSexpr, [believe, m1, m1:[awesome, _]]).
+unilog(tag(RScope, [bleave, NextGuide]), theorem(BScope, [believe, S, Internal])) :-
+    unilog(tag(RScope, NextGuide), theorem([S|BScope], Internal)).
 
-unilog(tag([], a1), theorem([], InSexpr)) :-
-    unify(InSexpr, [if, b, a]).
-unilog(tag([], a2), theorem([], InSexpr)) :-
-    unify(InSexpr, a).
+unilog(tag(RScope, [benter, NextGuide]), theorem([S|BScope], Internal)) :-
+    unilog(tag(RScope, NextGuide), theorem(BScope, [believe, S, Internal])).
+
+unilog(tag(RScope, [dist, UnaryGuide, NextGuide]), Theorem) :-
+    (
+        NextGuide = [mp, G0, G1],
+        !,
+        unilog(tag(RScope, [mp, [dist, UnaryGuide, G0], [dist, UnaryGuide, G1]]), Theorem)
+    );
+    (
+        % distributing unary onto terminal guide (execute unary)
+        unilog(tag(RScope, [UnaryGuide, NextGuide]), Theorem)
+    ).
+
+:-
+    decl(tag([], a0), theorem([awesome, jake])),
+    decl(tag([], a1), theorem([if, y, x])),
+    decl(tag([], a2), theorem(x)),
+    decl(tag([], a3), theorem([believe, m1, x])),
+    decl(tag([], a4), theorem([believe, m1, [if, y, x]]))
+    .
+
+:- 
+    \+ query([mp, a4, a3], _),
+    query([bleave, [mp, [benter, a4], [benter, a3]]], _),
+    query([bleave, [dist, benter, [mp, a4, a3]]], R1),
+        R1 = [believe, m1, y]
+    .
