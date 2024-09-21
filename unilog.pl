@@ -74,20 +74,16 @@ rscope(X, [S|NextRScope], Descoped) :-
 rscope(Theorem, [], Theorem) :-
     !.
 
-fully_qualify(Unqualified, RScope, BScope, Qualified) :-
-    bscope(BQualified, BScope, Unqualified),
-    bscope(Qualified, RScope, BQualified).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Handle querying
+% Handle theorem/guide declarations
 
 decl(Tag, Expression) :-
     %%% make sure unilog tag cannot unify with a pre-existing one.
     \+ clause(unilog(Tag, _), _),
     (
         (
-            Expression = theorem(Sexpr),
-            decl_theorem(Tag, Sexpr),
+            Expression = axiom(Sexpr),
+            decl_axiom(Tag, Sexpr),
             !
         )
         ;
@@ -96,9 +92,15 @@ decl(Tag, Expression) :-
             decl_guide(Tag, Sexpr),
             !
         )
+        ;
+        (
+            Expression = infer(Sexpr, Guide),
+            decl_infer(Tag, Sexpr, Guide),
+            !
+        )
     ).
 
-decl_theorem(tag(RScope, GuideTag), Sexpr) :-
+decl_axiom(tag(RScope, GuideTag), Sexpr) :-
     rscope(RScoped, RScope, Sexpr),
     bscope(BScoped, RScope, RScoped),
     assertz((
@@ -111,6 +113,18 @@ decl_guide(tag(RScope, GuideTag), Redirect) :-
         unilog(tag(RScope, GuideTag), Theorem) :-
             unilog(tag(RScope, Redirect), Theorem)
     )).
+
+%decl_infer(tag(RScope, GuideTag), Sexpr, Guide) :-
+%    rscope(RScoped, RScope, Sexpr),
+%    bscope(BScoped, RScope, RScoped),
+%    unilog(tag(RScope, GuideTag), )
+%    assertz((
+%        unilog(tag(RScope, GuideTag), theorem([], InSexpr)) :-
+%            unify(InSexpr, BScoped)
+%    )).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Handle querying
 
 query(Tag, Theorem) :-
     unilog(tag([], Tag), theorem([], Theorem)).
@@ -140,11 +154,11 @@ unilog(tag(RScope, [dist, UnaryGuide, NextGuide]), Theorem) :-
     ).
 
 :-
-    decl(tag([], a0), theorem([awesome, jake])),
-    decl(tag([], a1), theorem([if, y, x])),
-    decl(tag([], a2), theorem(x)),
-    decl(tag([], a3), theorem([believe, m1, x])),
-    decl(tag([], a4), theorem([believe, m1, [if, y, x]]))
+    decl(tag([], a0), axiom([awesome, jake])),
+    decl(tag([], a1), axiom([if, y, x])),
+    decl(tag([], a2), axiom(x)),
+    decl(tag([], a3), axiom([believe, m1, x])),
+    decl(tag([], a4), axiom([believe, m1, [if, y, x]]))
     .
 
 :- 
