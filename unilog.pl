@@ -79,30 +79,30 @@ rscope(SExpr, [], SExpr) :-
 
 axiom(RScope, GuideTag, Sexpr) :-
     %%% make sure unilog tag cannot unify with a pre-existing one.
-    \+ clause(unilog(RScope, GuideTag, _, _), _),
+    \+ clause(unilog(RScope, _, GuideTag, _), _),
     rscope(RScoped, RScope, Sexpr),
     bscope(BScoped, RScope, RScoped),
     assertz((
-        unilog(RScope, GuideTag, [], InSexpr) :-
+        unilog(RScope, [], GuideTag, InSexpr) :-
             unify(InSexpr, BScoped)
     )).
 
 guide(RScope, GuideTag, Redirect) :-
     %%% make sure unilog tag cannot unify with a pre-existing one.
-    \+ clause(unilog(RScope, GuideTag, _, _), _),
+    \+ clause(unilog(RScope, _, GuideTag, _), _),
     assertz((
-        unilog(RScope, GuideTag, BScope, SExpr) :-
-            unilog(RScope, Redirect, BScope, SExpr)
+        unilog(RScope, BScope, GuideTag, SExpr) :-
+            unilog(RScope, BScope, Redirect,  SExpr)
     )).
 
 %infer(RScope, GuideTag, Sexpr, Guide) :-
 %    %%% make sure unilog tag cannot unify with a pre-existing one.
-%    \+ clause(unilog(RScope, GuideTag, _, _), _),
+%    \+ clause(unilog(RScope, _, GuideTag, _), _),
 %    rscope(RScoped, RScope, Sexpr),
 %    bscope(BScoped, RScope, RScoped),
 %    query()
 %    assertz((
-%        unilog(RScope, GuideTag, [], InSexpr) :-
+%        unilog(RScope, [], GuideTag, InSexpr) :-
 %            unify(InSexpr, BScoped)
 %    )).
 
@@ -110,38 +110,38 @@ guide(RScope, GuideTag, Redirect) :-
 % Handle querying
 
 query(Tag, SExpr) :-
-    unilog([], Tag, [], SExpr).
+    unilog([], [], Tag, SExpr).
 
 :- multifile unilog/4.
 :- dynamic unilog/4.
 
-unilog(RScope, [mp, ImpGuide, JusGuide], BScope, Y) :-
-    unilog(RScope, ImpGuide, BScope, [if, Y, X]),
-    unilog(RScope, JusGuide, BScope, X).
+unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
+    unilog(RScope, BScope, ImpGuide, [if, Y, X]),
+    unilog(RScope, BScope, JusGuide, X).
 
-unilog(RScope, [bout, NextGuide], BScope, [believe, S, Internal]) :-
-    unilog(RScope, NextGuide, [S|BScope], Internal).
+unilog(RScope, BScope, [bout, NextGuide], [believe, S, Internal]) :-
+    unilog(RScope, [S|BScope], NextGuide, Internal).
 
-unilog(RScope, [bin, NextGuide], [S|BScope], Internal) :-
-    unilog(RScope, NextGuide, BScope, [believe, S, Internal]).
+unilog(RScope, [S|BScope], [bin, NextGuide], Internal) :-
+    unilog(RScope, BScope, NextGuide, [believe, S, Internal]).
 
-unilog(RScope, [bpov, NextGuide], BScope, SExpr) :-
-    unilog(RScope, [bout, [dist, bin, NextGuide]], BScope, SExpr).
+unilog(RScope, BScope, [bpov, NextGuide], SExpr) :-
+    unilog(RScope, BScope, [bout, [dist, bin, NextGuide]], SExpr).
 
-unilog(RScope, [dist, UnaryGuide, NextGuide], BScope, SExpr) :-
+unilog(RScope, BScope, [dist, UnaryGuide, NextGuide], SExpr) :-
     (
         NextGuide = [mp, G0, G1],
         !,
-        unilog(RScope, [mp, [dist, UnaryGuide, G0], [dist, UnaryGuide, G1]], BScope, SExpr)
+        unilog(RScope, BScope, [mp, [dist, UnaryGuide, G0], [dist, UnaryGuide, G1]], SExpr)
     );
     %(
     %    NextGuide = [dist, G0, G1],
     %    !,
-    %    unilog(RScope, [dist, ], BScope, SExpr)
+    %    unilog(RScope, BScope, [dist, ], SExpr)
     %);
     (
         % distributing unary onto terminal guide (execute unary)
-        unilog(RScope, [UnaryGuide, NextGuide], BScope, SExpr)
+        unilog(RScope, BScope, [UnaryGuide, NextGuide], SExpr)
     ).
 
 :-
