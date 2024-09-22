@@ -112,6 +112,9 @@ guide(RScope, GuideTag, Redirect) :-
 query(Tag, SExpr) :-
     unilog([], [], Tag, SExpr).
 
+query(RScope, BScope, [], Tag, SExpr) :-
+    unilog(RScope, BScope, [], Tag, SE)
+
 :- multifile unilog/4.
 :- dynamic unilog/4.
 
