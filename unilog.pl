@@ -81,16 +81,12 @@ axiom(RScope, GuideTag, Sexpr) :-
     %%% make sure unilog tag cannot unify with a pre-existing one.
     \+ clause(unilog(RScope, _, GuideTag, _), _),
     atomic(GuideTag),
-    rscope(RScoped, RScope, Sexpr),
-        % axioms will always have their bscope
-        %     at the theorem level.
-    bscope(BScoped, RScope, RScoped), 
     assertz((
         unilog(RScope, BScope, [GuideTag], InSexpr) :-
                 % descope the axiom according to argued BScope,
-            bscope(BScoped, BScope, BDescoped),
+            bscope(BScoped, BScope, InSexpr),
                 % then attempt to unify.
-            unify(BDescoped, InSexpr)
+            unify(BScoped, Sexpr)
     )).
 
 guide(RScope, GuideTag, GuideArgs, Redirect) :-
@@ -129,9 +125,10 @@ unilog(RScope, BScope, [bout, NextGuide], [believe, S, Internal]) :-
 unilog(RScope, [S|BScope], [bin, NextGuide], Internal) :-
     unilog(RScope, BScope, NextGuide, [believe, S, Internal]).
 
-%unilog(RScope, [S|BScope], [gout, NextGuide], [believe, S, Internal]) :-
-%    append(RScope, [S], NewRScope),
-%    unilog(NewRScope, )
+unilog(RScope, [S|BScope], [gout, S, NextGuide], RScoped) :-
+    append(RScope, [S], NewRScope),
+    rscope(RScoped, [S], RDescoped),
+    unilog(NewRScope, BScope, NextGuide, RDescoped).
 
 % logic ROI
 
@@ -172,5 +169,11 @@ unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
     query([bout, [mp, [a4], [a3]]], R2),
         R2 = [believe, m1, y],
     query([bout, [bout, [mp, [bin, [a7]], [bin, [mp, [a5], [a6]]]]]], R3),
-        R3 = [believe, m1, [believe, m2, c]]
+        R3 = [believe, m1, [believe, m2, c]],
+    query([bout, [gout, m3, [bout, [mp, [a0], [a1]]]]], R4),
+        R4 = [believe, m3,
+            m3:[
+                believe, m1, y
+            ]
+        ]
     .
