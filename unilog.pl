@@ -119,10 +119,10 @@ query(Tag, SExpr) :-
 :- multifile unilog/4.
 :- dynamic unilog/4.
 
-unilog(RScope, BScope, [bout, NextGuide], [believe, S, Internal]) :-
+unilog(RScope, BScope, [bout, S, NextGuide], [believe, S, Internal]) :-
     unilog(RScope, [S|BScope], NextGuide, Internal).
 
-unilog(RScope, [S|BScope], [bin, NextGuide], Internal) :-
+unilog(RScope, [S|BScope], [bin, S, NextGuide], Internal) :-
     unilog(RScope, BScope, NextGuide, [believe, S, Internal]).
 
 unilog(RScope, [S|BScope], [gout, S, NextGuide], RScoped) :-
@@ -165,18 +165,35 @@ unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
 
 :-
     \+ query([mp, [a4], [a3]], _),
-    query([bout, [mp, [bin, [a4]], [bin, [a3]]]], _),
-    query([bout, [mp, [a4], [a3]]], R2),
+    query([bout, m1, [mp, [bin, m1, [a4]], [bin, m1, [a3]]]], _),
+    query([bout, m1, [mp, [a4], [a3]]], R2),
         R2 = [believe, m1, y],
-    query([bout, [bout, [mp, [bin, [a7]], [bin, [mp, [a5], [a6]]]]]], R3),
+    query([bout, m1, [bout, m2, [mp, [bin, m2, [a7]], [bin, m2, [mp, [a5], [a6]]]]]], R3),
         R3 = [believe, m1, [believe, m2, c]],
-    query([bout, [gout, m3, [bout, [mp, [a0], [a1]]]]], R4),
+    query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]], R4),
         R4 = [believe, m3,
             m3:[
                 believe, m1, y
             ]
         ],
-    query([bout, [gout, m3, [bout, [mp, [a0], [a1]]]]], 
+    query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]],
         [believe, m3, [believe, m3:m1, m3:y]]
+        ),
+    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]],
+        [believe, m4, [believe, m3:m1, m3:y]]
+        ),
+    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]],
+        [believe, m3, [believe, m1, m3:y]]
+        ),
+    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]],
+        [believe, m3, [believe, m3:m1, y]]
         )
     .
+
+% Example predicate that delays evaluation until X is instantiated
+lazy_eval(X, Result) :-
+    freeze(X, perform_computation(X, Result)).
+
+% The computation that should be done lazily
+perform_computation(X, Result) :-
+    X = 25.
