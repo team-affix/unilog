@@ -175,5 +175,8 @@ unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
             m3:[
                 believe, m1, y
             ]
-        ]
+        ],
+    query([bout, [gout, m3, [bout, [mp, [a0], [a1]]]]], 
+        [believe, m3, [believe, m3:m1, m3:y]]
+        )
     .
