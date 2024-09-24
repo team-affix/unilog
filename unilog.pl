@@ -80,18 +80,26 @@ rscope(SExpr, [], SExpr) :-
 axiom(RScope, GuideTag, Sexpr) :-
     %%% make sure unilog tag cannot unify with a pre-existing one.
     \+ clause(unilog(RScope, _, GuideTag, _), _),
+    atomic(GuideTag),
     rscope(RScoped, RScope, Sexpr),
-    bscope(BScoped, RScope, RScoped),
+        % axioms will always have their bscope
+        %     at the theorem level.
+    bscope(BScoped, RScope, RScoped), 
     assertz((
-        unilog(RScope, [], GuideTag, InSexpr) :-
-            unify(InSexpr, BScoped)
+        unilog(RScope, BScope, [GuideTag], InSexpr) :-
+                % descope the axiom according to argued BScope,
+            bscope(BScoped, BScope, BDescoped),
+                % then attempt to unify.
+            unify(BDescoped, InSexpr)
     )).
 
-guide(RScope, GuideTag, Redirect) :-
+guide(RScope, GuideTag, GuideArgs, Redirect) :-
     %%% make sure unilog tag cannot unify with a pre-existing one.
     \+ clause(unilog(RScope, _, GuideTag, _), _),
+    atomic(GuideTag),
+    is_list(GuideArgs),
     assertz((
-        unilog(RScope, BScope, GuideTag, SExpr) :-
+        unilog(RScope, BScope, [GuideTag|GuideArgs], SExpr) :-
             unilog(RScope, BScope, Redirect,  SExpr)
     )).
 
@@ -115,34 +123,21 @@ query(Tag, SExpr) :-
 :- multifile unilog/4.
 :- dynamic unilog/4.
 
-unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
-    unilog(RScope, BScope, ImpGuide, [if, Y, X]),
-    unilog(RScope, BScope, JusGuide, X).
-
 unilog(RScope, BScope, [bout, NextGuide], [believe, S, Internal]) :-
     unilog(RScope, [S|BScope], NextGuide, Internal).
 
 unilog(RScope, [S|BScope], [bin, NextGuide], Internal) :-
     unilog(RScope, BScope, NextGuide, [believe, S, Internal]).
 
-unilog(RScope, BScope, [bpov, NextGuide], SExpr) :-
-    unilog(RScope, BScope, [bout, [dist, bin, NextGuide]], SExpr).
+%unilog(RScope, [S|BScope], [gout, NextGuide], [believe, S, Internal]) :-
+%    append(RScope, [S], NewRScope),
+%    unilog(NewRScope, )
 
-unilog(RScope, BScope, [dist, UnaryGuide, NextGuide], SExpr) :-
-    (
-        NextGuide = [mp, G0, G1],
-        !,
-        unilog(RScope, BScope, [mp, [dist, UnaryGuide, G0], [dist, UnaryGuide, G1]], SExpr)
-    );
-    %(
-    %    NextGuide = [dist, G0, G1],
-    %    !,
-    %    unilog(RScope, BScope, [dist, ], SExpr)
-    %);
-    (
-        % distributing unary onto terminal guide (execute unary)
-        unilog(RScope, BScope, [UnaryGuide, NextGuide], SExpr)
-    ).
+% logic ROI
+
+unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
+    unilog(RScope, BScope, ImpGuide, [if, Y, X]),
+    unilog(RScope, BScope, JusGuide, X).
 
 :-
     axiom([], a0, [awesome, jake]),
@@ -166,15 +161,16 @@ unilog(RScope, BScope, [dist, UnaryGuide, NextGuide], SExpr) :-
                     b
                 ]
             ]
-        ])
+        ]),
+    axiom([m3], a0, [believe, m1, [if, y, x]]),
+    axiom([m3], a1, [believe, m1, x])
     .
 
 :-
-    \+ query([mp, a4, a3], _),
-    query([bout, [mp, [bin, a4], [bin, a3]]], _),
-    query([bout, [dist, bin, [mp, a4, a3]]], R1),
-        R1 = [believe, m1, y],
-    query([bpov, [mp, a4, a3]], R2),
-        R2 = [believe, m1, y]
-    %query([bpov, ])
+    \+ query([mp, [a4], [a3]], _),
+    query([bout, [mp, [bin, [a4]], [bin, [a3]]]], _),
+    query([bout, [mp, [a4], [a3]]], R2),
+        R2 = [believe, m1, y],
+    query([bout, [bout, [mp, [bin, [a7]], [bin, [mp, [a5], [a6]]]]]], R3),
+        R3 = [believe, m1, [believe, m2, c]]
     .
