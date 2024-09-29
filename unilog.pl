@@ -22,30 +22,6 @@ u_case(or).
 u_case(cons).
 u_case(believe).
 
-% standard unification of two expressions
-punify(Expr, Expr) :-
-    !.
-% empty list is a universal symbol
-punify(Expr, _:Expr) :-
-    universal(Expr),
-    !.
-punify(_:Expr, Expr) :-
-    universal(Expr),
-    !.
-punify(_:Expr, _:Expr) :-
-    universal(Expr),
-    !.
-punify(X, S:[YH|YT]) :-
-    !,
-    punify(X, [S:YH|S:YT]).
-punify(S:[XH|XT], Y) :-
-    !,
-    punify([S:XH|S:XT], Y).
-punify([XH|XT], [YH|YT]) :-
-    !,
-    punify(XH, YH),
-    punify(XT, YT).
-
 unify(X, Y) :-
     unify([], [], X, Y).
 
@@ -101,16 +77,18 @@ rscope(SExpr, [], SExpr) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle theorem/guide declarations
 
-axiom(RScope, GuideTag, Sexpr) :-
+axiom(RScope, GuideTag, Target) :-
     %%% make sure unilog tag cannot unify with a pre-existing one.
     \+ clause(unilog(RScope, _, GuideTag, _), _),
     atomic(GuideTag),
+    rscope(RScopedTarget, RScope, Target),
+    bscope(BScopedTarget, RScope, RScopedTarget),
     assertz((
-        unilog(RScope, BScope, GuideTag, InSexpr) :-
+        unilog(RScope, BScope, GuideTag, Source) :-
                 % descope the axiom according to argued BScope,
-            bscope(BScoped, BScope, InSexpr),
+            bscope(BScopedSource, BScope, Source),
                 % then attempt to unify.
-            unify(BScoped, Sexpr)
+            unify(BScopedSource, BScopedTarget)
     )).
 
 guide(RScope, GuideTag, GuideArgs, Redirect) :-
@@ -120,7 +98,7 @@ guide(RScope, GuideTag, GuideArgs, Redirect) :-
     is_list(GuideArgs),
     assertz((
         unilog(RScope, BScope, [GuideTag|GuideArgs], SExpr) :-
-            unilog(RScope, BScope, Redirect,  SExpr)
+            unilog(RScope, BScope, Redirect, SExpr)
     )).
 
 %infer(RScope, GuideTag, Sexpr, Guide) :-
@@ -140,19 +118,19 @@ guide(RScope, GuideTag, GuideArgs, Redirect) :-
 query(Tag, SExpr) :-
     unilog([], [], Tag, SExpr).
 
-:- multifile unilog/4.
 :- dynamic unilog/4.
 
 unilog(RScope, BScope, [bout, S, NextGuide], [believe, S, Internal]) :-
-    unilog(RScope, [S|BScope], NextGuide, Internal).
+    append(BScope, [S], NewBScope),
+    unilog(RScope, NewBScope, NextGuide, Internal).
 
-unilog(RScope, [S|BScope], [bin, S, NextGuide], Internal) :-
-    unilog(RScope, BScope, NextGuide, [believe, S, Internal]).
+unilog(RScope, BScope, [bin, S, NextGuide], Internal) :-
+    append(NewBScope, [S], BScope),
+    unilog(RScope, NewBScope, NextGuide, [believe, S, Internal]).
 
-unilog(RScope, [S|BScope], [gout, S, NextGuide], RScoped) :-
+unilog(RScope, [S|BScope], [gout, S, NextGuide], SExpr) :-
     append(RScope, [S], NewRScope),
-    rscope(RScoped, [S], RDescoped),
-    unilog(NewRScope, BScope, NextGuide, RDescoped).
+    unilog(NewRScope, [S|BScope], NextGuide, SExpr).
 
 % logic ROI
 
@@ -166,7 +144,7 @@ unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
     axiom([], a2, x),
     axiom([], a3, [believe, m1, x]),
     axiom([], a4, [believe, m1, [if, y, x]]),
-    axiom([], a5, 
+    axiom([], a5,
         [believe, m1,
             [if,
                 [believe, m2, b],
@@ -174,7 +152,7 @@ unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
             ]
         ]),
     axiom([], a6, [believe, m1, a]),
-    axiom([], a7, 
+    axiom([], a7,
         [believe, m1,
             [believe, m2,
                 [if,
@@ -191,25 +169,26 @@ unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
     \+ query([mp, a4, a3], _),
     query([bout, m1, [mp, [bin, m1, a4], [bin, m1, a3]]], _),
     query([bout, m1, [mp, a4, a3]], R2),
-        R2 = [believe, m1, y],
+        unify(R2, [believe, m1, y]),
     query([bout, m1, [bout, m2, [mp, [bin, m2, a7], [bin, m2, [mp, a5, a6]]]]], R3),
-        R3 = [believe, m1, [believe, m2, c]],
-    query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]], R4),
-        R4 = [believe, m3,
-            m3:[
-                believe, m1, y
-            ]
-        ],
-    query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]],
+        unify(R3, [believe, m1, [believe, m2, c]]),
+    query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]], R4),
+        unify(R4,
+            [believe, m3,
+                m3:[
+                    believe, m1, y
+                ]
+            ]),
+    query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
         [believe, m3, [believe, m3:m1, m3:y]]
         ),
-    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]],
+    \+ query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
         [believe, m4, [believe, m3:m1, m3:y]]
         ),
-    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]],
+    \+ query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
         [believe, m3, [believe, m1, m3:y]]
         ),
-    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]],
+    \+ query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
         [believe, m3, [believe, m3:m1, y]]
         )
     .
