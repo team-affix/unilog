@@ -138,57 +138,57 @@ unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
     unilog(RScope, BScope, ImpGuide, [if, Y, X]),
     unilog(RScope, BScope, JusGuide, X).
 
-:-
-    axiom([], a0, [awesome, jake]),
-    axiom([], a1, [if, y, x]),
-    axiom([], a2, x),
-    axiom([], a3, [believe, m1, x]),
-    axiom([], a4, [believe, m1, [if, y, x]]),
-    axiom([], a5,
-        [believe, m1,
-            [if,
-                [believe, m2, b],
-                a
-            ]
-        ]),
-    axiom([], a6, [believe, m1, a]),
-    axiom([], a7,
-        [believe, m1,
-            [believe, m2,
-                [if,
-                    c,
-                    b
-                ]
-            ]
-        ]),
-    axiom([m3], a0, [believe, m1, [if, y, x]]),
-    axiom([m3], a1, [believe, m1, x])
-    .
-
-:-
-    \+ query([mp, a4, a3], _),
-    query([bout, m1, [mp, [bin, m1, a4], [bin, m1, a3]]], _),
-    query([bout, m1, [mp, a4, a3]], R2),
-        unify(R2, [believe, m1, y]),
-    query([bout, m1, [bout, m2, [mp, [bin, m2, a7], [bin, m2, [mp, a5, a6]]]]], R3),
-        unify(R3, [believe, m1, [believe, m2, c]]),
-    query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]], R4),
-        unify(R4,
-            [believe, m3,
-                m3:[
-                    believe, m1, y
-                ]
-            ]),
-    query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
-        [believe, m3, [believe, m3:m1, m3:y]]
-        ),
-    \+ query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
-        [believe, m4, [believe, m3:m1, m3:y]]
-        ),
-    \+ query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
-        [believe, m3, [believe, m1, m3:y]]
-        ),
-    \+ query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
-        [believe, m3, [believe, m3:m1, y]]
-        )
-    .
+%:-
+%    axiom([], a0, [awesome, jake]),
+%    axiom([], a1, [if, y, x]),
+%    axiom([], a2, x),
+%    axiom([], a3, [believe, m1, x]),
+%    axiom([], a4, [believe, m1, [if, y, x]]),
+%    axiom([], a5,
+%        [believe, m1,
+%            [if,
+%                [believe, m2, b],
+%                a
+%            ]
+%        ]),
+%    axiom([], a6, [believe, m1, a]),
+%    axiom([], a7,
+%        [believe, m1,
+%            [believe, m2,
+%                [if,
+%                    c,
+%                    b
+%                ]
+%            ]
+%        ]),
+%    axiom([m3], a0, [believe, m1, [if, y, x]]),
+%    axiom([m3], a1, [believe, m1, x])
+%    .
+%
+%:-
+%    \+ query([mp, a4, a3], _),
+%    query([bout, m1, [mp, [bin, m1, a4], [bin, m1, a3]]], _),
+%    query([bout, m1, [mp, a4, a3]], R2),
+%        unify(R2, [believe, m1, y]),
+%    query([bout, m1, [bout, m2, [mp, [bin, m2, a7], [bin, m2, [mp, a5, a6]]]]], R3),
+%        unify(R3, [believe, m1, [believe, m2, c]]),
+%    query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]], R4),
+%        unify(R4,
+%            [believe, m3,
+%                m3:[
+%                    believe, m1, y
+%                ]
+%            ]),
+%    query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
+%        [believe, m3, [believe, m3:m1, m3:y]]
+%        ),
+%    \+ query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
+%        [believe, m4, [believe, m3:m1, m3:y]]
+%        ),
+%    \+ query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
+%        [believe, m3, [believe, m1, m3:y]]
+%        ),
+%    \+ query([bout, m3, [gout, m3, [bout, m3:m1, [mp, a0, a1]]]],
+%        [believe, m3, [believe, m3:m1, y]]
+%        )
+%    .
