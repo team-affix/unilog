@@ -22,41 +22,65 @@ u_case(or).
 u_case(cons).
 u_case(believe).
 
-unify(X, Y) :-
-    unify_helper([], [], X, Y).
-
 % standard unification of two expressions
-unify_helper([], [], Expr, Expr) :-
+punify(Expr, Expr) :-
     !.
 % empty list is a universal symbol
-unify_helper(_, _, Expr, Expr) :-
+punify(Expr, _:Expr) :-
+    universal(Expr),
+    !.
+punify(_:Expr, Expr) :-
+    universal(Expr),
+    !.
+punify(_:Expr, _:Expr) :-
+    universal(Expr),
+    !.
+punify(X, S:[YH|YT]) :-
+    !,
+    punify(X, [S:YH|S:YT]).
+punify(S:[XH|XT], Y) :-
+    !,
+    punify([S:XH|S:XT], Y).
+punify([XH|XT], [YH|YT]) :-
+    !,
+    punify(XH, YH),
+    punify(XT, YT).
+
+unify(X, Y) :-
+    unify([], [], X, Y).
+
+% standard unification of two expressions
+unify([], [], Expr, Expr) :-
+    !.
+% empty list is a universal symbol
+unify(_, _, Expr, Expr) :-
     universal(Expr),
     !.
 % pop from scope
-unify_helper([S|XScopeRest], YScope, X, S:Y) :-
+unify([S|XScopeRest], YScope, X, S:Y) :-
     !,
-    unify_helper(XScopeRest, YScope, X, Y).
-unify_helper(XScope, [S|YScopeRest], S:X, Y) :-
+    unify(XScopeRest, YScope, X, Y).
+unify(XScope, [S|YScopeRest], S:X, Y) :-
     !,
-    unify_helper(XScope, YScopeRest, X, Y).
+    unify(XScope, YScopeRest, X, Y).
 % element-wise unify lists
-unify_helper(XScope, YScope, [XH|XT], [YH|YT]) :-
+unify(XScope, YScope, [XH|XT], [YH|YT]) :-
     !,
-    unify_helper(XScope, YScope, XH, YH),
-    unify_helper(XScope, YScope, XT, YT).
+    unify(XScope, YScope, XH, YH),
+    unify(XScope, YScope, XT, YT).
 % push onto scope
-unify_helper([], YScope, X, SY) :-
+unify([], YScope, X, SY) :-
     nonvar(SY), % we should never just 'generate' a scope out of thin air.
     SY = S:Y,
     !,
     append(YScope, [S], NewYScope),
-    unify_helper([], NewYScope, X, Y).
-unify_helper(XScope, [], SX, Y) :-
+    unify([], NewYScope, X, Y).
+unify(XScope, [], SX, Y) :-
     nonvar(SX), % we should never just 'generate' a scope out of thin air.
     SX = S:X,
     !,
     append(XScope, [S], NewXScope),
-    unify_helper(NewXScope, [], X, Y).
+    unify(NewXScope, [], X, Y).
 
 
 
@@ -82,7 +106,7 @@ axiom(RScope, GuideTag, Sexpr) :-
     \+ clause(unilog(RScope, _, GuideTag, _), _),
     atomic(GuideTag),
     assertz((
-        unilog(RScope, BScope, [GuideTag], InSexpr) :-
+        unilog(RScope, BScope, GuideTag, InSexpr) :-
                 % descope the axiom according to argued BScope,
             bscope(BScoped, BScope, InSexpr),
                 % then attempt to unify.
@@ -164,36 +188,28 @@ unilog(RScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
     .
 
 :-
-    \+ query([mp, [a4], [a3]], _),
-    query([bout, m1, [mp, [bin, m1, [a4]], [bin, m1, [a3]]]], _),
-    query([bout, m1, [mp, [a4], [a3]]], R2),
+    \+ query([mp, a4, a3], _),
+    query([bout, m1, [mp, [bin, m1, a4], [bin, m1, a3]]], _),
+    query([bout, m1, [mp, a4, a3]], R2),
         R2 = [believe, m1, y],
-    query([bout, m1, [bout, m2, [mp, [bin, m2, [a7]], [bin, m2, [mp, [a5], [a6]]]]]], R3),
+    query([bout, m1, [bout, m2, [mp, [bin, m2, a7], [bin, m2, [mp, a5, a6]]]]], R3),
         R3 = [believe, m1, [believe, m2, c]],
-    query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]], R4),
+    query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]], R4),
         R4 = [believe, m3,
             m3:[
                 believe, m1, y
             ]
         ],
-    query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]],
+    query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]],
         [believe, m3, [believe, m3:m1, m3:y]]
         ),
-    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]],
+    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]],
         [believe, m4, [believe, m3:m1, m3:y]]
         ),
-    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]],
+    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]],
         [believe, m3, [believe, m1, m3:y]]
         ),
-    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, [a0], [a1]]]]],
+    \+ query([bout, m3, [gout, m3, [bout, m1, [mp, a0, a1]]]],
         [believe, m3, [believe, m3:m1, y]]
         )
     .
-
-% Example predicate that delays evaluation until X is instantiated
-lazy_eval(X, Result) :-
-    freeze(X, perform_computation(X, Result)).
-
-% The computation that should be done lazily
-perform_computation(X, Result) :-
-    X = 25.
