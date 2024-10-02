@@ -111,75 +111,121 @@ namespace unilog
 
     std::istream &operator>>(std::istream &a_istream, axiom_statement &a_axiom_statement)
     {
+        command l_command;
+        a_istream >> l_command;
+
+        if (l_command.m_text != AXIOM_COMMAND_KEYWORD)
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
         a_istream >> a_axiom_statement.m_tag;
         a_istream >> a_axiom_statement.m_theorem;
+
         return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, guide_statement &a_guide_statement)
     {
+        command l_command;
+        a_istream >> l_command;
+
+        if (l_command.m_text != GUIDE_COMMAND_KEYWORD)
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
         a_istream >> a_guide_statement.m_tag;
         a_istream >> a_guide_statement.m_guide;
+
         return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, infer_statement &a_infer_statement)
     {
+        command l_command;
+        a_istream >> l_command;
+
+        if (l_command.m_text != INFER_COMMAND_KEYWORD)
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
         a_istream >> a_infer_statement.m_tag;
         a_istream >> a_infer_statement.m_theorem;
         a_istream >> a_infer_statement.m_guide;
+
         return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, refer_statement &a_refer_statement)
     {
+        command l_command;
+        a_istream >> l_command;
+
+        if (l_command.m_text != REFER_COMMAND_KEYWORD)
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
         a_istream >> a_refer_statement.m_tag;
         a_istream >> a_refer_statement.m_file_path;
+
         return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, statement &a_statement)
     {
-        command l_command;
+        // case: axiom_statement
+        {
+            axiom_statement l_result;
+            if (a_istream >> l_result)
+            {
+                a_statement = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
+        }
 
-        // Try to extract a command.
-        a_istream >> l_command;
+        // case: guide_statement
+        {
+            guide_statement l_result;
+            if (a_istream >> l_result)
+            {
+                a_statement = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
+        }
 
-        // NOTE:
-        //     here, we cannot check !good(), because EOFbit might be set due to peek()ing EOF
-        //     in the lexer. Instead, check for failure to extract.
-        if (a_istream.fail())
-            return a_istream;
+        // case: infer_statement
+        {
+            infer_statement l_result;
+            if (a_istream >> l_result)
+            {
+                a_statement = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
+        }
 
-        if (l_command.m_text == AXIOM_COMMAND_KEYWORD)
+        // case: refer_statement
         {
-            axiom_statement l_axiom_statement;
-            a_istream >> l_axiom_statement;
-            a_statement = l_axiom_statement;
+            refer_statement l_result;
+            if (a_istream >> l_result)
+            {
+                a_statement = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
         }
-        else if (l_command.m_text == GUIDE_COMMAND_KEYWORD)
-        {
-            guide_statement l_guide_statement;
-            a_istream >> l_guide_statement;
-            a_statement = l_guide_statement;
-        }
-        else if (l_command.m_text == INFER_COMMAND_KEYWORD)
-        {
-            infer_statement l_infer_statement;
-            a_istream >> l_infer_statement;
-            a_statement = l_infer_statement;
-        }
-        else if (l_command.m_text == REFER_COMMAND_KEYWORD)
-        {
-            refer_statement l_refer_statement;
-            a_istream >> l_refer_statement;
-            a_statement = l_refer_statement;
-        }
-        else
-        {
-            // We read an invalid command identifier.
-            a_istream.setstate(std::ios::failbit);
-        }
+
+        // We read an invalid command identifier.
+        a_istream.setstate(std::ios::failbit);
 
         return a_istream;
     }

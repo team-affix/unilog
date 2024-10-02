@@ -181,12 +181,6 @@ namespace unilog
                !is_quoted_atom_indicator_char(c);
     }
 
-    bool is_atom_indicator_char(int c)
-    {
-        return is_quoted_atom_indicator_char(c) ||
-               is_unquoted_atom_indicator_char(c);
-    }
-
     bool is_command_text_char(int c)
     {
         return isalnum(c);
@@ -223,6 +217,9 @@ namespace unilog
 
     std::istream &operator>>(std::istream &a_istream, command &a_command)
     {
+        // save streamposition, restore on failure
+        std::streampos l_initial_sp = a_istream.tellg();
+
         ////////////////////////////////////
         //////// INDICATOR SECTION /////////
         ////////////////////////////////////
@@ -230,14 +227,14 @@ namespace unilog
         // consume until non-whitespace char
         consume_whitespace(a_istream);
 
-        if (!is_command_indicator_char(a_istream.peek()))
+        if (!is_command_indicator_char(a_istream.get()))
         {
+            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
+            // restore streampos
+            a_istream.seekg(l_initial_sp);
             return a_istream;
         }
-
-        // pop the indicator character
-        a_istream.get();
 
         ////////////////////////////////////
         /////////// TEXT SECTION ///////////
@@ -262,6 +259,9 @@ namespace unilog
 
     std::istream &operator>>(std::istream &a_istream, scope_separator &a_scope_separator)
     {
+        // save streamposition, restore on failure
+        std::streampos l_initial_sp = a_istream.tellg();
+
         ////////////////////////////////////
         //////// INDICATOR SECTION /////////
         ////////////////////////////////////
@@ -269,20 +269,23 @@ namespace unilog
         // consume until non-whitespace char
         consume_whitespace(a_istream);
 
-        if (!is_scope_separator_indicator_char(a_istream.peek()))
+        if (!is_scope_separator_indicator_char(a_istream.get()))
         {
+            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
+            // restore streampos
+            a_istream.seekg(l_initial_sp);
             return a_istream;
         }
-
-        // pop the indicator character
-        a_istream.get();
 
         return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, list_separator &a_list_separator)
     {
+        // save streamposition, restore on failure
+        std::streampos l_initial_sp = a_istream.tellg();
+
         ////////////////////////////////////
         //////// INDICATOR SECTION /////////
         ////////////////////////////////////
@@ -290,20 +293,23 @@ namespace unilog
         // consume until non-whitespace char
         consume_whitespace(a_istream);
 
-        if (!is_list_separator_indicator_char(a_istream.peek()))
+        if (!is_list_separator_indicator_char(a_istream.get()))
         {
+            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
+            // restore streampos
+            a_istream.seekg(l_initial_sp);
             return a_istream;
         }
-
-        // pop the indicator character
-        a_istream.get();
 
         return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, list_open &a_list_open)
     {
+        // save streamposition, restore on failure
+        std::streampos l_initial_sp = a_istream.tellg();
+
         ////////////////////////////////////
         //////// INDICATOR SECTION /////////
         ////////////////////////////////////
@@ -311,20 +317,23 @@ namespace unilog
         // consume until non-whitespace char
         consume_whitespace(a_istream);
 
-        if (!is_list_open_indicator_char(a_istream.peek()))
+        if (!is_list_open_indicator_char(a_istream.get()))
         {
+            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
+            // restore streampos
+            a_istream.seekg(l_initial_sp);
             return a_istream;
         }
-
-        // pop the indicator character
-        a_istream.get();
 
         return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, list_close &a_list_close)
     {
+        // save streamposition, restore on failure
+        std::streampos l_initial_sp = a_istream.tellg();
+
         ////////////////////////////////////
         //////// INDICATOR SECTION /////////
         ////////////////////////////////////
@@ -332,20 +341,23 @@ namespace unilog
         // consume until non-whitespace char
         consume_whitespace(a_istream);
 
-        if (!is_list_close_indicator_char(a_istream.peek()))
+        if (!is_list_close_indicator_char(a_istream.get()))
         {
+            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
+            // restore streampos
+            a_istream.seekg(l_initial_sp);
             return a_istream;
         }
-
-        // pop the indicator character
-        a_istream.get();
 
         return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, variable &a_variable)
     {
+        // save streamposition, restore on failure
+        std::streampos l_initial_sp = a_istream.tellg();
+
         ////////////////////////////////////
         //////// INDICATOR SECTION /////////
         ////////////////////////////////////
@@ -355,7 +367,10 @@ namespace unilog
 
         if (!is_variable_indicator_char(a_istream.peek()))
         {
+            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
+            // restore streampos
+            a_istream.seekg(l_initial_sp);
             return a_istream;
         }
 
@@ -384,6 +399,9 @@ namespace unilog
 
     std::istream &operator>>(std::istream &a_istream, quoted_atom &a_quoted_atom)
     {
+        // save streamposition, restore on failure
+        std::streampos l_initial_sp = a_istream.tellg();
+
         ////////////////////////////////////
         //////// INDICATOR SECTION /////////
         ////////////////////////////////////
@@ -391,9 +409,15 @@ namespace unilog
         // consume until non-whitespace char
         consume_whitespace(a_istream);
 
-        if (!is_quoted_atom_indicator_char(a_istream.peek()))
+        // save the type of quotation. then we can match for closing quote.
+        int l_quote_char = a_istream.get();
+
+        if (!is_quoted_atom_indicator_char(l_quote_char))
         {
+            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
+            // restore streampos
+            a_istream.seekg(l_initial_sp);
             return a_istream;
         }
 
@@ -402,12 +426,6 @@ namespace unilog
         ////////////////////////////////////
 
         a_quoted_atom.m_text.clear();
-
-        // save the type of quotation. then we can match for closing quote.
-        char l_quote_char;
-
-        // pop the indicator character
-        a_istream.get(l_quote_char);
 
         char l_char;
 
@@ -431,6 +449,9 @@ namespace unilog
 
     std::istream &operator>>(std::istream &a_istream, unquoted_atom &a_unquoted_atom)
     {
+        // save streamposition, restore on failure
+        std::streampos l_initial_sp = a_istream.tellg();
+
         ////////////////////////////////////
         //////// INDICATOR SECTION /////////
         ////////////////////////////////////
@@ -440,7 +461,10 @@ namespace unilog
 
         if (!is_unquoted_atom_indicator_char(a_istream.peek()))
         {
+            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
+            // restore streampos
+            a_istream.seekg(l_initial_sp);
             return a_istream;
         }
 
@@ -472,35 +496,29 @@ namespace unilog
 
     std::istream &operator>>(std::istream &a_istream, atom &a_atom)
     {
-        ////////////////////////////////////
-        //////// INDICATOR SECTION /////////
-        ////////////////////////////////////
-
-        // consume until non-whitespace char
-        consume_whitespace(a_istream);
-
-        if (!is_atom_indicator_char(a_istream.peek()))
+        // case: quoted_atom
         {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
+            quoted_atom l_result;
+            if (a_istream >> l_result)
+            {
+                a_atom = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
         }
 
-        ////////////////////////////////////
-        /////////// TEXT SECTION ///////////
-        ////////////////////////////////////
+        // case: unquoted_atom
+        {
+            unquoted_atom l_result;
+            if (a_istream >> l_result)
+            {
+                a_atom = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
+        }
 
-        if (is_quoted_atom_indicator_char(a_istream.peek()))
-        {
-            quoted_atom l_quoted_atom;
-            a_istream >> l_quoted_atom;
-            a_atom = l_quoted_atom;
-        }
-        else
-        {
-            unquoted_atom l_unquoted_atom;
-            a_istream >> l_unquoted_atom;
-            a_atom = l_unquoted_atom;
-        }
+        a_istream.setstate(std::ios::failbit);
 
         return a_istream;
     }
@@ -518,70 +536,84 @@ namespace unilog
         ///     istream_iterator will only terminate extraction once an extraction FAILS. in other words, simply enabling eofbit is NOT
         ///     enough to terminate extraction. failbit is required to terminate, I am NOT sure if eofbit is required however.
 
-        // consume until non-whitespace char
-        consume_whitespace(a_istream);
-
-        // If reading the character failed, just early return.
-        //     Extracting lexeme failed.
-        if (!a_istream.good())
+        // case: command
         {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
+            command l_result;
+            if (a_istream >> l_result)
+            {
+                a_lexeme = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
         }
 
-        // command `!`
-        if (is_command_indicator_char(a_istream.peek()))
+        // case: scope_separator
         {
-            command l_command;
-            a_istream >> l_command;
-            a_lexeme = l_command;
+            scope_separator l_result;
+            if (a_istream >> l_result)
+            {
+                a_lexeme = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
         }
-        // scope_separator `:`
-        else if (is_scope_separator_indicator_char(a_istream.peek()))
+
+        // case: list_separator
         {
-            scope_separator l_scope_separator;
-            a_istream >> l_scope_separator;
-            a_lexeme = l_scope_separator;
+            list_separator l_result;
+            if (a_istream >> l_result)
+            {
+                a_lexeme = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
         }
-        // list_separator `|`
-        else if (is_list_separator_indicator_char(a_istream.peek()))
+
+        // case: list_open
         {
-            list_separator l_list_separator;
-            a_istream >> l_list_separator;
-            a_lexeme = l_list_separator;
+            list_open l_result;
+            if (a_istream >> l_result)
+            {
+                a_lexeme = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
         }
-        // list_open `[`
-        else if (is_list_open_indicator_char(a_istream.peek()))
+
+        // case: list_close
         {
-            list_open l_list_open;
-            a_istream >> l_list_open;
-            a_lexeme = l_list_open;
+            list_close l_result;
+            if (a_istream >> l_result)
+            {
+                a_lexeme = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
         }
-        // list_close `]`
-        else if (is_list_close_indicator_char(a_istream.peek()))
+
+        // case: variable
         {
-            list_close l_list_close;
-            a_istream >> l_list_close;
-            a_lexeme = l_list_close;
+            variable l_result;
+            if (a_istream >> l_result)
+            {
+                a_lexeme = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
         }
-        // variable
-        else if (is_variable_indicator_char(a_istream.peek()))
+
+        // case: atom
         {
-            variable l_variable;
-            a_istream >> l_variable;
-            a_lexeme = l_variable;
+            atom l_result;
+            if (a_istream >> l_result)
+            {
+                a_lexeme = l_result;
+                return a_istream;
+            }
+            a_istream.clear();
         }
-        // atom
-        else if (is_atom_indicator_char(a_istream.peek()))
-        {
-            atom l_atom;
-            a_istream >> l_atom;
-            a_lexeme = l_atom;
-        }
-        else
-        {
-            a_istream.setstate(std::ios::failbit);
-        }
+
+        a_istream.setstate(std::ios::failbit);
 
         return a_istream;
     }
