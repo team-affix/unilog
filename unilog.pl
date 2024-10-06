@@ -67,11 +67,11 @@ bscope(X, [S|NextBScope], Descoped) :-
 bscope(SExpr, [], SExpr) :-
     !.
 
-sscope(X, [S|NextSScope], Descoped) :-
-    unify(X, S:SScoped),
-    sscope(SScoped, NextSScope, Descoped),
+cscope(X, [S|NextCScope], Descoped) :-
+    unify(X, S:CScoped),
+    cscope(CScoped, NextCScope, Descoped),
     !.
-sscope(SExpr, [], SExpr) :-
+cscope(SExpr, [], SExpr) :-
     !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -97,14 +97,14 @@ guide(GScope, GuideTag, GuideArgs, Redirect) :-
             unilog(GScope, BScope, Redirect, SExpr)
     )).
 
-%infer(SScope, GuideTag, Sexpr, Guide) :-
+%infer(CScope, GuideTag, Sexpr, Guide) :-
 %    %%% make sure unilog tag cannot unify with a pre-existing one.
-%    \+ clause(unilog(SScope, _, GuideTag, _), _),
-%    sscope(SScoped, SScope, Sexpr),
-%    bscope(BScoped, SScope, SScoped),
+%    \+ clause(unilog(CScope, _, GuideTag, _), _),
+%    cscope(CScoped, CScope, Sexpr),
+%    bscope(BScoped, CScope, CScoped),
 %    query()
 %    assertz((
-%        unilog(SScope, [], GuideTag, InSexpr) :-
+%        unilog(CScope, [], GuideTag, InSexpr) :-
 %            unify(InSexpr, BScoped)
 %    )).
 
@@ -116,31 +116,31 @@ query(Tag, SExpr) :-
 
 :- dynamic unilog/4.
 
-unilog(SScope, BScope, [bout, S, NextGuide], ScopedSExpr) :-
+unilog(CScope, BScope, [bout, S, NextGuide], ScopedSExpr) :-
     bscope(ScopedSExpr, [S], Internal),
     append(BScope, [S], NewBScope),
-    unilog(SScope, NewBScope, NextGuide, Internal).
+    unilog(CScope, NewBScope, NextGuide, Internal).
 
-unilog(SScope, BScope, [bin, S, NextGuide], Internal) :-
+unilog(CScope, BScope, [bin, S, NextGuide], Internal) :-
     bscope(ScopedSExpr, [S], Internal),
     append(NewBScope, [S], BScope),
-    unilog(SScope, NewBScope, NextGuide, ScopedSExpr).
+    unilog(CScope, NewBScope, NextGuide, ScopedSExpr).
 
-unilog(SScope, BScope, [gout, S, NextGuide], ScopedSExpr) :-
-    sscope(ScopedSExpr, [S], Internal),
-    append(SScope, [S], NewSScope),
-    unilog(NewSScope, BScope, NextGuide, Internal).
+unilog(CScope, BScope, [gout, S, NextGuide], ScopedSExpr) :-
+    cscope(ScopedSExpr, [S], Internal),
+    append(CScope, [S], NewCScope),
+    unilog(NewCScope, BScope, NextGuide, Internal).
 
-unilog(SScope, BScope, [gin, S, NextGuide], Internal) :-
-    sscope(ScopedSExpr, [S], Internal),
-    append(NewSScope, [S], SScope),
-    unilog(NewSScope, BScope, NextGuide, ScopedSExpr).
+unilog(CScope, BScope, [gin, S, NextGuide], Internal) :-
+    cscope(ScopedSExpr, [S], Internal),
+    append(NewCScope, [S], CScope),
+    unilog(NewCScope, BScope, NextGuide, ScopedSExpr).
 
 % logic ROI
 
-unilog(SScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
-    unilog(SScope, BScope, ImpGuide, [if, Y, X]),
-    unilog(SScope, BScope, JusGuide, X).
+unilog(CScope, BScope, [mp, ImpGuide, JusGuide], Y) :-
+    unilog(CScope, BScope, ImpGuide, [if, Y, X]),
+    unilog(CScope, BScope, JusGuide, X).
 
 :-
     axiom([], a0, [awesome, jake]),
