@@ -33,6 +33,12 @@ unify(_, _, Expr, Expr) :-
     universal(Expr),
     !.
 % pop from scope
+unify([_|XScopeRest], YScope, back:X, Y) :-
+    !,
+    unify(XScopeRest, YScope, X, Y).
+unify(XScope, [_|YScopeRest], X, back:Y) :-
+    !,
+    unify(XScope, YScopeRest, X, Y).
 unify([S|XScopeRest], YScope, X, S:Y) :-
     !,
     unify(XScopeRest, YScope, X, Y).
@@ -96,17 +102,6 @@ guide(GScope, GuideTag, GuideArgs, Redirect) :-
         unilog(GScope, BScope, [GuideTag|GuideArgs], SExpr) :-
             unilog(GScope, BScope, Redirect, SExpr)
     )).
-
-%infer(CScope, GuideTag, Sexpr, Guide) :-
-%    %%% make sure unilog tag cannot unify with a pre-existing one.
-%    \+ clause(unilog(CScope, _, GuideTag, _), _),
-%    cscope(CScoped, CScope, Sexpr),
-%    bscope(BScoped, CScope, CScoped),
-%    query()
-%    assertz((
-%        unilog(CScope, [], GuideTag, InSexpr) :-
-%            unify(InSexpr, BScoped)
-%    )).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
