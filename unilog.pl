@@ -99,69 +99,59 @@ bscope_from_gscope([], []) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle theorem/guide declarations
 
-axiom(ModuleID, Tag, Theorem) :-
+decl_axiom(ModuleID, Tag, Theorem) :-
+    atomic(ModuleID),
     atomic(Tag),
-    \+ clause(unilog(ModuleID, _, Tag, _), _),
+    \+ clause(axiom(ModuleID, Tag, _), _),
     assertz((
-        unilog(ModuleID, [], Tag, Theorem)
+        axiom(ModuleID, Tag, Theorem)
     )).
 
-guide(ModuleID, Tag, GuideArgs, Redirect) :-
+decl_guide(ModuleID, Tag, Args, Redirect) :-
+    atomic(ModuleID),
     atomic(Tag),
-    is_list(GuideArgs),
-    \+ clause(unilog(ModuleID, _, Tag, _), _),
+    is_list(Args),
+    \+ clause(guide(ModuleID, Tag, _, _), _),
     assertz((
-        unilog(ModuleID, BScope, [Tag|GuideArgs], Theorem) :-
-            query(BScope, Redirect, Theorem)
-    )).
-
-refer(CurrentModuleID, Tag, IncomingModuleID) :-
-    atomic(Tag),
-    \+ clause(unilog(CurrentModuleID, _, Tag:_, _), _), % eventually, we are going to have to be able
-                                                        % to check for conflicts using unify() on the tag
-    \+ clause(unilog(IncomingModuleID, _, back:_, _), _),
-    assertz((
-        unilog(CurrentModuleID, [Tag|BScopeRest], Tag:NextGuide, [believe, Tag, Tag:Theorem]) :-
-            cscope_all(QualifiedBScopeRest, [back], BScopeRest),
-            unilog(IncomingModuleID, QualifiedBScopeRest, NextGuide, Theorem)
-    )),
-    assertz((
-        unilog(IncomingModuleID, [back|BScopeRest], back:NextGuide, [believe, back, back:Theorem]) :-
-            cscope_all(QualifiedBScopeRest, [Tag], BScopeRest),
-            unilog(CurrentModuleID, QualifiedBScopeRest, NextGuide, Theorem)
+        guide(ModuleID, Tag, Args, Redirect)
     )).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
 
 query(ModuleID, Guide, Theorem) :-
-    query(ModuleID, [], Guide, Theorem).
+    query(ModuleID, [], [], Guide, Theorem).
 
-query(ModuleID, BScope, Guide, Theorem) :-
-    clause(unilog(TargetModuleID, TargetBScope, TargetGuide, TargetTheorem), Clause),
-    unify(ModuleID, TargetModuleID),
-    unify(BScope, TargetBScope),
-    unify(Guide, TargetGuide),
-    unify(Theorem, TargetTheorem),
-    Clause.
+query(ModuleID, GStack, BStack, [bout, S, NextGuide], ScopedSExpr) :-
+    cscope(CScopedS, GStack, S),
+    bscope(ScopedSExpr, [CScopedS], Internal),
+    append(BStack, [CScopedS], NewBStack),
+    query(ModuleID, GStack, NewBStack, NextGuide, Internal).
 
-:- dynamic unilog/4.
-
-unilog(ModuleID, BScope, [bout, S, NextGuide], ScopedSExpr) :-
-    bscope(ScopedSExpr, [S], Internal),
-    append(BScope, [S], NewBScope),
-    query(ModuleID, NewBScope, NextGuide, Internal).
-
-unilog(ModuleID, BScope, [bin, S, NextGuide], Internal) :-
-    bscope(ScopedSExpr, [S], Internal),
-    append(NewBScope, [S], BScope),
-    query(ModuleID, NewBScope, NextGuide, ScopedSExpr).
+query(ModuleID, GStack, BStack, [bin, S, NextGuide], Internal) :-
+    cscope(CScopedS, GStack, S),
+    bscope(ScopedSExpr, [CScopedS], Internal),
+    append(NewBStack, [CScopedS], BStack),
+    query(ModuleID, GStack, NewBStack, NextGuide, ScopedSExpr).
 
 % logic ROI
 
-unilog(ModuleID, BScope, [mp, ImpGuide, JusGuide], Y) :-
-    query(ModuleID, BScope, ImpGuide, [if, Y, X]),
-    query(ModuleID, BScope, JusGuide, X).
+query(ModuleID, GStack, BStack, [mp, ImpGuide, JusGuide], Y) :-
+    query(ModuleID, GStack, BStack, ImpGuide, [if, Y, X]),
+    query(ModuleID, GStack, BStack, JusGuide, X).
+
+query(ModuleID, GStack, BStack, [axiom, AxiomTag], Theorem) :-
+    unilog(ModuleID, AxiomTag, axiom, Theorem),
+    bscope_from_gscope(BStack, GStack)
+    
+    .
+
+query(ModuleID, GStack, BStack, [guide, GuideTag], Theorem) :-
+    unilog(ModuleID, GuideTag, guide, Redirect),
+    query(ModuleID, GStack, BStack, Redirect, Theorem).
+
+:- dynamic axiom/3.
+:- dynamic guide/4.
 
 %:-
 %    axiom([], a0, [awesome, jake]),
