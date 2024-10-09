@@ -116,42 +116,92 @@ decl_guide(ModuleID, Tag, Args, Redirect) :-
         guide(ModuleID, Tag, Args, Redirect)
     )).
 
+decl_refer(CurrentModuleID, Tag, IncomingModuleID) :-
+    atomic(CurrentModuleID),
+    atomic(Tag),
+    atomic(IncomingModuleID),
+    \+ clause(refer(CurrentModuleID, Tag, _), _),
+    \+ clause(refer(IncomingModuleID, back, _), _),
+    assertz((
+        refer(CurrentModuleID, Tag, IncomingModuleID)
+    )),
+    assertz((
+        refer(IncomingModuleID, back, CurrentModuleID)
+    )).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
 
 query(ModuleID, Guide, Theorem) :-
     query(ModuleID, [], [], Guide, Theorem).
 
-query(ModuleID, GStack, BStack, [bout, S, NextGuide], ScopedSExpr) :-
+% OUTERMOST WRAPPER FOR query()
+query(ModuleID, GStack, BStack, Guide, Theorem) :-
+    clause(query_case(ModuleID, GStack, TargetBStack, Guide, TargetTheorem), _),
+    unify(BStack, TargetBStack), % do custom unification
+    unify(Theorem, TargetTheorem),
+    query_case(ModuleID, GStack, TargetBStack, Guide, TargetTheorem).
+
+query_case(ModuleID, GStack, BStack, [bout, S, NextGuide], ScopedSExpr) :-
     cscope(CScopedS, GStack, S),
     bscope(ScopedSExpr, [CScopedS], Internal),
     append(BStack, [CScopedS], NewBStack),
     query(ModuleID, GStack, NewBStack, NextGuide, Internal).
 
-query(ModuleID, GStack, BStack, [bin, S, NextGuide], Internal) :-
+query_case(ModuleID, GStack, BStack, [bin, S, NextGuide], Internal) :-
     cscope(CScopedS, GStack, S),
     bscope(ScopedSExpr, [CScopedS], Internal),
     append(NewBStack, [CScopedS], BStack),
     query(ModuleID, GStack, NewBStack, NextGuide, ScopedSExpr).
 
+query_case(ModuleID, GStack, BStack, [gout, S, NextGuide], ScopedSExpr) :-
+    clause(refer(ModuleID, S, NextModuleID), _),
+    
+    % main functionality
+    cscope(ScopedSExpr, [S], Internal),
+    
+    % gstack functionality
+    append(GStack, [S], AppendedGStack),
+    cscope_all(NewGStack, [back], AppendedGStack),
+    
+    % bstack functionality
+    cscope_all(NewBStack, [back], BStack),
+
+    query(NextModuleID, NewGStack, NewBStack, NextGuide, Internal).
+
+query_case(ModuleID, GStack, BStack, [gin, S, NextGuide], Internal) :-
+    clause(refer(ModuleID, back, NextModuleID), _),
+    
+    % main functionality
+    cscope(ScopedSExpr, [S], Internal),
+
+    % gstack functionality
+    cscope_all(GStack, [back], UnprefixedGStack),
+    append(NewGStack, [S], UnprefixedGStack),
+
+    % bstack functionality
+    cscope_all(NewBStack, [S], BStack),
+    
+    query(NextModuleID, NewGStack, NewBStack, NextGuide, ScopedSExpr).
+
 % logic ROI
 
-query(ModuleID, GStack, BStack, [mp, ImpGuide, JusGuide], Y) :-
+query_case(ModuleID, GStack, BStack, [mp, ImpGuide, JusGuide], Y) :-
     query(ModuleID, GStack, BStack, ImpGuide, [if, Y, X]),
     query(ModuleID, GStack, BStack, JusGuide, X).
 
-query(ModuleID, GStack, BStack, [axiom, AxiomTag], Theorem) :-
-    unilog(ModuleID, AxiomTag, axiom, Theorem),
-    bscope_from_gscope(BStack, GStack)
-    
-    .
+query_case(ModuleID, GStack, BStack, [axiom, AxiomTag], Theorem) :-
+    clause(axiom(ModuleID, AxiomTag, TargetTheorem), _),
+    unify(Theorem, TargetTheorem),
+    bscope_from_gscope(BStack, GStack).
 
-query(ModuleID, GStack, BStack, [guide, GuideTag], Theorem) :-
-    unilog(ModuleID, GuideTag, guide, Redirect),
+query_case(ModuleID, GStack, BStack, [guide, GuideTag], Theorem) :-
+    guide(ModuleID, GuideTag, Redirect),
     query(ModuleID, GStack, BStack, Redirect, Theorem).
 
 :- dynamic axiom/3.
 :- dynamic guide/4.
+:- dynamic refer/3.
 
 %:-
 %    axiom([], a0, [awesome, jake]),
