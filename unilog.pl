@@ -11,60 +11,60 @@ without_last([X|Rest], [X|RestWithoutLast]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle Scoping
 
-universal(X) :-
-    ground(X),
-    u_case(X).
-
-u_case([]).
-u_case(if).
-u_case(and).
-u_case(or).
-u_case(cons).
-u_case(believe).
-
-unify(X, Y) :-
-    unify([], [], X, Y).
-
-% standard unification of two expressions
-unify([], [], Expr, Expr) :-
-    !.
-% empty list is a universal symbol
-unify(_, _, Expr, Expr) :-
-    universal(Expr),
-    !.
-% pop from scope
-unify([_|XScopeRest], YScope, back:X, Y) :-
-    !,
-    unify(XScopeRest, YScope, X, Y).
-unify(XScope, [_|YScopeRest], X, back:Y) :-
-    !,
-    unify(XScope, YScopeRest, X, Y).
-unify([S|XScopeRest], YScope, X, S:Y) :-
-    !,
-    unify(XScopeRest, YScope, X, Y).
-unify(XScope, [S|YScopeRest], S:X, Y) :-
-    !,
-    unify(XScope, YScopeRest, X, Y).
-% element-wise unify lists
-unify(XScope, YScope, [XH|XT], [YH|YT]) :-
-    !,
-    unify(XScope, YScope, XH, YH),
-    unify(XScope, YScope, XT, YT).
-% push onto scope
-unify([], YScope, X, SY) :-
-    nonvar(SY), % we should never just 'generate' a scope out of thin air.
-    SY = S:Y,
-    !,
-    append(YScope, [S], NewYScope),
-    unify([], NewYScope, X, Y).
-unify(XScope, [], SX, Y) :-
-    nonvar(SX), % we should never just 'generate' a scope out of thin air.
-    SX = S:X,
-    !,
-    append(XScope, [S], NewXScope),
-    unify(NewXScope, [], X, Y).
-
-
+%universal(X) :-
+%    ground(X),
+%    u_case(X).
+%
+%u_case([]).
+%u_case(if).
+%u_case(and).
+%u_case(or).
+%u_case(cons).
+%u_case(believe).
+%
+%unify(X, Y) :-
+%    unify([], [], X, Y).
+%
+%% standard unification of two expressions
+%unify([], [], Expr, Expr) :-
+%    !.
+%% empty list is a universal symbol
+%unify(_, _, Expr, Expr) :-
+%    universal(Expr),
+%    !.
+%% pop from scope
+%unify([_|XScopeRest], YScope, back:X, Y) :-
+%    !,
+%    unify(XScopeRest, YScope, X, Y).
+%unify(XScope, [_|YScopeRest], X, back:Y) :-
+%    !,
+%    unify(XScope, YScopeRest, X, Y).
+%unify([S|XScopeRest], YScope, X, S:Y) :-
+%    !,
+%    unify(XScopeRest, YScope, X, Y).
+%unify(XScope, [S|YScopeRest], S:X, Y) :-
+%    !,
+%    unify(XScope, YScopeRest, X, Y).
+%% element-wise unify lists
+%unify(XScope, YScope, [XH|XT], [YH|YT]) :-
+%    !,
+%    unify(XScope, YScope, XH, YH),
+%    unify(XScope, YScope, XT, YT).
+%% push onto scope
+%unify([], YScope, X, SY) :-
+%    nonvar(SY), % we should never just 'generate' a scope out of thin air.
+%    SY = S:Y,
+%    !,
+%    append(YScope, [S], NewYScope),
+%    unify([], NewYScope, X, Y).
+%unify(XScope, [], SX, Y) :-
+%    nonvar(SX), % we should never just 'generate' a scope out of thin air.
+%    SX = S:X,
+%    !,
+%    append(XScope, [S], NewXScope),
+%    unify(NewXScope, [], X, Y).
+%
+%
 
 bscope(X, [S|NextBScope], Descoped) :-
     unify(X, [believe, S, SExpr]),
@@ -73,12 +73,23 @@ bscope(X, [S|NextBScope], Descoped) :-
 bscope(SExpr, [], SExpr) :-
     !.
 
-cscope(X, [S|NextCScope], Descoped) :-
-    unify(X, S:CScoped),
-    cscope(CScoped, NextCScope, Descoped),
+% universal cases
+cscope(_, X, X) :-
+    (
+        var(X);
+        X = []
+    ),
     !.
-cscope(SExpr, [], SExpr) :-
+
+cscope([], X, X).
+
+cscope(Scope, [DescopedX|DescopedRest], [X|Rest]) :-
+    cscope(Scope, DescopedX, X),
+    cscope(Scope, DescopedRest, Rest),
     !.
+
+cscope([S|ScopeRest], Descoped, S:X) :-
+    cscope(ScopeRest, Descoped, X).
 
 cscope_all([ScopedX|ScopedRest], Scope, [DescopedX|DescopedRest]) :-
     cscope(ScopedX, Scope, DescopedX),
@@ -99,12 +110,12 @@ bscope_from_gscope([], []) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle theorem/guide declarations
 
-decl_axiom(ModuleID, Tag, Theorem) :-
+decl_theorem(ModuleID, Tag, Theorem) :-
     atomic(ModuleID),
     atomic(Tag),
-    \+ clause(axiom(ModuleID, Tag, _), _),
+    \+ clause(theorem(ModuleID, Tag, _), _),
     assertz((
-        axiom(ModuleID, Tag, Theorem)
+        theorem(ModuleID, Tag, Theorem)
     )).
 
 decl_guide(ModuleID, Tag, Args, Redirect) :-
@@ -116,12 +127,10 @@ decl_guide(ModuleID, Tag, Args, Redirect) :-
         guide(ModuleID, Tag, Args, Redirect)
     )).
 
-decl_refer(CurrentModuleID, Tag, IncomingModuleID) :-
+refer(CurrentModuleID, Tag, IncomingModuleID) :-
     atomic(CurrentModuleID),
     atomic(Tag),
     atomic(IncomingModuleID),
-    \+ clause(refer(CurrentModuleID, Tag, _), _),
-    \+ clause(refer(IncomingModuleID, back, _), _),
     assertz((
         refer(CurrentModuleID, Tag, IncomingModuleID)
     )),
@@ -133,75 +142,39 @@ decl_refer(CurrentModuleID, Tag, IncomingModuleID) :-
 % Handle querying
 
 query(ModuleID, Guide, Theorem) :-
-    query(ModuleID, [], [], Guide, Theorem).
+    query_case(ModuleID, [], Guide, Theorem).
 
-% OUTERMOST WRAPPER FOR query()
-query(ModuleID, GStack, BStack, Guide, Theorem) :-
-    clause(query_case(ModuleID, GStack, TargetBStack, Guide, TargetTheorem), _),
-    unify(BStack, TargetBStack), % do custom unification
-    unify(Theorem, TargetTheorem),
-    query_case(ModuleID, GStack, TargetBStack, Guide, TargetTheorem).
-
-query_case(ModuleID, GStack, BStack, [bout, S, NextGuide], ScopedSExpr) :-
-    cscope(CScopedS, GStack, S),
+query_case(ModuleID, BStack, [bout, S, NextGuide], ScopedSExpr) :-
+    cscope(CScopedS, S),
     bscope(ScopedSExpr, [CScopedS], Internal),
     append(BStack, [CScopedS], NewBStack),
-    query(ModuleID, GStack, NewBStack, NextGuide, Internal).
+    query(ModuleID, NewBStack, NextGuide, Internal).
 
-query_case(ModuleID, GStack, BStack, [bin, S, NextGuide], Internal) :-
-    cscope(CScopedS, GStack, S),
+query_case(ModuleID, BStack, [bin, S, NextGuide], Internal) :-
+    cscope(CScopedS, S),
     bscope(ScopedSExpr, [CScopedS], Internal),
     append(NewBStack, [CScopedS], BStack),
-    query(ModuleID, GStack, NewBStack, NextGuide, ScopedSExpr).
-
-query_case(ModuleID, GStack, BStack, [gout, S, NextGuide], ScopedSExpr) :-
-    clause(refer(ModuleID, S, NextModuleID), _),
-    
-    % main functionality
-    cscope(ScopedSExpr, [S], Internal),
-    
-    % gstack functionality
-    append(GStack, [S], AppendedGStack),
-    cscope_all(NewGStack, [back], AppendedGStack),
-    
-    % bstack functionality
-    cscope_all(NewBStack, [back], BStack),
-
-    query(NextModuleID, NewGStack, NewBStack, NextGuide, Internal).
-
-query_case(ModuleID, GStack, BStack, [gin, S, NextGuide], Internal) :-
-    clause(refer(ModuleID, back, NextModuleID), _),
-    
-    % main functionality
-    cscope(ScopedSExpr, [S], Internal),
-
-    % gstack functionality
-    cscope_all(GStack, [back], UnprefixedGStack),
-    append(NewGStack, [S], UnprefixedGStack),
-
-    % bstack functionality
-    cscope_all(NewBStack, [S], BStack),
-    
-    query(NextModuleID, NewGStack, NewBStack, NextGuide, ScopedSExpr).
+    query(ModuleID, NewBStack, NextGuide, ScopedSExpr).
 
 % logic ROI
 
-query_case(ModuleID, GStack, BStack, [mp, ImpGuide, JusGuide], Y) :-
-    query(ModuleID, GStack, BStack, ImpGuide, [if, Y, X]),
-    query(ModuleID, GStack, BStack, JusGuide, X).
+query_case(ModuleID, BStack, [mp, ImpGuide, JusGuide], Y) :-
+    query(ModuleID, BStack, ImpGuide, [if, Y, X]),
+    query(ModuleID, BStack, JusGuide, X).
 
-query_case(ModuleID, GStack, BStack, [axiom, AxiomTag], Theorem) :-
-    clause(axiom(ModuleID, AxiomTag, TargetTheorem), _),
+% terminal ROI
+
+query_case(ModuleID, BStack, [theorem, AxiomTag], Theorem) :-
+    clause(theorem(ModuleID, AxiomTag, TargetTheorem), _),
     unify(Theorem, TargetTheorem),
     bscope_from_gscope(BStack, GStack).
 
-query_case(ModuleID, GStack, BStack, [guide, GuideTag], Theorem) :-
+query_case(ModuleID, BStack, [guide, GuideTag], Theorem) :-
     guide(ModuleID, GuideTag, Redirect),
-    query(ModuleID, GStack, BStack, Redirect, Theorem).
+    query(ModuleID, BStack, Redirect, Theorem).
 
-:- dynamic axiom/3.
+:- dynamic theorem/3.
 :- dynamic guide/4.
-:- dynamic refer/3.
 
 %:-
 %    axiom([], a0, [awesome, jake]),
