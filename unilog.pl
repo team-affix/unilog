@@ -73,23 +73,45 @@ bscope(X, [S|NextBScope], Descoped) :-
 bscope(SExpr, [], SExpr) :-
     !.
 
+
+
+
+
+
+
+
+cscope([S|SRest], Descoped, Scoped) :-
+    cscope_case([S], OuterDescoped, Scoped),
+    cscope(SRest, Descoped, OuterDescoped).
+
+cscope([], Descoped, Scoped) :-
+    cscope_case([], Descoped, Scoped).
+
 % universal cases
-cscope(_, X, X) :-
+cscope_case(_, X, X) :-
     (
         var(X);
         X = []
     ),
     !.
 
-cscope([], X, X).
-
-cscope(Scope, [DescopedX|DescopedRest], [X|Rest]) :-
-    cscope(Scope, DescopedX, X),
-    cscope(Scope, DescopedRest, Rest),
+cscope_case([], X, X) :-
     !.
 
-cscope([S|ScopeRest], Descoped, S:X) :-
-    cscope(ScopeRest, Descoped, X).
+cscope_case(Scope, [DescopedX|DescopedRest], [X|Rest]) :-
+    cscope_case(Scope, DescopedX, X),
+    cscope_case(Scope, DescopedRest, Rest),
+    !.
+
+cscope_case([S|ScopeRest], Descoped, S:X) :-
+    cscope_case(ScopeRest, Descoped, X),
+    !.
+
+
+
+
+
+
 
 cscope_all([ScopedX|ScopedRest], Scope, [DescopedX|DescopedRest]) :-
     cscope(ScopedX, Scope, DescopedX),
