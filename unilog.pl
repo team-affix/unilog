@@ -11,16 +11,16 @@ without_last([X|Rest], [X|RestWithoutLast]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle Scoping
 
-%universal(X) :-
-%    ground(X),
-%    u_case(X).
-%
-%u_case([]).
-%u_case(if).
-%u_case(and).
-%u_case(or).
-%u_case(cons).
-%u_case(believe).
+universal(X) :-
+    ground(X),
+    u_case(X).
+
+u_case([]).
+u_case(if).
+u_case(and).
+u_case(or).
+u_case(cons).
+u_case(believe).
 %
 %unify(X, Y) :-
 %    unify([], [], X, Y).
@@ -65,6 +65,33 @@ without_last([X|Rest], [X|RestWithoutLast]) :-
 %    unify(NewXScope, [], X, Y).
 %
 %
+
+%full_scope(X, [], X) :-
+%    (
+%        X \= (_:_)
+%        ;
+%        var(X)
+%    ),
+%    !.
+%
+%full_scope(C:CRest, [C|SRest], Terminal) :-
+%    full_scope(CRest, SRest, Terminal),
+%    !.
+%
+%
+%
+%unify(X, Y) :-
+%    full_scope(X, _, Terminal),
+%    full_scope(Y, _, Terminal),
+%    universal(Terminal),
+%    !.
+%
+%unify(X, Y) :-
+%    full_scope(X, XScope, [XH|XT]),
+%    full_scope(Y, YScope, [YH|YT]),
+%    % undo scope, distributing to inside
+%    full_scope()
+
 
 bscope(X, [S|NextBScope], Descoped) :-
     unify(X, [believe, S, SExpr]),
@@ -164,34 +191,46 @@ refer(CurrentModuleID, Tag, IncomingModuleID) :-
 % Handle querying
 
 query(ModuleID, Guide, Theorem) :-
-    query_case(ModuleID, [], Guide, Theorem).
+    query(ModuleID, [], Guide, Theorem).
 
-query_case(ModuleID, BStack, [bout, S, NextGuide], ScopedSExpr) :-
+query(ModuleID, BStack, [bout, S, NextGuide], ScopedSExpr) :-
     cscope(CScopedS, S),
     bscope(ScopedSExpr, [CScopedS], Internal),
     append(BStack, [CScopedS], NewBStack),
     query(ModuleID, NewBStack, NextGuide, Internal).
 
-query_case(ModuleID, BStack, [bin, S, NextGuide], Internal) :-
+query(ModuleID, BStack, [bin, S, NextGuide], Internal) :-
     cscope(CScopedS, S),
     bscope(ScopedSExpr, [CScopedS], Internal),
     append(NewBStack, [CScopedS], BStack),
     query(ModuleID, NewBStack, NextGuide, ScopedSExpr).
 
+query(ModuleID, BStack, [bind, Target, NextGuide], Target) :-
+    query(ModuleID, BStack, NextGuide, Target).
+
+query(ModuleID, BStack, [sub, SubTarget, SubGuide, NextGuide], Target) :-
+    query(ModuleID, BStack, SubGuide, SubTarget),
+    query(ModuleID, BStack, NextGuide, Target).
+
+query(ModuleID, BStack, [cond, [[CondTheorem|CondGuide]|NextGuide] | CondsRest], Target) :-
+    query(ModuleID, BStack, CondGuide, CondTheorem),
+    !, % if condition goal succeeds, do NOT try any other branches
+    query(ModuleID, BStack, NextGuide, Target)
+    ;
+    query(ModuleID, BStack, [cond | CondsRest], Target).
+
 % logic ROI
 
-query_case(ModuleID, BStack, [mp, ImpGuide, JusGuide], Y) :-
+query(ModuleID, BStack, [mp, ImpGuide, JusGuide], Y) :-
     query(ModuleID, BStack, ImpGuide, [if, Y, X]),
     query(ModuleID, BStack, JusGuide, X).
 
 % terminal ROI
 
-query_case(ModuleID, BStack, [theorem, AxiomTag], Theorem) :-
-    clause(theorem(ModuleID, AxiomTag, TargetTheorem), _),
-    unify(Theorem, TargetTheorem),
-    bscope_from_gscope(BStack, GStack).
+query(ModuleID, BStack, [theorem, AxiomTag], Theorem) :-
+    theorem(ModuleID, AxiomTag, Theorem).
 
-query_case(ModuleID, BStack, [guide, GuideTag], Theorem) :-
+query(ModuleID, BStack, [guide, GuideTag], Theorem) :-
     guide(ModuleID, GuideTag, Redirect),
     query(ModuleID, BStack, Redirect, Theorem).
 
