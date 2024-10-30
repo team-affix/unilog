@@ -20,20 +20,6 @@
             }
           }
         ]
-      },
-      {
-        "id": "0861958bb50fd8dd",
-        "type": "tabs",
-        "children": [
-          {
-            "id": "5ff9f14d37a94e20",
-            "type": "leaf",
-            "state": {
-              "type": "graph",
-              "state": {}
-            }
-          }
-        ]
       }
     ],
     "direction": "vertical"
@@ -162,8 +148,8 @@
   },
   "active": "870df021807c2ac7",
   "lastOpenFiles": [
-    "Atoms.md",
     "Scopes.md",
+    "Atoms.md",
     "Welcome.md",
     "Untitled",
     "create a link.md"

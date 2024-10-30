@@ -11,16 +11,16 @@ without_last([X|Rest], [X|RestWithoutLast]) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle Scoping
 
-universal(X) :-
-    ground(X),
-    u_case(X).
-
-u_case([]).
-u_case(if).
-u_case(and).
-u_case(or).
-u_case(cons).
-u_case(believe).
+%universal(X) :-
+%    ground(X),
+%    u_case(X).
+%
+%u_case([]).
+%u_case(if).
+%u_case(and).
+%u_case(or).
+%u_case(cons).
+%u_case(believe).
 %
 %unify(X, Y) :-
 %    unify([], [], X, Y).
@@ -91,6 +91,68 @@ u_case(believe).
 %    full_scope(Y, YScope, [YH|YT]),
 %    % undo scope, distributing to inside
 %    full_scope()
+
+% general methodology:
+%     EVERY TIME we find an expression in the form: expr(S, X), we push S onto the corresponding stack
+
+% entry point
+rescope(X, Y) :-
+    rescope([], [], X, Y),
+    write("entry").
+
+% defines universal symbols
+universal([]).
+
+% base case: eq
+rescope([], [], Expr, Expr) :-
+    write("eq base case").
+
+% base case: universal
+rescope(_, _, Expr, Expr) :-
+    \+ var(Expr),
+    universal(Expr),
+    write("universal").
+
+% left push
+rescope(XStack, [], X, Y) :-
+    \+ var(X),
+    X = scope(S, XDescoped),
+    append(XStack, [S], NewXStack),
+    rescope(NewXStack, [], XDescoped, Y),
+    write("left push").
+
+% right push
+rescope([], YStack, X, Y) :-
+    \+ var(Y),
+    Y = scope(S, YDescoped),
+    append(YStack, [S], NewYStack),
+    rescope([], NewYStack, X, YDescoped),
+    write("right push").
+
+% left pop
+rescope([S|NewXStack], [], X, Y) :-
+    Y = scope(S, YDescoped),
+    rescope(NewXStack, [], X, YDescoped),
+    write("left pop").
+
+% right pop
+rescope([], [S|NewYStack], X, Y) :-
+    X = scope(S, XDescoped),
+    rescope([], NewYStack, XDescoped, Y),
+    write("right pop").
+
+% distribute into lists
+rescope(XStack, YStack, X, Y) :-
+    \+ var(X),\+ var(Y),
+    X = [XH|XT],Y = [YH|YT],
+    rescope(XStack, YStack, XH, YH),
+    rescope(XStack, YStack, XT, YT),
+    write("lists").
+
+
+
+
+
 
 
 bscope(X, [S|NextBScope], Descoped) :-
