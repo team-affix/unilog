@@ -35,6 +35,8 @@ decl_guide(ModulePath, Tag, Args, Redirect) :-
 query(Guide, Theorem) :-
     query([], [], Guide, Theorem).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% scope handling
+
 query(DStack, BStack, [bout, S, NextGuide], ScopedSExpr) :-
     append(BStack, [S], NewBStack),
     bscope(ScopedSExpr, [S], Internal),
