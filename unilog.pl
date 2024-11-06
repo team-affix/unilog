@@ -80,8 +80,8 @@ query(DStack, BStack, [mp, ImpGuide, JusGuide], Y) :-
 query(DStack, [], [theorem, AxiomTag], Theorem) :-
     theorem(DStack, AxiomTag, Theorem).
 
-query(DStack, BStack, [guide, GuideTag], Theorem) :-
-    guide(DStack, GuideTag, Redirect),
+query(DStack, BStack, [guide, GuideTag | GuideArgs], Theorem) :-
+    guide(DStack, GuideTag, GuideArgs, Redirect),
     query(DStack, BStack, Redirect, Theorem).
 
 :- dynamic theorem/3.
