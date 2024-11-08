@@ -2,6 +2,7 @@
 #include <regex>
 #include <stdexcept>
 #include <cctype>
+
 #include "lexer.hpp"
 
 std::istream &escape(std::istream &a_istream, char &a_char)

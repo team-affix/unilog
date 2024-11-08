@@ -8,8 +8,8 @@
 #include <random>
 #include "test_utils.hpp"
 
-#include "test_utils.hpp"
 #include "../src_lib/parser.hpp"
+#include "../src_lib/variant_functions.hpp"
 
 // Function signatures to test
 std::istream &unilog::operator>>(std::istream &a_istream, unilog::prolog_expression &a_prolog_expression);

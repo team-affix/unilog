@@ -1,5 +1,5 @@
-#ifndef VARIANT_FUNCTIONS_H
-#define VARIANT_FUNCTIONS_H
+#ifndef VARIANT_FUNCTIONS_HPP
+#define VARIANT_FUNCTIONS_HPP
 
 #include <functional>
 #include <istream>

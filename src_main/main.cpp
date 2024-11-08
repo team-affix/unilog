@@ -59,6 +59,8 @@ int main(int argc, char **argv)
     try
     {
         l_app.parse(argc, argv);
+        for (const std::string &l_file : l_files)
+            std::cout << l_file << std::endl;
     }
     catch (const CLI::ParseError &e)
     {

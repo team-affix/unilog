@@ -1,6 +1,7 @@
 #include <iterator>
 #include <algorithm>
 
+#include "variant_functions.hpp"
 #include "parser.hpp"
 
 #define AXIOM_COMMAND_KEYWORD "axiom"

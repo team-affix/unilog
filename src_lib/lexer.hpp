@@ -1,13 +1,11 @@
-#ifndef LEXER_H
-#define LEXER_H
+#ifndef LEXER_HPP
+#define LEXER_HPP
 
 #include <list>
 #include <string>
 #include <filesystem>
 #include <iterator>
 #include <variant>
-
-#include "variant_functions.h"
 
 namespace unilog
 {
