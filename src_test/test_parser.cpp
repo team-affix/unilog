@@ -27,7 +27,6 @@ void test_parser_extract_prolog_expression()
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     using unilog::atom;
-    using unilog::command;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
@@ -316,7 +315,7 @@ void test_parser_extract_prolog_expression()
                 "test!@.$^&*()",
                 prolog_expression{
                     unquoted_atom{
-                        "test",
+                        "test!@.$^&*()",
                     },
                 },
             },
@@ -619,6 +618,8 @@ void test_parser_extract_prolog_expression()
 
         assert(l_exp == l_value);
 
+        assert(!l_ss.fail());
+
         LOG("success, case: \"" << l_key << "\"" << std::endl);
     }
 
@@ -626,11 +627,9 @@ void test_parser_extract_prolog_expression()
         {
             "[abc",
             "[[abc] [123]",
-            "!axiom",
-            "[!axiom]",
-            "[!comm]",
             "]",
-            "[[!axiom]]",
+            "\'",
+            "\"",
             // "abc]", // this is NOT an expect failure input.
             // this is because it will only try to parse the first prolog expression before a lexeme separator char.
 
@@ -642,9 +641,10 @@ void test_parser_extract_prolog_expression()
 
         prolog_expression l_exp;
 
-        assert_throws(
-            ([&l_ss, &l_exp]
-             { l_ss >> l_exp; }));
+        l_ss >> l_exp;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
 
         LOG("success, expected throw, case: " << l_input << std::endl);
     }
@@ -656,7 +656,6 @@ void test_parser_extract_axiom_statement()
 
     using unilog::atom;
     using unilog::axiom_statement;
-    using unilog::command;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
@@ -668,7 +667,7 @@ void test_parser_extract_axiom_statement()
     data_points<std::string, axiom_statement> l_test_cases =
         {
             {
-                "a0 x",
+                "axiom a0 x",
                 axiom_statement{
                     .m_tag =
                         unquoted_atom{
@@ -683,7 +682,7 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "add_bc_0 [add [] L L]",
+                "axiom add_bc_0 [add [] L L]",
                 axiom_statement{
                     .m_tag =
                         unquoted_atom{
@@ -717,7 +716,7 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "@tag [awesome X]",
+                "axiom @tag [awesome X]",
                 axiom_statement{
                     .m_tag =
                         unquoted_atom{
@@ -741,7 +740,7 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "tAg123@#$%^&*() _",
+                "axiom tAg123@#$%^&*() _",
                 axiom_statement{
                     .m_tag =
                         unquoted_atom{
@@ -756,7 +755,7 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "tag[theorem]",
+                "axiom tag[theorem]",
                 axiom_statement{
                     .m_tag =
                         unquoted_atom{
@@ -775,7 +774,7 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "abc 123",
+                "axiom abc 123",
                 axiom_statement{
                     .m_tag =
                         unquoted_atom{
@@ -790,7 +789,7 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "123 [[[]] a 123]",
+                "axiom 123 [[[]] a 123]",
                 axiom_statement{
                     .m_tag =
                         unquoted_atom{
@@ -824,7 +823,7 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "+/bc/0\n"
+                "axiom +/bc/0\n"
                 "[+\n"
                 "    []\n"
                 "    L\n"
@@ -863,7 +862,7 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "123[\'! this is a \\t quotation\']",
+                "axiom 123[\'! this is a \\t quotation\']",
                 axiom_statement{
                     .m_tag =
                         unquoted_atom{
@@ -882,7 +881,7 @@ void test_parser_extract_axiom_statement()
                 },
             },
             {
-                "\'tag\' theorem",
+                "axiom \'tag\' theorem",
                 axiom_statement{
                     .m_tag =
                         quoted_atom{
@@ -925,6 +924,9 @@ void test_parser_extract_axiom_statement()
             "[] theorem",
             "[X] theorem",
             "[atom] theorem",
+            "axiom a0",
+            "axiom \'a0\'",
+            "axiom [tag] [expr]",
         };
 
     for (const auto &l_input : l_fail_cases)
@@ -947,7 +949,6 @@ void test_parser_extract_guide_statement()
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     using unilog::atom;
-    using unilog::command;
     using unilog::guide_statement;
     using unilog::lexeme;
     using unilog::list_close;
@@ -960,7 +961,7 @@ void test_parser_extract_guide_statement()
     data_points<std::string, guide_statement> l_test_cases =
         {
             {
-                "g_add_bc\n"
+                "guide g_add_bc\n"
                 "[gor\n"
                 "    add_bc_0\n"
                 "    add_bc_1\n"

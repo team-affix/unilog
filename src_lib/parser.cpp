@@ -101,17 +101,15 @@ namespace unilog
 
         std::istream &l_result = extract_prolog_expression(a_istream, a_prolog_expression, l_list_depth);
 
-        if (l_list_depth > 0)
-            throw std::runtime_error("Failed to extract prolog expression: Not enough closing brackets.");
-        else if (l_list_depth < 0)
-            throw std::runtime_error("Failed to extract prolog expression: Too many closing brackets.");
+        if (l_list_depth > 0 || l_list_depth < 0)
+            a_istream.setstate(std::ios::failbit); // open/close bracket count mismatch
 
         return l_result;
     }
 
     std::istream &operator>>(std::istream &a_istream, axiom_statement &a_axiom_statement)
     {
-        command l_command;
+        unquoted_atom l_command;
         a_istream >> l_command;
 
         if (l_command.m_text != AXIOM_COMMAND_KEYWORD)
@@ -128,7 +126,7 @@ namespace unilog
 
     std::istream &operator>>(std::istream &a_istream, guide_statement &a_guide_statement)
     {
-        command l_command;
+        unquoted_atom l_command;
         a_istream >> l_command;
 
         if (l_command.m_text != GUIDE_COMMAND_KEYWORD)
@@ -145,7 +143,7 @@ namespace unilog
 
     std::istream &operator>>(std::istream &a_istream, infer_statement &a_infer_statement)
     {
-        command l_command;
+        unquoted_atom l_command;
         a_istream >> l_command;
 
         if (l_command.m_text != INFER_COMMAND_KEYWORD)
@@ -163,7 +161,7 @@ namespace unilog
 
     std::istream &operator>>(std::istream &a_istream, refer_statement &a_refer_statement)
     {
-        command l_command;
+        unquoted_atom l_command;
         a_istream >> l_command;
 
         if (l_command.m_text != REFER_COMMAND_KEYWORD)
@@ -178,55 +176,4 @@ namespace unilog
         return a_istream;
     }
 
-    std::istream &operator>>(std::istream &a_istream, statement &a_statement)
-    {
-        // case: axiom_statement
-        {
-            axiom_statement l_result;
-            if (a_istream >> l_result)
-            {
-                a_statement = l_result;
-                return a_istream;
-            }
-            a_istream.clear();
-        }
-
-        // case: guide_statement
-        {
-            guide_statement l_result;
-            if (a_istream >> l_result)
-            {
-                a_statement = l_result;
-                return a_istream;
-            }
-            a_istream.clear();
-        }
-
-        // case: infer_statement
-        {
-            infer_statement l_result;
-            if (a_istream >> l_result)
-            {
-                a_statement = l_result;
-                return a_istream;
-            }
-            a_istream.clear();
-        }
-
-        // case: refer_statement
-        {
-            refer_statement l_result;
-            if (a_istream >> l_result)
-            {
-                a_statement = l_result;
-                return a_istream;
-            }
-            a_istream.clear();
-        }
-
-        // We read an invalid command identifier.
-        a_istream.setstate(std::ios::failbit);
-
-        return a_istream;
-    }
 }

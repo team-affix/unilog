@@ -47,19 +47,17 @@ namespace unilog
     bool operator==(const infer_statement &a_lhs, const infer_statement &a_rhs);
     bool operator==(const refer_statement &a_lhs, const refer_statement &a_rhs);
 
-    typedef std::variant<
+    using statement = std::variant<
         axiom_statement,
         guide_statement,
         infer_statement,
-        refer_statement>
-        statement;
+        refer_statement>;
 
     std::istream &operator>>(std::istream &a_istream, prolog_expression &a_prolog_expression);
     std::istream &operator>>(std::istream &a_istream, axiom_statement &a_axiom_statement);
     std::istream &operator>>(std::istream &a_istream, guide_statement &a_guide_statement);
     std::istream &operator>>(std::istream &a_istream, infer_statement &a_infer_statement);
     std::istream &operator>>(std::istream &a_istream, refer_statement &a_refer_statement);
-    std::istream &operator>>(std::istream &a_istream, statement &a_statement);
 
 }
 
