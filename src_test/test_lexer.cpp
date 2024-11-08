@@ -2263,7 +2263,7 @@ void test_lexer_extract_lexeme()
     }
 }
 
-void test_lex_file_syntax_valid_example_0()
+void test_lex_file_example_0()
 {
     using unilog::atom;
     using unilog::lexeme;
@@ -2275,7 +2275,7 @@ void test_lex_file_syntax_valid_example_0()
     using unilog::variable;
 
     std::stringstream l_ss;
-    std::ifstream l_if("./src_test/example_unilog_files/syntax_valid/example_0/main.ul");
+    std::ifstream l_if("./src_test/example_unilog_files/lexer_example_0/main.ul");
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
@@ -2284,6 +2284,7 @@ void test_lex_file_syntax_valid_example_0()
     std::list<lexeme> l_lexemes;
     std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
 
+    assert(l_ss.eof()); // assert successful extraction
     assert(l_lexemes == std::list<lexeme>({
                             unquoted_atom{"axiom"},
                             unquoted_atom{"a0"},
@@ -2298,7 +2299,7 @@ void test_lex_file_syntax_valid_example_0()
                         }));
 }
 
-void test_lex_file_syntax_invalid_example_0()
+void test_lex_file_example_1()
 {
     using unilog::atom;
     using unilog::lexeme;
@@ -2310,7 +2311,7 @@ void test_lex_file_syntax_invalid_example_0()
     using unilog::variable;
 
     std::stringstream l_ss;
-    std::ifstream l_if("./src_test/example_unilog_files/syntax_invalid/example_0/main.ul");
+    std::ifstream l_if("./src_test/example_unilog_files/lexer_example_1/main.ul");
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
@@ -2319,20 +2320,103 @@ void test_lex_file_syntax_invalid_example_0()
     std::list<lexeme> l_lexemes;
     std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
 
+    assert(l_ss.eof()); // assert successful extraction
     assert(l_lexemes == std::list<lexeme>({
                             unquoted_atom{"axiom"},
                             quoted_atom{"a0"},
                             unquoted_atom{"test"},
+
                             unquoted_atom{"axiom"},
                             list_open{},
                             unquoted_atom{"a1"},
                             list_close{},
                             quoted_atom{"x"},
+
                             unquoted_atom{"axiom"},
                             quoted_atom{"a2"},
                             list_open{},
                             unquoted_atom{"x"},
                             list_close{},
+                        }));
+}
+
+void test_lex_file_example_2()
+{
+    using unilog::atom;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::list_separator;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    std::stringstream l_ss;
+    std::ifstream l_if("./src_test/example_unilog_files/lexer_example_2/main.ul");
+    // std::cout << std::filesystem::current_path() << std::endl;
+    // std::cout << "is_good: " << l_if.good() << std::endl;
+    l_ss << l_if.rdbuf(); // read in contents of file
+    std::cout << l_ss.str() << std::endl;
+
+    std::list<lexeme> l_lexemes;
+    std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
+
+    assert(l_ss.eof()); // assert successful extraction
+    assert(l_lexemes == std::list<lexeme>({
+                            unquoted_atom{"infer"},
+                            unquoted_atom{"i0"},
+                            list_open{},
+                            unquoted_atom{"if"},
+                            variable{"Y"},
+                            list_open{},
+                            unquoted_atom{"and"},
+                            list_open{},
+                            unquoted_atom{"if"},
+                            variable{"Y"},
+                            variable{"X"},
+                            list_close{},
+                            variable{"X"},
+                            list_close{},
+                            list_close{},
+
+                            unquoted_atom{"axiom"},
+                            unquoted_atom{"a0"},
+                            list_open{},
+                            unquoted_atom{"if"},
+                            unquoted_atom{"b"},
+                            unquoted_atom{"a"},
+                            list_close{},
+
+                            unquoted_atom{"axiom"},
+                            unquoted_atom{"a1"},
+                            unquoted_atom{"a"},
+                        }));
+}
+
+void test_lex_file_example_3()
+{
+    using unilog::atom;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::list_separator;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    std::stringstream l_ss;
+    std::ifstream l_if("./src_test/example_unilog_files/lexer_example_3/main.ul");
+    // std::cout << std::filesystem::current_path() << std::endl;
+    // std::cout << "is_good: " << l_if.good() << std::endl;
+    l_ss << l_if.rdbuf(); // read in contents of file
+    std::cout << l_ss.str() << std::endl;
+    std::cout << "eof?: " << ((l_ss.peek() == std::istream::traits_type::eof()) ? '1' : '0') << std::endl;
+    std::list<lexeme> l_lexemes;
+    std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
+
+    assert(l_ss.peek() == EOF); // assert successful extraction
+    assert(l_lexemes == std::list<lexeme>({
+
                         }));
 }
 
@@ -2354,8 +2438,10 @@ void test_lexer_main()
     TEST(test_lexer_extract_quoted_atom);
     TEST(test_lexer_extract_unquoted_atom);
     TEST(test_lexer_extract_lexeme);
-    TEST(test_lex_file_syntax_valid_example_0);
-    TEST(test_lex_file_syntax_invalid_example_0);
+    TEST(test_lex_file_example_0);
+    TEST(test_lex_file_example_1);
+    TEST(test_lex_file_example_2);
+    TEST(test_lex_file_example_3);
 
     return;
 }

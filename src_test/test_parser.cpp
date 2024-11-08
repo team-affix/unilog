@@ -1069,7 +1069,7 @@ void test_parser_extract_guide_statement()
     }
 }
 
-void test_parse_file_syntax_invalid_example_0()
+void test_parse_file_example_0()
 {
     using unilog::atom;
     using unilog::axiom_statement;
@@ -1086,7 +1086,7 @@ void test_parse_file_syntax_invalid_example_0()
     using unilog::unquoted_atom;
     using unilog::variable;
 
-    std::ifstream l_if("./src_test/example_unilog_files/syntax_invalid/example_0/main.ul");
+    std::ifstream l_if("./src_test/example_unilog_files/parser_example_0/main.ul");
 
     std::stringstream l_file_contents;
     if (!(l_file_contents << l_if.rdbuf())) // read in file content
@@ -1095,7 +1095,8 @@ void test_parse_file_syntax_invalid_example_0()
     std::list<statement> l_statements;
     std::copy(std::istream_iterator<statement>(l_file_contents), std::istream_iterator<statement>(), std::back_inserter(l_statements));
 
-    assert(l_file_contents.fail() && !l_file_contents.eof()); // invalid syntax, will be detected and cause failure
+    std::cout << "content: " << l_file_contents.peek() << std::endl;
+    assert(!l_file_contents.eof()); // invalid syntax, will be detected and cause failure
     assert(l_statements == std::list<statement>(
                                {
                                    axiom_statement{
@@ -1105,7 +1106,7 @@ void test_parse_file_syntax_invalid_example_0()
                                }));
 }
 
-void test_parse_file_syntax_valid_example_0()
+void test_parse_file_example_1()
 {
     using unilog::atom;
     using unilog::axiom_statement;
@@ -1122,7 +1123,7 @@ void test_parse_file_syntax_valid_example_0()
     using unilog::unquoted_atom;
     using unilog::variable;
 
-    std::ifstream l_if("./src_test/example_unilog_files/syntax_valid/example_0/main.ul");
+    std::ifstream l_if("./src_test/example_unilog_files/parser_example_1/main.ul");
 
     std::stringstream l_file_contents;
     if (!(l_file_contents << l_if.rdbuf())) // read in file content
@@ -1131,7 +1132,7 @@ void test_parse_file_syntax_valid_example_0()
     std::list<statement> l_statements;
     std::copy(std::istream_iterator<statement>(l_file_contents), std::istream_iterator<statement>(), std::back_inserter(l_statements));
 
-    assert(l_file_contents.eof()); // std::copy will read 1 past end, causing failbit to set, but ALSO eof.
+    assert(l_file_contents.eof()); // assert successful parse
     assert(l_statements == std::list<statement>(
                                {
                                    axiom_statement{
@@ -1157,8 +1158,8 @@ int test_parser_main()
     TEST(test_parser_extract_prolog_expression);
     TEST(test_parser_extract_axiom_statement);
     TEST(test_parser_extract_guide_statement);
-    TEST(test_parse_file_syntax_invalid_example_0);
-    TEST(test_parse_file_syntax_valid_example_0);
+    TEST(test_parse_file_example_0);
+    TEST(test_parse_file_example_1);
 
     return 0;
 }

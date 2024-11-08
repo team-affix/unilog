@@ -156,7 +156,9 @@ namespace unilog
                !is_list_open_indicator_char(c) &&
                !is_list_close_indicator_char(c) &&
                !is_variable_indicator_char(c) &&
-               !is_quoted_atom_indicator_char(c);
+               !is_quoted_atom_indicator_char(c) &&
+               std::isspace(c) == 0 &&
+               c != std::istream::traits_type::eof();
     }
 
     bool is_command_text_char(int c)

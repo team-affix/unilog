@@ -12,8 +12,8 @@ namespace unilog
     template <typename... Ts>
     std::istream &operator>>(std::istream &a_istream, std::variant<Ts...> &a_result)
     {
-        // check for EOF. peek() will set eofbit as well.
-        if (a_istream.peek() == std::istream::traits_type::eof())
+        // here, peek() will look ahead for eof, and set eofbit correspondingly
+        if (a_istream.peek(), !a_istream.good())
         {
             a_istream.setstate(std::ios::failbit);
             return a_istream;
