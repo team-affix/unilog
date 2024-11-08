@@ -5,11 +5,20 @@
 #include <istream>
 #include <variant>
 
+#include <iostream>
+
 namespace unilog
 {
     template <typename... Ts>
     std::istream &operator>>(std::istream &a_istream, std::variant<Ts...> &a_result)
     {
+        // check for EOF. peek() will set eofbit as well.
+        if (a_istream.peek() == std::istream::traits_type::eof())
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
         std::streampos l_restore_point = a_istream.tellg();
 
         auto l_try_extract = [&a_istream, &a_result, l_restore_point](auto a_alternative)

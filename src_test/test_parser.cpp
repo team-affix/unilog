@@ -6,6 +6,8 @@
 #include <iterator>
 #include <algorithm>
 #include <random>
+#include <fstream>
+
 #include "test_utils.hpp"
 
 #include "../src_lib/parser.hpp"
@@ -17,6 +19,15 @@ std::istream &unilog::operator>>(std::istream &a_istream, unilog::prolog_express
 ////////////////////////////////
 //// HELPER FUNCTIONS
 ////////////////////////////////
+
+bool read_in_file(const std::string &a_file_path, std::stringstream &a_result)
+{
+    using unilog::statement;
+
+    std::ifstream l_if(a_file_path);
+
+    return (bool)(a_result << l_if.rdbuf()); // read in all content
+}
 
 ////////////////////////////////
 //// TESTS
@@ -1054,8 +1065,89 @@ void test_parser_extract_guide_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
+        LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
     }
+}
+
+void test_parse_file_syntax_invalid_example_0()
+{
+    using unilog::atom;
+    using unilog::axiom_statement;
+    using unilog::guide_statement;
+    using unilog::infer_statement;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::list_separator;
+    using unilog::prolog_expression;
+    using unilog::quoted_atom;
+    using unilog::refer_statement;
+    using unilog::statement;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    std::ifstream l_if("./src_test/example_unilog_files/syntax_invalid/example_0/main.ul");
+
+    std::stringstream l_file_contents;
+    if (!(l_file_contents << l_if.rdbuf())) // read in file content
+        throw std::runtime_error("Failed to read file");
+
+    std::list<statement> l_statements;
+    std::copy(std::istream_iterator<statement>(l_file_contents), std::istream_iterator<statement>(), std::back_inserter(l_statements));
+
+    assert(l_file_contents.fail() && !l_file_contents.eof()); // invalid syntax, will be detected and cause failure
+    assert(l_statements == std::list<statement>(
+                               {
+                                   axiom_statement{
+                                       .m_tag = quoted_atom{"a0"},
+                                       .m_theorem = prolog_expression{unquoted_atom{"test"}},
+                                   },
+                               }));
+}
+
+void test_parse_file_syntax_valid_example_0()
+{
+    using unilog::atom;
+    using unilog::axiom_statement;
+    using unilog::guide_statement;
+    using unilog::infer_statement;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::list_separator;
+    using unilog::prolog_expression;
+    using unilog::quoted_atom;
+    using unilog::refer_statement;
+    using unilog::statement;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    std::ifstream l_if("./src_test/example_unilog_files/syntax_valid/example_0/main.ul");
+
+    std::stringstream l_file_contents;
+    if (!(l_file_contents << l_if.rdbuf())) // read in file content
+        throw std::runtime_error("Failed to read file");
+
+    std::list<statement> l_statements;
+    std::copy(std::istream_iterator<statement>(l_file_contents), std::istream_iterator<statement>(), std::back_inserter(l_statements));
+
+    assert(l_file_contents.eof()); // std::copy will read 1 past end, causing failbit to set, but ALSO eof.
+    assert(l_statements == std::list<statement>(
+                               {
+                                   axiom_statement{
+                                       .m_tag = unquoted_atom{"a0"},
+                                       .m_theorem = prolog_expression{std::list<prolog_expression>({
+                                           prolog_expression{unquoted_atom{"if"}},
+                                           prolog_expression{unquoted_atom{"y"}},
+                                           prolog_expression{unquoted_atom{"x"}},
+                                       })},
+                                   },
+                                   axiom_statement{
+                                       .m_tag = unquoted_atom{"a1"},
+                                       .m_theorem = prolog_expression{unquoted_atom{"x"}},
+                                   },
+
+                               }));
 }
 
 int test_parser_main()
@@ -1065,6 +1157,8 @@ int test_parser_main()
     TEST(test_parser_extract_prolog_expression);
     TEST(test_parser_extract_axiom_statement);
     TEST(test_parser_extract_guide_statement);
+    TEST(test_parse_file_syntax_invalid_example_0);
+    TEST(test_parse_file_syntax_valid_example_0);
 
     return 0;
 }

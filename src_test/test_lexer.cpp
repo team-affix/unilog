@@ -2324,14 +2324,14 @@ void test_lex_file_syntax_invalid_example_0()
                             quoted_atom{"a0"},
                             unquoted_atom{"test"},
                             unquoted_atom{"axiom"},
-                            quoted_atom{"a1"},
+                            list_open{},
+                            unquoted_atom{"a1"},
+                            list_close{},
                             quoted_atom{"x"},
                             unquoted_atom{"axiom"},
                             quoted_atom{"a2"},
                             list_open{},
                             unquoted_atom{"x"},
-                            list_separator{},
-                            unquoted_atom{"y"},
                             list_close{},
                         }));
 }
