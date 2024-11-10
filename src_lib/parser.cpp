@@ -137,6 +137,26 @@ namespace unilog
         }
 
         a_istream >> a_guide_statement.m_tag;
+
+        /////////// read the list open for args list
+        list_open l_args_list_open;
+        if (!(a_istream >> l_args_list_open))
+            return a_istream;
+
+        a_guide_statement.m_args.clear();
+
+        /////////// read in list of args
+        std::copy(std::istream_iterator<variable>(a_istream),
+                  std::istream_iterator<variable>(),
+                  std::back_inserter(a_guide_statement.m_args));
+
+        a_istream.clear();
+
+        /////////// read the list close for args list
+        list_close l_args_list_close;
+        if (!(a_istream >> l_args_list_close))
+            return a_istream;
+
         a_istream >> a_guide_statement.m_guide;
 
         return a_istream;

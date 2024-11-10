@@ -906,6 +906,21 @@ void test_parser_extract_axiom_statement()
                         },
                 },
             },
+            {
+                "axiom \"tag\" theorem",
+                axiom_statement{
+                    .m_tag =
+                        quoted_atom{
+                            "tag",
+                        },
+                    .m_theorem =
+                        prolog_expression{
+                            unquoted_atom{
+                                "theorem",
+                            },
+                        },
+                },
+            },
         };
 
     for (const auto &[l_key, l_value] : l_test_cases)
@@ -938,6 +953,9 @@ void test_parser_extract_axiom_statement()
             "axiom a0",
             "axiom \'a0\'",
             "axiom [tag] [expr]",
+            "guide a0 x",
+            "infer i0 x",
+            "refer r0 x",
         };
 
     for (const auto &l_input : l_fail_cases)
@@ -972,7 +990,7 @@ void test_parser_extract_guide_statement()
     data_points<std::string, guide_statement> l_test_cases =
         {
             {
-                "guide g_add_bc\n"
+                "guide g_add_bc []\n"
                 "[gor\n"
                 "    add_bc_0\n"
                 "    add_bc_1\n"
@@ -988,6 +1006,7 @@ void test_parser_extract_guide_statement()
                                 "g_add_bc",
                             },
                         },
+                    .m_args = std::list<variable>({}),
                     .m_guide =
                         prolog_expression{
                             std::list<prolog_expression>{
@@ -1030,6 +1049,42 @@ void test_parser_extract_guide_statement()
                         },
                 },
             },
+            {"guide g0 [] [bind K [theorem a0]]",
+             guide_statement{
+                 .m_tag = unquoted_atom{"g0"},
+                 .m_args = std::list<variable>({}),
+                 .m_guide = prolog_expression{std::list<prolog_expression>({prolog_expression{unquoted_atom{"bind"}},
+                                                                            prolog_expression{variable{"K"}},
+                                                                            prolog_expression{std::list<prolog_expression>({
+                                                                                prolog_expression{unquoted_atom{"theorem"}},
+                                                                                prolog_expression{unquoted_atom{"a0"}},
+                                                                            })}})}}},
+            {"guide \"g\" [] [sub thm [theorem a0] [theorem a1]]",
+             guide_statement{
+                 .m_tag = quoted_atom{"g"},
+                 .m_args = std::list<variable>({}),
+                 .m_guide = prolog_expression{
+                     std::list<prolog_expression>({
+                         prolog_expression{unquoted_atom{"sub"}},
+                         prolog_expression{unquoted_atom{"thm"}},
+                         prolog_expression{std::list<prolog_expression>({
+                             prolog_expression{unquoted_atom{"theorem"}},
+                             prolog_expression{unquoted_atom{"a0"}},
+                         })},
+                         prolog_expression{std::list<prolog_expression>({
+                             prolog_expression{unquoted_atom{"theorem"}},
+                             prolog_expression{unquoted_atom{"a1"}},
+                         })},
+                     })}}},
+            {"guide \"g\" [Subgoal Subguide] [sub Subgoal Subguide [theorem a1]]", guide_statement{.m_tag = quoted_atom{"g"}, .m_args = std::list<variable>({variable{"Subgoal"}, variable{"Subguide"}}), .m_guide = prolog_expression{std::list<prolog_expression>({
+                                                                                                                                                                                                              prolog_expression{unquoted_atom{"sub"}},
+                                                                                                                                                                                                              prolog_expression{variable{"Subgoal"}},
+                                                                                                                                                                                                              prolog_expression{variable{"Subguide"}},
+                                                                                                                                                                                                              prolog_expression{std::list<prolog_expression>({
+                                                                                                                                                                                                                  prolog_expression{unquoted_atom{"theorem"}},
+                                                                                                                                                                                                                  prolog_expression{unquoted_atom{"a1"}},
+                                                                                                                                                                                                              })},
+                                                                                                                                                                                                          })}}},
         };
 
     for (const auto &[l_key, l_value] : l_test_cases)
@@ -1052,6 +1107,23 @@ void test_parser_extract_guide_statement()
         {
             "_",
             "abc",
+            "",
+            "_ _",
+            "VariableTag Guide",
+            "VariableTag atom",
+            "VariableTag [elem0 elem1]",
+            "[] theorem",
+            "[X] theorem",
+            "[atom] theorem",
+            "axiom a0",
+            "axiom \'a0\'",
+            "axiom [tag] [expr]",
+            "axiom a0 x"
+            "infer i0 x",
+            "refer r0 x",
+            "guide g0 [",
+            "guide g0 [test] [redir]",   // arg list is not comprised of variables
+            "guide g0 [V test] [redir]", // arg list is not comprised of only variables
         };
 
     for (const auto &l_input : l_fail_cases)
@@ -1095,7 +1167,6 @@ void test_parse_file_example_0()
     std::list<statement> l_statements;
     std::copy(std::istream_iterator<statement>(l_file_contents), std::istream_iterator<statement>(), std::back_inserter(l_statements));
 
-    std::cout << "content: " << l_file_contents.peek() << std::endl;
     assert(!l_file_contents.eof()); // invalid syntax, will be detected and cause failure
     assert(l_statements == std::list<statement>(
                                {

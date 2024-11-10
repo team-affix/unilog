@@ -25,6 +25,7 @@ namespace unilog
     struct guide_statement
     {
         prolog_expression m_tag;
+        std::list<variable> m_args;
         prolog_expression m_guide;
     };
 
