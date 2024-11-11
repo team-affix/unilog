@@ -10,6 +10,10 @@
 namespace unilog
 {
 
+    struct eol
+    {
+    };
+
     /////////////////////////////////
     // PROLOG
 
@@ -47,6 +51,7 @@ namespace unilog
     /////////////////////////////////
 
     // Comparisons for lexeme types.
+    bool operator==(const eol &a_lhs, const eol &a_rhs);
     bool operator==(const list_separator &a_lhs, const list_separator &a_rhs);
     bool operator==(const list_open &a_lhs, const list_open &a_rhs);
     bool operator==(const list_close &a_lhs, const list_close &a_rhs);
@@ -55,12 +60,14 @@ namespace unilog
     bool operator==(const quoted_atom &a_lhs, const quoted_atom &a_rhs);
 
     using lexeme = std::variant<
+        eol,
         list_separator,
         list_open,
         list_close,
         variable,
         atom>;
 
+    std::istream &operator>>(std::istream &a_istream, eol &a_eol);
     std::istream &operator>>(std::istream &a_istream, list_separator &a_command);
     std::istream &operator>>(std::istream &a_istream, list_open &a_list_open);
     std::istream &operator>>(std::istream &a_istream, list_close &a_list_close);

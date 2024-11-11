@@ -91,6 +91,10 @@ std::istream &escape(std::istream &a_istream, char &a_char)
 
 namespace unilog
 {
+    bool operator==(const eol &a_lhs, const eol &a_rhs)
+    {
+        return true;
+    }
 
     bool operator==(const list_separator &a_lhs, const list_separator &a_rhs)
     {
@@ -120,6 +124,11 @@ namespace unilog
     bool operator==(const unquoted_atom &a_lhs, const unquoted_atom &a_rhs)
     {
         return a_lhs.m_text == a_rhs.m_text;
+    }
+
+    bool is_eol_indicator_char(int c)
+    {
+        return c == ';';
     }
 
     bool is_list_separator_indicator_char(int c)
@@ -152,18 +161,14 @@ namespace unilog
 
     bool is_unquoted_atom_indicator_char(int c)
     {
-        return !is_list_separator_indicator_char(c) &&
+        return !is_eol_indicator_char(c) &&
+               !is_list_separator_indicator_char(c) &&
                !is_list_open_indicator_char(c) &&
                !is_list_close_indicator_char(c) &&
                !is_variable_indicator_char(c) &&
                !is_quoted_atom_indicator_char(c) &&
                std::isspace(c) == 0 &&
                c != std::istream::traits_type::eof();
-    }
-
-    bool is_command_text_char(int c)
-    {
-        return isalnum(c);
     }
 
     bool is_variable_text_char(int c)
@@ -174,7 +179,8 @@ namespace unilog
 
     bool is_unquoted_atom_text_char(int c)
     {
-        return !is_list_separator_indicator_char(c) &&
+        return !is_eol_indicator_char(c) &&
+               !is_list_separator_indicator_char(c) &&
                !is_list_open_indicator_char(c) &&
                !is_list_close_indicator_char(c) &&
                !is_quoted_atom_indicator_char(c) &&
@@ -193,9 +199,27 @@ namespace unilog
         return a_istream;
     }
 
+    std::istream &operator>>(std::istream &a_istream, eol &a_eol)
+    {
+        ////////////////////////////////////
+        //////// INDICATOR SECTION /////////
+        ////////////////////////////////////
+
+        // consume until non-whitespace char
+        consume_whitespace(a_istream);
+
+        if (!is_eol_indicator_char(a_istream.get()))
+        {
+            a_istream.clear();
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        return a_istream;
+    }
+
     std::istream &operator>>(std::istream &a_istream, list_separator &a_list_separator)
     {
-
         ////////////////////////////////////
         //////// INDICATOR SECTION /////////
         ////////////////////////////////////

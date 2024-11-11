@@ -1049,16 +1049,28 @@ void test_parser_extract_guide_statement()
                         },
                 },
             },
-            {"guide g0 [] [bind K [theorem a0]]",
-             guide_statement{
-                 .m_tag = unquoted_atom{"g0"},
-                 .m_args = std::list<variable>({}),
-                 .m_guide = prolog_expression{std::list<prolog_expression>({prolog_expression{unquoted_atom{"bind"}},
-                                                                            prolog_expression{variable{"K"}},
-                                                                            prolog_expression{std::list<prolog_expression>({
-                                                                                prolog_expression{unquoted_atom{"theorem"}},
-                                                                                prolog_expression{unquoted_atom{"a0"}},
-                                                                            })}})}}},
+            {
+                "guide g0 [] [bind K [theorem a0]]",
+                guide_statement{
+                    .m_tag = unquoted_atom{"g0"},
+                    .m_args = std::list<variable>({}),
+                    .m_guide = prolog_expression{std::list<prolog_expression>({
+                        prolog_expression{
+                            unquoted_atom{"bind"},
+                        },
+                        prolog_expression{
+                            variable{"K"},
+                        },
+                        prolog_expression{std::list<prolog_expression>({
+                            prolog_expression{
+                                unquoted_atom{"theorem"},
+                            },
+                            prolog_expression{
+                                unquoted_atom{"a0"},
+                            },
+                        })},
+                    })}},
+            },
             {"guide \"g\" [] [sub thm [theorem a0] [theorem a1]]",
              guide_statement{
                  .m_tag = quoted_atom{"g"},
@@ -1076,15 +1088,69 @@ void test_parser_extract_guide_statement()
                              prolog_expression{unquoted_atom{"a1"}},
                          })},
                      })}}},
-            {"guide \"g\" [Subgoal Subguide] [sub Subgoal Subguide [theorem a1]]", guide_statement{.m_tag = quoted_atom{"g"}, .m_args = std::list<variable>({variable{"Subgoal"}, variable{"Subguide"}}), .m_guide = prolog_expression{std::list<prolog_expression>({
-                                                                                                                                                                                                              prolog_expression{unquoted_atom{"sub"}},
-                                                                                                                                                                                                              prolog_expression{variable{"Subgoal"}},
-                                                                                                                                                                                                              prolog_expression{variable{"Subguide"}},
-                                                                                                                                                                                                              prolog_expression{std::list<prolog_expression>({
-                                                                                                                                                                                                                  prolog_expression{unquoted_atom{"theorem"}},
-                                                                                                                                                                                                                  prolog_expression{unquoted_atom{"a1"}},
-                                                                                                                                                                                                              })},
-                                                                                                                                                                                                          })}}},
+            {
+                "guide \"g\" [Subgoal Subguide] [sub Subgoal Subguide [theorem a1]]",
+                guide_statement{
+                    .m_tag = quoted_atom{"g"},
+                    .m_args = std::list<variable>({
+                        variable{"Subgoal"},
+                        variable{"Subguide"},
+                    }),
+                    .m_guide = prolog_expression{std::list<prolog_expression>({
+                        prolog_expression{
+                            unquoted_atom{"sub"},
+                        },
+                        prolog_expression{
+                            variable{"Subgoal"},
+                        },
+                        prolog_expression{
+                            variable{"Subguide"},
+                        },
+                        prolog_expression{std::list<prolog_expression>({
+                            prolog_expression{
+                                unquoted_atom{"theorem"},
+                            },
+                            prolog_expression{
+                                unquoted_atom{"a1"},
+                            },
+                        })},
+                    })},
+                },
+            },
+            {
+                "guide gt [] [mp [theorem a0] [theorem a1]]",
+                guide_statement{
+                    .m_tag = unquoted_atom{"gt"},
+                    .m_args = std::list<variable>({}),
+                    .m_guide = prolog_expression{
+                        std::list<prolog_expression>({
+                            prolog_expression{
+                                unquoted_atom{"mp"},
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>({
+                                    prolog_expression{
+                                        unquoted_atom{"theorem"},
+                                    },
+                                    prolog_expression{
+                                        unquoted_atom{"a0"},
+                                    },
+                                }),
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>({
+                                    prolog_expression{
+                                        unquoted_atom{"theorem"},
+                                    },
+                                    prolog_expression{
+                                        unquoted_atom{"a1"},
+                                    },
+                                }),
+                            },
+                        }),
+                    },
+                },
+            },
         };
 
     for (const auto &[l_key, l_value] : l_test_cases)
@@ -1124,6 +1190,7 @@ void test_parser_extract_guide_statement()
             "guide g0 [",
             "guide g0 [test] [redir]",   // arg list is not comprised of variables
             "guide g0 [V test] [redir]", // arg list is not comprised of only variables
+            "guide g0 n [theorem a0]",
         };
 
     for (const auto &l_input : l_fail_cases)
@@ -1131,6 +1198,175 @@ void test_parser_extract_guide_statement()
         std::stringstream l_ss(l_input);
 
         guide_statement l_statement;
+
+        l_ss >> l_statement;
+
+        // ensure failure of extraction
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
+    }
+}
+
+void test_parser_extract_infer_statement()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::atom;
+    using unilog::infer_statement;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::prolog_expression;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    data_points<std::string, infer_statement> l_test_cases =
+        {
+            {
+                "infer i0 [claim daniel y] [bout daniel [mp [theorem a0] [theorem a1]]]",
+                infer_statement{
+                    .m_tag = unquoted_atom{"i0"},
+                    .m_theorem = prolog_expression{std::list<prolog_expression>({
+                        prolog_expression{unquoted_atom{"claim"}},
+                        prolog_expression{unquoted_atom{"daniel"}},
+                        prolog_expression{unquoted_atom{"y"}},
+                    })},
+                    .m_guide = prolog_expression{std::list<prolog_expression>({
+                        prolog_expression{unquoted_atom{"bout"}},
+                        prolog_expression{unquoted_atom{"daniel"}},
+                        prolog_expression{std::list<prolog_expression>({
+                            prolog_expression{unquoted_atom{"mp"}},
+                            prolog_expression{std::list<prolog_expression>({
+                                prolog_expression{unquoted_atom{"theorem"}},
+                                prolog_expression{unquoted_atom{"a0"}},
+                            })},
+                            prolog_expression{std::list<prolog_expression>({
+                                prolog_expression{unquoted_atom{"theorem"}},
+                                prolog_expression{unquoted_atom{"a1"}},
+                            })},
+                        })},
+                    })},
+                },
+            },
+            {
+                "infer 'i0' [claim daniel y] [bout daniel [mp [theorem a0] [theorem a1]]]",
+                infer_statement{
+                    .m_tag = quoted_atom{"i0"},
+                    .m_theorem = prolog_expression{std::list<prolog_expression>({
+                        prolog_expression{unquoted_atom{"claim"}},
+                        prolog_expression{unquoted_atom{"daniel"}},
+                        prolog_expression{unquoted_atom{"y"}},
+                    })},
+                    .m_guide = prolog_expression{std::list<prolog_expression>({
+                        prolog_expression{unquoted_atom{"bout"}},
+                        prolog_expression{unquoted_atom{"daniel"}},
+                        prolog_expression{std::list<prolog_expression>({
+                            prolog_expression{unquoted_atom{"mp"}},
+                            prolog_expression{std::list<prolog_expression>({
+                                prolog_expression{unquoted_atom{"theorem"}},
+                                prolog_expression{unquoted_atom{"a0"}},
+                            })},
+                            prolog_expression{std::list<prolog_expression>({
+                                prolog_expression{unquoted_atom{"theorem"}},
+                                prolog_expression{unquoted_atom{"a1"}},
+                            })},
+                        })},
+                    })},
+                },
+            },
+            {
+                "infer 'i0' [claim daniel y] [bout daniel [dout daniel [mp [theorem a2] [theorem a3]]]]",
+                infer_statement{
+                    .m_tag = quoted_atom{"i0"},
+                    .m_theorem = prolog_expression{std::list<prolog_expression>({
+                        prolog_expression{unquoted_atom{"claim"}},
+                        prolog_expression{unquoted_atom{"daniel"}},
+                        prolog_expression{unquoted_atom{"y"}},
+                    })},
+                    .m_guide = prolog_expression{std::list<prolog_expression>({
+                        prolog_expression{unquoted_atom{"bout"}},
+                        prolog_expression{unquoted_atom{"daniel"}},
+                        prolog_expression{std::list<prolog_expression>({
+                            prolog_expression{unquoted_atom{"dout"}},
+                            prolog_expression{unquoted_atom{"daniel"}},
+                            prolog_expression{std::list<prolog_expression>({
+                                prolog_expression{unquoted_atom{"mp"}},
+                                prolog_expression{std::list<prolog_expression>({
+                                    prolog_expression{unquoted_atom{"theorem"}},
+                                    prolog_expression{unquoted_atom{"a2"}},
+                                })},
+                                prolog_expression{std::list<prolog_expression>({
+                                    prolog_expression{unquoted_atom{"theorem"}},
+                                    prolog_expression{unquoted_atom{"a3"}},
+                                })},
+                            })},
+                        })},
+                    })},
+                },
+            },
+            {
+                "infer 'i0' [claim daniel y] a0",
+                infer_statement{
+                    .m_tag = quoted_atom{"i0"},
+                    .m_theorem = prolog_expression{std::list<prolog_expression>({
+                        prolog_expression{unquoted_atom{"claim"}},
+                        prolog_expression{unquoted_atom{"daniel"}},
+                        prolog_expression{unquoted_atom{"y"}},
+                    })},
+                    .m_guide = prolog_expression{unquoted_atom{"a0"}},
+                },
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_test_cases)
+    {
+        std::stringstream l_ss(l_key);
+
+        infer_statement l_exp;
+
+        l_ss >> l_exp;
+
+        assert(l_exp == l_value);
+
+        // make sure the stringstream is not in failstate
+        assert(!l_ss.fail());
+
+        LOG("success, case: \"" << l_key << "\"" << std::endl);
+    }
+
+    std::vector<std::string> l_fail_cases =
+        {
+            "_",
+            "abc",
+            "",
+            "_ _",
+            "VariableTag Guide",
+            "VariableTag atom",
+            "VariableTag [elem0 elem1]",
+            "[] theorem",
+            "[X] theorem",
+            "[atom] theorem",
+            "axiom a0",
+            "axiom \'a0\'",
+            "axiom [tag] [expr]",
+            "axiom tag x",
+            "axiom a0 x"
+            "infer i0 x",
+            "refer r0 x",
+            "guide g0 [",
+            "guide g0 [test] [redir]",
+            "guide g0 [V test] [redir]",
+            "guide g0 n [theorem a0]",
+            "guide g0 [] [theorem a0]",
+        };
+
+    for (const auto &l_input : l_fail_cases)
+    {
+        std::stringstream l_ss(l_input);
+
+        infer_statement l_statement;
 
         l_ss >> l_statement;
 
@@ -1229,6 +1465,7 @@ int test_parser_main()
     TEST(test_parser_extract_prolog_expression);
     TEST(test_parser_extract_axiom_statement);
     TEST(test_parser_extract_guide_statement);
+    TEST(test_parser_extract_infer_statement);
     TEST(test_parse_file_example_0);
     TEST(test_parse_file_example_1);
 

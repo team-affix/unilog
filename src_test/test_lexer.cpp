@@ -96,6 +96,27 @@ void test_lexer_escape()
     }
 }
 
+void test_lexer_eol_equivalence()
+{
+    using unilog::eol;
+
+    data_points<std::pair<eol, eol>, bool> l_desired =
+        {
+            {
+                {
+                    eol{},
+                    eol{},
+                },
+                true,
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
 void test_lexer_list_separator_equivalence()
 {
     using unilog::list_separator;
@@ -363,6 +384,86 @@ void test_lexer_unquoted_atom_equivalence()
     for (const auto &[l_key, l_value] : l_desired)
     {
         assert((l_key.first == l_key.second) == l_value);
+    }
+}
+
+void test_lexer_extract_eol()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::eol;
+
+    data_points<std::string, eol> l_desired =
+        {
+            {
+                ";",
+                eol{},
+            },
+            {
+                "; []",
+                eol{},
+            },
+            {
+                "; [z]",
+                eol{},
+            },
+            {
+                "; [a b c]",
+                eol{},
+            },
+            {
+                ";[ \'quote\' ]",
+                eol{},
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_desired)
+    {
+        std::stringstream l_ss(l_key);
+
+        eol l_eol;
+        l_ss >> l_eol;
+
+        // make sure the extraction was successful
+        assert(!l_ss.fail());
+
+        assert(l_eol == l_value);
+
+        // make sure it did not extract more than it needs to
+        l_ss.unget();
+        assert(l_ss.peek() == ';');
+
+        LOG("success, case: extracted eol: " << l_key << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "",
+            "!command",
+            "!",
+            ":",
+            ":alg",
+            ": ",
+            "]",
+            "Variable",
+            "_Variable",
+            "\'quoted\'",
+            "unquoted",
+            "@unquoted",
+            "|",
+        };
+
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        eol l_eol;
+        l_ss >> l_eol;
+
+        // make sure the extraction was unsuccessful
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting eol: " << l_input << std::endl);
     }
 }
 
@@ -1139,6 +1240,7 @@ void test_lexer_extract_lexeme()
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     using unilog::atom;
+    using unilog::eol;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
@@ -2222,6 +2324,45 @@ void test_lexer_extract_lexeme()
                 },
             },
         },
+        {
+            "test;",
+            std::vector<lexeme>{
+                unquoted_atom{"test"},
+                eol{},
+            },
+        },
+        {
+            "test1;test2",
+            std::vector<lexeme>{
+                unquoted_atom{"test1"},
+                eol{},
+                unquoted_atom{"test2"},
+            },
+        },
+        {
+            "[test1 test2];",
+            std::vector<lexeme>{
+                list_open{},
+                unquoted_atom{"test1"},
+                unquoted_atom{"test2"},
+                list_close{},
+                eol{},
+            },
+        },
+        {
+            ";;;[test1; \"test2\"];",
+            std::vector<lexeme>{
+                eol{},
+                eol{},
+                eol{},
+                list_open{},
+                unquoted_atom{"test1"},
+                eol{},
+                quoted_atom{"test2"},
+                list_close{},
+                eol{},
+            },
+        },
     };
 
     // Execute pre-made tests
@@ -2425,12 +2566,14 @@ void test_lexer_main()
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     TEST(test_lexer_escape);
+    TEST(test_lexer_eol_equivalence);
     TEST(test_lexer_list_separator_equivalence);
     TEST(test_lexer_list_open_equivalence);
     TEST(test_lexer_list_close_equivalence);
     TEST(test_lexer_variable_equivalence);
     TEST(test_lexer_quoted_atom_equivalence);
     TEST(test_lexer_unquoted_atom_equivalence);
+    TEST(test_lexer_extract_eol);
     TEST(test_lexer_extract_list_separator);
     TEST(test_lexer_extract_list_open);
     TEST(test_lexer_extract_list_close);
