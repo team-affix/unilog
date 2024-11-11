@@ -2587,6 +2587,4 @@ void test_lexer_main()
     TEST(test_lex_file_example_1);
     TEST(test_lex_file_example_2);
     TEST(test_lex_file_example_3);
-
-    return;
 }

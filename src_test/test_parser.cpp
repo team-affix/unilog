@@ -1564,7 +1564,7 @@ void test_parse_file_example_1()
                                }));
 }
 
-int test_parser_main()
+void test_parser_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
@@ -1575,6 +1575,4 @@ int test_parser_main()
     TEST(test_parser_extract_refer_statement);
     TEST(test_parse_file_example_0);
     TEST(test_parse_file_example_1);
-
-    return 0;
 }
