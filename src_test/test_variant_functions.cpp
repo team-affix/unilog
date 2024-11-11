@@ -54,6 +54,10 @@ void test_variant_2_types_extract()
     l_ss >> l_variant; // c
     assert(std::get<char>(l_variant) == 'c');
     assert(!l_ss.fail());
+
+    l_ss >> l_variant;
+    assert(l_ss.fail());
+    assert(l_ss.eof());
 }
 
 void test_variant_functions_main()
