@@ -74,8 +74,8 @@ namespace unilog
             while (extract_prolog_expression(a_istream, l_prolog_subexpression, a_list_depth))
                 l_list.push_back(l_prolog_subexpression);
 
-            // reset the state flags for the stream
-            a_istream.clear();
+            // reset the failbit flag for the stream
+            a_istream.clear(a_istream.rdstate() & ~std::ios::failbit);
 
             a_prolog_expression.m_variant = l_list;
         }
@@ -150,7 +150,8 @@ namespace unilog
                   std::istream_iterator<variable>(),
                   std::back_inserter(a_guide_statement.m_args));
 
-        a_istream.clear();
+        // reset failbit flag
+        a_istream.clear(a_istream.rdstate() & ~std::ios::failbit);
 
         /////////// read the list close for args list
         list_close l_args_list_close;

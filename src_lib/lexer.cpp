@@ -210,7 +210,6 @@ namespace unilog
 
         if (!is_eol_indicator_char(a_istream.get()))
         {
-            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
             return a_istream;
         }
@@ -229,7 +228,6 @@ namespace unilog
 
         if (!is_list_separator_indicator_char(a_istream.get()))
         {
-            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
             return a_istream;
         }
@@ -248,7 +246,6 @@ namespace unilog
 
         if (!is_list_open_indicator_char(a_istream.get()))
         {
-            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
             return a_istream;
         }
@@ -267,7 +264,6 @@ namespace unilog
 
         if (!is_list_close_indicator_char(a_istream.get()))
         {
-            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
             return a_istream;
         }
@@ -286,7 +282,6 @@ namespace unilog
 
         if (!is_variable_indicator_char(a_istream.peek()))
         {
-            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
             return a_istream;
         }
@@ -328,7 +323,6 @@ namespace unilog
 
         if (!is_quoted_atom_indicator_char(l_quote_char))
         {
-            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
             return a_istream;
         }
@@ -370,7 +364,6 @@ namespace unilog
 
         if (!is_unquoted_atom_indicator_char(a_istream.peek()))
         {
-            a_istream.clear();
             a_istream.setstate(std::ios::failbit);
             return a_istream;
         }

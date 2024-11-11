@@ -1206,6 +1206,8 @@ void test_lexer_extract_unquoted_atom()
     std::vector<std::string> l_expect_failure_inputs =
         {
             "",
+            ";",
+            ";a",
             "|",
             "|[]",
             "| [a]",

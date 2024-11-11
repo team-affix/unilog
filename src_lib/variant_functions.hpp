@@ -29,7 +29,7 @@ namespace unilog
                 return true;
             }
 
-            a_istream.clear();
+            a_istream.clear();                // clear all flags when restoring
             a_istream.seekg(l_restore_point); // Restore point for next attempt
 
             return false;
