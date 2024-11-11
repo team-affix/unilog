@@ -1354,7 +1354,7 @@ void test_parser_extract_infer_statement()
             "axiom tag x",
             "axiom a0 x"
             "infer i0 x",
-            "infer [i0] x [theorem a0]",
+            "infer [i0] x [theorem a0]", // tag is not atomic
             "refer r0 x",
             "guide g0 [",
             "guide g0 [test] [redir]",

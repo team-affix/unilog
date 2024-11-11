@@ -2619,6 +2619,90 @@ void test_lex_file_example_4()
                         }));
 }
 
+void test_lex_file_example_5()
+{
+    using unilog::atom;
+    using unilog::eol;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::list_separator;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    std::stringstream l_ss;
+    std::ifstream l_if("./src_test/example_unilog_files/lexer_example_5/jake.u");
+    // std::cout << std::filesystem::current_path() << std::endl;
+    // std::cout << "is_good: " << l_if.good() << std::endl;
+    l_ss << l_if.rdbuf(); // read in contents of file
+    // std::cout << l_ss.str() << std::endl;
+    std::list<lexeme> l_lexemes;
+    std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
+
+    // assert(l_ss.eof());
+    //     above line omitted due to trailing newline at end of file.
+    assert(l_lexemes == std::list<lexeme>({
+                            unquoted_atom{"axiom"},
+                            quoted_atom{"a0"},
+                            list_open{},
+                            unquoted_atom{"awesome"},
+                            variable{"_"},
+                            list_close{},
+                            eol{},
+
+                            unquoted_atom{"infer"},
+                            quoted_atom{"i0"},
+                            list_open{},
+                            unquoted_atom{"awesome"},
+                            unquoted_atom{"leon"},
+                            list_close{},
+                            list_open{},
+                            unquoted_atom{"theorem"},
+                            unquoted_atom{"a0"},
+                            list_close{},
+                            eol{},
+                        }));
+}
+
+void test_lex_file_example_6()
+{
+    using unilog::atom;
+    using unilog::eol;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::list_separator;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    std::stringstream l_ss;
+    std::ifstream l_if("./src_test/example_unilog_files/lexer_example_6/jake.u");
+    // std::cout << std::filesystem::current_path() << std::endl;
+    // std::cout << "is_good: " << l_if.good() << std::endl;
+    l_ss << l_if.rdbuf(); // read in contents of file
+    // std::cout << l_ss.str() << std::endl;
+    std::list<lexeme> l_lexemes;
+    std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
+
+    assert(l_lexemes == std::list<lexeme>({
+                            eol{},
+                            eol{},
+                            eol{},
+                            unquoted_atom{"guide"},
+                            unquoted_atom{"g0"},
+                            list_open{},
+                            list_close{},
+                            list_open{},
+                            unquoted_atom{"theorem"},
+                            variable{"_"},
+                            list_close{},
+                            unquoted_atom{"asdasd"},
+                            eol{},
+                        }));
+}
+
 void test_lexer_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
@@ -2649,4 +2733,6 @@ void test_lexer_main()
     TEST(test_lex_file_example_2);
     TEST(test_lex_file_example_3);
     TEST(test_lex_file_example_4);
+    TEST(test_lex_file_example_5);
+    TEST(test_lex_file_example_6);
 }
