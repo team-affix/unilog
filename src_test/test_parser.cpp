@@ -1354,12 +1354,16 @@ void test_parser_extract_infer_statement()
             "axiom tag x",
             "axiom a0 x"
             "infer i0 x",
+            "infer [i0] x [theorem a0]",
             "refer r0 x",
             "guide g0 [",
             "guide g0 [test] [redir]",
             "guide g0 [V test] [redir]",
             "guide g0 n [theorem a0]",
             "guide g0 [] [theorem a0]",
+            "infer [",
+            "infer ]",
+            "infer \'i0",
         };
 
     for (const auto &l_input : l_fail_cases)
@@ -1367,6 +1371,108 @@ void test_parser_extract_infer_statement()
         std::stringstream l_ss(l_input);
 
         infer_statement l_statement;
+
+        l_ss >> l_statement;
+
+        // ensure failure of extraction
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
+    }
+}
+
+void test_parser_extract_refer_statement()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::atom;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::prolog_expression;
+    using unilog::quoted_atom;
+    using unilog::refer_statement;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    data_points<std::string, refer_statement> l_test_cases =
+        {
+            {
+                "refer leon \'./path/to/leon.u\'",
+                refer_statement{
+                    .m_tag = unquoted_atom{"leon"},
+                    .m_file_path = quoted_atom{"./path/to/leon.u"},
+                },
+            },
+            {
+                "refer 'jake' \'./path /to /jake.u\'",
+                refer_statement{
+                    .m_tag = quoted_atom{"jake"},
+                    .m_file_path = quoted_atom{"./path /to /jake.u"},
+                },
+            },
+            {
+                "refer 1.1 \"./daniel.u\"",
+                refer_statement{
+                    .m_tag = unquoted_atom{"1.1"},
+                    .m_file_path = quoted_atom{"./daniel.u"},
+                },
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_test_cases)
+    {
+        std::stringstream l_ss(l_key);
+
+        refer_statement l_exp;
+
+        l_ss >> l_exp;
+
+        assert(l_exp == l_value);
+
+        // make sure the stringstream is not in failstate
+        assert(!l_ss.fail());
+
+        LOG("success, case: \"" << l_key << "\"" << std::endl);
+    }
+
+    std::vector<std::string> l_fail_cases =
+        {
+            "_",
+            "abc",
+            "",
+            "_ _",
+            "VariableTag Guide",
+            "VariableTag atom",
+            "VariableTag [elem0 elem1]",
+            "[] theorem",
+            "[X] theorem",
+            "[atom] theorem",
+            "axiom a0",
+            "axiom \'a0\'",
+            "axiom [tag] [expr]",
+            "axiom tag x",
+            "axiom a0 x"
+            "infer i0 x",
+            "infer [i0] x [theorem a0]",
+            "refer r0 x",
+            "guide g0 [",
+            "guide g0 [test] [redir]",
+            "guide g0 [V test] [redir]",
+            "guide g0 n [theorem a0]",
+            "guide g0 [] [theorem a0]",
+            "infer [",
+            "infer ]",
+            "infer \'i0",
+            "refer [jake] \'jake.u\'",
+            "refer jake ['not_a_quoted_atom']",
+        };
+
+    for (const auto &l_input : l_fail_cases)
+    {
+        std::stringstream l_ss(l_input);
+
+        refer_statement l_statement;
 
         l_ss >> l_statement;
 
@@ -1466,6 +1572,7 @@ int test_parser_main()
     TEST(test_parser_extract_axiom_statement);
     TEST(test_parser_extract_guide_statement);
     TEST(test_parser_extract_infer_statement);
+    TEST(test_parser_extract_refer_statement);
     TEST(test_parse_file_example_0);
     TEST(test_parse_file_example_1);
 
