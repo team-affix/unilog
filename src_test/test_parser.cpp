@@ -1050,7 +1050,7 @@ void test_parser_extract_guide_statement()
                 },
             },
             {
-                "guide g0 [] [bind K [theorem a0]]",
+                "guide g0[][bind K [theorem a0]]",
                 guide_statement{
                     .m_tag = unquoted_atom{"g0"},
                     .m_args = std::list<variable>({}),
@@ -1071,7 +1071,7 @@ void test_parser_extract_guide_statement()
                         })},
                     })}},
             },
-            {"guide \"g\" [] [sub thm [theorem a0] [theorem a1]]",
+            {"guide \"g\"[] [sub thm [theorem a0] [theorem a1]]",
              guide_statement{
                  .m_tag = quoted_atom{"g"},
                  .m_args = std::list<variable>({}),
@@ -1089,7 +1089,7 @@ void test_parser_extract_guide_statement()
                          })},
                      })}}},
             {
-                "guide \"g\" [Subgoal Subguide] [sub Subgoal Subguide [theorem a1]]",
+                "guide \"g\" [Subgoal Subguide][sub Subgoal Subguide [theorem a1]]",
                 guide_statement{
                     .m_tag = quoted_atom{"g"},
                     .m_args = std::list<variable>({

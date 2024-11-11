@@ -2422,12 +2422,12 @@ void test_lex_file_example_0()
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
-    std::cout << l_ss.str() << std::endl;
+    // std::cout << l_ss.str() << std::endl;
 
     std::list<lexeme> l_lexemes;
     std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
 
-    assert(l_ss.eof()); // assert successful extraction
+    assert(l_ss.eof()); // there is no trailing newline.
     assert(l_lexemes == std::list<lexeme>({
                             unquoted_atom{"axiom"},
                             unquoted_atom{"a0"},
@@ -2458,12 +2458,12 @@ void test_lex_file_example_1()
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
-    std::cout << l_ss.str() << std::endl;
+    // std::cout << l_ss.str() << std::endl;
 
     std::list<lexeme> l_lexemes;
     std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
 
-    assert(l_ss.eof()); // assert successful extraction
+    assert(l_ss.eof()); // there is no trailing newline.
     assert(l_lexemes == std::list<lexeme>({
                             unquoted_atom{"axiom"},
                             quoted_atom{"a0"},
@@ -2499,12 +2499,12 @@ void test_lex_file_example_2()
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
-    std::cout << l_ss.str() << std::endl;
+    // std::cout << l_ss.str() << std::endl;
 
     std::list<lexeme> l_lexemes;
     std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
 
-    assert(l_ss.eof()); // assert successful extraction
+    assert(l_ss.eof()); // there is no trailing newline.
     assert(l_lexemes == std::list<lexeme>({
                             unquoted_atom{"infer"},
                             unquoted_atom{"i0"},
@@ -2552,14 +2552,70 @@ void test_lex_file_example_3()
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
-    std::cout << l_ss.str() << std::endl;
-    std::cout << "eof?: " << ((l_ss.peek() == std::istream::traits_type::eof()) ? '1' : '0') << std::endl;
+    // std::cout << l_ss.str() << std::endl;
     std::list<lexeme> l_lexemes;
     std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
 
-    assert(l_ss.peek() == EOF); // assert successful extraction
+    // assert(l_ss.eof()); // assert successful extraction
+    // THE ABOVE ASSERTION WILL NOT WORK. THIS IS BECAUSE stringstream HAS A CUSTOM
+    //     IMPLEMENTATION OF SETTING eofbit, AND NO CHARACTERS WERE EVER EXTRACTED BEFORE
+    //     REACHING END OF BUFFER THUS eofbit WILL NOT BE SET.
     assert(l_lexemes == std::list<lexeme>({
 
+                        }));
+}
+
+void test_lex_file_example_4()
+{
+    using unilog::atom;
+    using unilog::eol;
+    using unilog::lexeme;
+    using unilog::list_close;
+    using unilog::list_open;
+    using unilog::list_separator;
+    using unilog::quoted_atom;
+    using unilog::unquoted_atom;
+    using unilog::variable;
+
+    std::stringstream l_ss;
+    std::ifstream l_if("./src_test/example_unilog_files/lexer_example_4/jake.u");
+    // std::cout << std::filesystem::current_path() << std::endl;
+    // std::cout << "is_good: " << l_if.good() << std::endl;
+    l_ss << l_if.rdbuf(); // read in contents of file
+    // std::cout << l_ss.str() << std::endl;
+    std::list<lexeme> l_lexemes;
+    std::copy(std::istream_iterator<lexeme>(l_ss), std::istream_iterator<lexeme>(), std::back_inserter(l_lexemes));
+
+    // assert(l_ss.eof());
+    //     above line omitted due to trailing newline at end of file.
+    assert(l_lexemes == std::list<lexeme>({
+                            unquoted_atom{"axiom"},
+                            unquoted_atom{"a0"},
+                            list_open{},
+                            unquoted_atom{"if"},
+                            unquoted_atom{"y"},
+                            unquoted_atom{"x"},
+                            list_close{},
+                            eol{},
+                            unquoted_atom{"axiom"},
+                            unquoted_atom{"a1"},
+                            unquoted_atom{"x"},
+                            eol{},
+                            unquoted_atom{"infer"},
+                            unquoted_atom{"i0"},
+                            unquoted_atom{"y"},
+                            list_open{},
+                            unquoted_atom{"mp"},
+                            list_open{},
+                            unquoted_atom{"theorem"},
+                            unquoted_atom{"a0"},
+                            list_close{},
+                            list_open{},
+                            unquoted_atom{"theorem"},
+                            unquoted_atom{"a1"},
+                            list_close{},
+                            list_close{},
+                            eol{},
                         }));
 }
 
@@ -2567,6 +2623,7 @@ void test_lexer_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
+    // equivalence tests
     TEST(test_lexer_escape);
     TEST(test_lexer_eol_equivalence);
     TEST(test_lexer_list_separator_equivalence);
@@ -2575,6 +2632,8 @@ void test_lexer_main()
     TEST(test_lexer_variable_equivalence);
     TEST(test_lexer_quoted_atom_equivalence);
     TEST(test_lexer_unquoted_atom_equivalence);
+
+    // extractor tests
     TEST(test_lexer_extract_eol);
     TEST(test_lexer_extract_list_separator);
     TEST(test_lexer_extract_list_open);
@@ -2583,8 +2642,11 @@ void test_lexer_main()
     TEST(test_lexer_extract_quoted_atom);
     TEST(test_lexer_extract_unquoted_atom);
     TEST(test_lexer_extract_lexeme);
+
+    // larger tests, lexing files
     TEST(test_lex_file_example_0);
     TEST(test_lex_file_example_1);
     TEST(test_lex_file_example_2);
     TEST(test_lex_file_example_3);
+    TEST(test_lex_file_example_4);
 }
