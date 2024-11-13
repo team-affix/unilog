@@ -71,6 +71,12 @@ query(DStack, BStack, [cond, [[CondTheorem|CondGuide]|NextGuide] | CondsRest], T
     ;
     query(DStack, BStack, [cond | CondsRest], Target).
 
+query(DStack, BStack, [eval], [eval, Guide]) :-
+    query(DStack, BStack, Guide, _).
+
+query(DStack, BStack, [fail, NextGuide], Target) :-
+    \+ query(DStack, BStack, NextGuide, Target).
+
 % logic ROI
 
 query(DStack, BStack, [mp, ImpGuide, JusGuide], Y) :-
