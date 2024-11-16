@@ -12,7 +12,7 @@
 namespace unilog
 {
 
-    bool operator==(const prolog_expression &a_lhs, const prolog_expression &a_rhs)
+    bool operator==(const term &a_lhs, const term &a_rhs)
     {
         return a_lhs.m_variant == a_rhs.m_variant;
     }
@@ -42,7 +42,7 @@ namespace unilog
                a_lhs.m_file_path == a_rhs.m_file_path;
     }
 
-    std::istream &extract_prolog_expression(std::istream &a_istream, prolog_expression &a_prolog_expression, int &a_list_depth)
+    std::istream &extract_prolog_expression(std::istream &a_istream, term &a_term, int &a_list_depth)
     {
         lexeme l_lexeme;
 
@@ -56,18 +56,18 @@ namespace unilog
             return a_istream;
 
         if (std::holds_alternative<atom>(l_lexeme))
-            a_prolog_expression.m_variant = std::get<atom>(l_lexeme);
+            a_term.m_variant = std::get<atom>(l_lexeme);
         else if (std::holds_alternative<variable>(l_lexeme))
-            a_prolog_expression.m_variant = std::get<variable>(l_lexeme);
+            a_term.m_variant = std::get<variable>(l_lexeme);
         else if (std::holds_alternative<list_open>(l_lexeme))
         {
-            std::list<prolog_expression> l_list;
+            std::list<term> l_list;
 
             // increment list depth BEFORE while loop.
             //     this is to avoid repeatedly incrementing each iteration
             ++a_list_depth;
 
-            prolog_expression l_prolog_subexpression;
+            term l_prolog_subexpression;
 
             // extract until failure, this does NOT have to come from
             //     eof. It will come from a list_close lexeme or command as well.
@@ -77,7 +77,7 @@ namespace unilog
             // reset the failbit flag for the stream
             a_istream.clear(a_istream.rdstate() & ~std::ios::failbit);
 
-            a_prolog_expression.m_variant = l_list;
+            a_term.m_variant = l_list;
         }
         else if (std::holds_alternative<list_close>(l_lexeme))
         {
@@ -95,12 +95,12 @@ namespace unilog
         return a_istream;
     }
 
-    std::istream &operator>>(std::istream &a_istream, prolog_expression &a_prolog_expression)
+    std::istream &operator>>(std::istream &a_istream, term &a_term)
     {
         // the paren stack
         int l_list_depth = 0;
 
-        std::istream &l_result = extract_prolog_expression(a_istream, a_prolog_expression, l_list_depth);
+        std::istream &l_result = extract_prolog_expression(a_istream, a_term, l_list_depth);
 
         if (l_list_depth > 0 || l_list_depth < 0)
             a_istream.setstate(std::ios::failbit); // open/close bracket count mismatch
