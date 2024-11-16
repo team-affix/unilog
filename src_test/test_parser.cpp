@@ -46,228 +46,230 @@ void test_parser_extract_prolog_expression()
     using unilog::unquoted_atom;
     using unilog::variable;
 
-    data_points<std::string, prolog_expression> l_test_cases =
-        {
+    data_points<std::string, prolog_expression>
+        l_test_cases =
             {
-                "if",
-                prolog_expression{
-                    unquoted_atom{
-                        .m_text = "if",
+                {
+                    "if",
+                    prolog_expression{
+                        unquoted_atom{
+                            .m_text = "if",
+                        },
                     },
                 },
-            },
-            {
-                "Var",
-                prolog_expression{
-                    variable{
-                        .m_identifier = "Var",
+                {
+                    "Var",
+                    prolog_expression{
+                        variable{
+                            .m_identifier = "Var",
+                        },
                     },
                 },
-            },
-            {
-                "_",
-                prolog_expression{
-                    variable{
-                        .m_identifier = "_",
+                {
+                    "_",
+                    prolog_expression{
+                        variable{
+                            .m_identifier = "_",
+                        },
                     },
                 },
-            },
-            {
-                // Test singular extraction not perturbed by later content
-                "_ abc",
-                prolog_expression{
-                    variable{
-                        .m_identifier = "_",
+                {
+                    // Test singular extraction not perturbed by later content
+                    "_ abc",
+                    prolog_expression{
+                        variable{
+                            .m_identifier = "_",
+                        },
                     },
                 },
-            },
-            {
-                "[]",
-                prolog_expression{
-                    std::list<prolog_expression>{
+                {
+                    "[]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
 
+                        },
                     },
                 },
-            },
-            {
-                "[] []",
-                prolog_expression{
-                    std::list<prolog_expression>{
+                {
+                    "[] []",
+                    prolog_expression{
+                        std::list<prolog_expression>{
 
-                    },
-                },
-            },
-            {
-                "[abc]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "abc",
-                            },
                         },
                     },
                 },
-            },
-            {
-                "[abc Var]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "abc",
-                            },
-                        },
-                        prolog_expression{
-                            variable{
-                                "Var",
-                            },
-                        },
-                    },
-                },
-            },
-            {
-                "[abc Var def]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "abc",
-                            },
-                        },
-                        prolog_expression{
-                            variable{
-                                "Var",
-                            },
-                        },
-                        prolog_expression{
-                            unquoted_atom{
-                                "def",
-                            },
-                        },
-                    },
-                },
-            },
-            {
-                "[[]]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            std::list<prolog_expression>{
-
-                            },
-                        },
-                    },
-                },
-            },
-            {
-                "[abc []]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "abc",
-                            },
-                        },
-                        prolog_expression{
-                            std::list<prolog_expression>{
-
-                            },
-                        },
-                    },
-                },
-            },
-            {
-                "[abc [] def]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "abc",
-                            },
-                        },
-                        prolog_expression{
-                            std::list<prolog_expression>{
-
-                            },
-                        },
-                        prolog_expression{
-                            unquoted_atom{
-                                "def",
-                            },
-                        },
-                    },
-                },
-            },
-            {
-                "[abc [123] def]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "abc",
-                            },
-                        },
-                        prolog_expression{
-                            std::list<prolog_expression>{
-                                prolog_expression{
-                                    unquoted_atom{
-                                        "123",
-                                    },
+                {
+                    "[abc]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "abc",
                                 },
                             },
                         },
-                        prolog_expression{
-                            unquoted_atom{
-                                "def",
-                            },
-                        },
                     },
                 },
-            },
-            {
-                "abc []",
-                prolog_expression{
-                    unquoted_atom{
-                        "abc",
-                    },
-                },
-            },
-            {
-                "[abc [123 [def [456 [ghi]]]]]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "abc",
-                            },
-                        },
-                        prolog_expression{
-                            std::list<prolog_expression>{
-                                prolog_expression{
-                                    unquoted_atom{
-                                        "123",
-                                    },
+                {
+                    "[abc Var]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "abc",
                                 },
-                                prolog_expression{
-                                    std::list<prolog_expression>{
-                                        prolog_expression{
-                                            unquoted_atom{
-                                                "def",
-                                            },
+                            },
+                            prolog_expression{
+                                variable{
+                                    "Var",
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    "[abc Var def]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "abc",
+                                },
+                            },
+                            prolog_expression{
+                                variable{
+                                    "Var",
+                                },
+                            },
+                            prolog_expression{
+                                unquoted_atom{
+                                    "def",
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    "[[]]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                std::list<prolog_expression>{
+
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    "[abc []]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "abc",
+                                },
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>{
+
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    "[abc [] def]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "abc",
+                                },
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>{
+
+                                },
+                            },
+                            prolog_expression{
+                                unquoted_atom{
+                                    "def",
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    "[abc [123] def]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "abc",
+                                },
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>{
+                                    prolog_expression{
+                                        unquoted_atom{
+                                            "123",
                                         },
-                                        prolog_expression{
-                                            std::list<prolog_expression>{
-                                                prolog_expression{
-                                                    unquoted_atom{
-                                                        "456",
-                                                    },
+                                    },
+                                },
+                            },
+                            prolog_expression{
+                                unquoted_atom{
+                                    "def",
+                                },
+                            },
+                        },
+                    },
+                },
+                {
+                    "abc []",
+                    prolog_expression{
+                        unquoted_atom{
+                            "abc",
+                        },
+                    },
+                },
+                {
+                    "[abc [123 [def [456 [ghi]]]]]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "abc",
+                                },
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>{
+                                    prolog_expression{
+                                        unquoted_atom{
+                                            "123",
+                                        },
+                                    },
+                                    prolog_expression{
+                                        std::list<prolog_expression>{
+                                            prolog_expression{
+                                                unquoted_atom{
+                                                    "def",
                                                 },
-                                                prolog_expression{
-                                                    std::list<prolog_expression>{
-                                                        prolog_expression{
-                                                            unquoted_atom{
-                                                                "ghi",
+                                            },
+                                            prolog_expression{
+                                                std::list<prolog_expression>{
+                                                    prolog_expression{
+                                                        unquoted_atom{
+                                                            "456",
+                                                        },
+                                                    },
+                                                    prolog_expression{
+                                                        std::list<prolog_expression>{
+                                                            prolog_expression{
+                                                                unquoted_atom{
+                                                                    "ghi",
+                                                                },
                                                             },
                                                         },
                                                     },
@@ -280,308 +282,308 @@ void test_parser_extract_prolog_expression()
                         },
                     },
                 },
-            },
-            {
-                "[abc [_ _] [def A]]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "abc",
-                            },
-                        },
-                        prolog_expression{
-                            std::list<prolog_expression>{
-                                prolog_expression{
-                                    variable{
-                                        "_",
-                                    },
-                                },
-                                prolog_expression{
-                                    variable{
-                                        "_",
-                                    },
+                {
+                    "[abc [_ _] [def A]]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "abc",
                                 },
                             },
-                        },
-                        prolog_expression{
-                            std::list<prolog_expression>{
-                                prolog_expression{
-                                    unquoted_atom{
-                                        "def",
+                            prolog_expression{
+                                std::list<prolog_expression>{
+                                    prolog_expression{
+                                        variable{
+                                            "_",
+                                        },
+                                    },
+                                    prolog_expression{
+                                        variable{
+                                            "_",
+                                        },
                                     },
                                 },
-                                prolog_expression{
-                                    variable{
-                                        "A",
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>{
+                                    prolog_expression{
+                                        unquoted_atom{
+                                            "def",
+                                        },
+                                    },
+                                    prolog_expression{
+                                        variable{
+                                            "A",
+                                        },
                                     },
                                 },
                             },
                         },
                     },
                 },
-            },
-            {
-                // Single atom, with special characters
-                "test!@.$^&*()",
-                prolog_expression{
-                    unquoted_atom{
-                        "test!@.$^&*()",
-                    },
-                },
-            },
-            {
-                // single atom, it will not fail even with the closing paren. this is because,
-                //     closing paren is a lexeme separator char and thus it will only extract the
-                //     first prolog expression, "abc"
-                "abc]",
-                prolog_expression{
-                    unquoted_atom{
-                        "abc",
-                    },
-                },
-            },
-            {
-                "[123 456 7.89]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "123",
-                            },
-                        },
-                        prolog_expression{
-                            unquoted_atom{
-                                "456",
-                            },
-                        },
-                        prolog_expression{
-                            unquoted_atom{
-                                "7.89",
-                            },
+                {
+                    // Single atom, with special characters
+                    "test!@.$^&*()",
+                    prolog_expression{
+                        unquoted_atom{
+                            "test!@.$^&*()",
                         },
                     },
                 },
-            },
-            {
-                "[123 456 7.89 A [_ _]]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "123",
-                            },
+                {
+                    // single atom, it will not fail even with the closing paren. this is because,
+                    //     closing paren is a lexeme separator char and thus it will only extract the
+                    //     first prolog expression, "abc"
+                    "abc]",
+                    prolog_expression{
+                        unquoted_atom{
+                            "abc",
                         },
-                        prolog_expression{
-                            unquoted_atom{
-                                "456",
-                            },
-                        },
-                        prolog_expression{
-                            unquoted_atom{
-                                "7.89",
-                            },
-                        },
-                        prolog_expression{
-                            variable{
-                                "A",
-                            },
-                        },
-                        prolog_expression{
-                            std::list<prolog_expression>{
-                                prolog_expression{
-                                    variable{
-                                        "_",
-                                    },
+                    },
+                },
+                {
+                    "[123 456 7.89]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "123",
                                 },
-                                prolog_expression{
-                                    variable{
-                                        "_",
-                                    },
+                            },
+                            prolog_expression{
+                                unquoted_atom{
+                                    "456",
+                                },
+                            },
+                            prolog_expression{
+                                unquoted_atom{
+                                    "7.89",
                                 },
                             },
                         },
                     },
                 },
-            },
-            {
-                // Having fun, realistic scenario
-                "[if\n"
-                "    [add X Y Z]\n"
-                "    [and\n"
-                "        [cons X XH XT]\n"
-                "        [cons Y YH YT]\n"
-                "        [add [XH] [YH] [ZH]]\n"
-                "        [add XT YT ZT]\n"
-                "        [cons Z ZH ZT]\n"
-                "    ]\n"
-                "]\n",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            unquoted_atom{
-                                "if",
+                {
+                    "[123 456 7.89 A [_ _]]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "123",
+                                },
                             },
-                        },
-                        prolog_expression{
-                            std::list<prolog_expression>{
-                                prolog_expression{
-                                    unquoted_atom{
-                                        "add",
-                                    },
+                            prolog_expression{
+                                unquoted_atom{
+                                    "456",
                                 },
-                                prolog_expression{
-                                    variable{
-                                        "X",
-                                    },
+                            },
+                            prolog_expression{
+                                unquoted_atom{
+                                    "7.89",
                                 },
-                                prolog_expression{
-                                    variable{
-                                        "Y",
-                                    },
+                            },
+                            prolog_expression{
+                                variable{
+                                    "A",
                                 },
-                                prolog_expression{
-                                    variable{
-                                        "Z",
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>{
+                                    prolog_expression{
+                                        variable{
+                                            "_",
+                                        },
+                                    },
+                                    prolog_expression{
+                                        variable{
+                                            "_",
+                                        },
                                     },
                                 },
                             },
                         },
-                        prolog_expression{
-                            std::list<prolog_expression>{
-                                prolog_expression{
-                                    unquoted_atom{
-                                        "and",
-                                    },
+                    },
+                },
+                {
+                    // Having fun, realistic scenario
+                    "[if\n"
+                    "    [add X Y Z]\n"
+                    "    [and\n"
+                    "        [cons X XH XT]\n"
+                    "        [cons Y YH YT]\n"
+                    "        [add [XH] [YH] [ZH]]\n"
+                    "        [add XT YT ZT]\n"
+                    "        [cons Z ZH ZT]\n"
+                    "    ]\n"
+                    "]\n",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                unquoted_atom{
+                                    "if",
                                 },
-                                prolog_expression{
-                                    std::list<prolog_expression>{
-                                        prolog_expression{
-                                            unquoted_atom{
-                                                "cons",
-                                            },
-                                        },
-                                        prolog_expression{
-                                            variable{
-                                                "X",
-                                            },
-                                        },
-                                        prolog_expression{
-                                            variable{
-                                                "XH",
-                                            },
-                                        },
-                                        prolog_expression{
-                                            variable{
-                                                "XT",
-                                            },
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>{
+                                    prolog_expression{
+                                        unquoted_atom{
+                                            "add",
                                         },
                                     },
-                                },
-                                prolog_expression{
-                                    std::list<prolog_expression>{
-                                        prolog_expression{
-                                            unquoted_atom{
-                                                "cons",
-                                            },
+                                    prolog_expression{
+                                        variable{
+                                            "X",
                                         },
-                                        prolog_expression{
-                                            variable{
-                                                "Y",
-                                            },
+                                    },
+                                    prolog_expression{
+                                        variable{
+                                            "Y",
                                         },
-                                        prolog_expression{
-                                            variable{
-                                                "YH",
-                                            },
-                                        },
-                                        prolog_expression{
-                                            variable{
-                                                "YT",
-                                            },
+                                    },
+                                    prolog_expression{
+                                        variable{
+                                            "Z",
                                         },
                                     },
                                 },
-                                prolog_expression{
-                                    std::list<prolog_expression>{
-                                        prolog_expression{
-                                            unquoted_atom{
-                                                "add",
-                                            },
+                            },
+                            prolog_expression{
+                                std::list<prolog_expression>{
+                                    prolog_expression{
+                                        unquoted_atom{
+                                            "and",
                                         },
-                                        prolog_expression{
-                                            std::list<prolog_expression>{
-                                                prolog_expression{
-                                                    variable{
-                                                        "XH",
-                                                    },
+                                    },
+                                    prolog_expression{
+                                        std::list<prolog_expression>{
+                                            prolog_expression{
+                                                unquoted_atom{
+                                                    "cons",
                                                 },
                                             },
-                                        },
-                                        prolog_expression{
-                                            std::list<prolog_expression>{
-                                                prolog_expression{
-                                                    variable{
-                                                        "YH",
-                                                    },
+                                            prolog_expression{
+                                                variable{
+                                                    "X",
                                                 },
                                             },
-                                        },
-                                        prolog_expression{
-                                            std::list<prolog_expression>{
-                                                prolog_expression{
-                                                    variable{
-                                                        "ZH",
-                                                    },
+                                            prolog_expression{
+                                                variable{
+                                                    "XH",
+                                                },
+                                            },
+                                            prolog_expression{
+                                                variable{
+                                                    "XT",
                                                 },
                                             },
                                         },
                                     },
-                                },
-                                prolog_expression{
-                                    std::list<prolog_expression>{
-                                        prolog_expression{
-                                            unquoted_atom{
-                                                "add",
+                                    prolog_expression{
+                                        std::list<prolog_expression>{
+                                            prolog_expression{
+                                                unquoted_atom{
+                                                    "cons",
+                                                },
                                             },
-                                        },
-                                        prolog_expression{
-                                            variable{
-                                                "XT",
+                                            prolog_expression{
+                                                variable{
+                                                    "Y",
+                                                },
                                             },
-                                        },
-                                        prolog_expression{
-                                            variable{
-                                                "YT",
+                                            prolog_expression{
+                                                variable{
+                                                    "YH",
+                                                },
                                             },
-                                        },
-                                        prolog_expression{
-                                            variable{
-                                                "ZT",
+                                            prolog_expression{
+                                                variable{
+                                                    "YT",
+                                                },
                                             },
                                         },
                                     },
-                                },
-                                prolog_expression{
-                                    std::list<prolog_expression>{
-                                        prolog_expression{
-                                            unquoted_atom{
-                                                "cons",
+                                    prolog_expression{
+                                        std::list<prolog_expression>{
+                                            prolog_expression{
+                                                unquoted_atom{
+                                                    "add",
+                                                },
+                                            },
+                                            prolog_expression{
+                                                std::list<prolog_expression>{
+                                                    prolog_expression{
+                                                        variable{
+                                                            "XH",
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                            prolog_expression{
+                                                std::list<prolog_expression>{
+                                                    prolog_expression{
+                                                        variable{
+                                                            "YH",
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                            prolog_expression{
+                                                std::list<prolog_expression>{
+                                                    prolog_expression{
+                                                        variable{
+                                                            "ZH",
+                                                        },
+                                                    },
+                                                },
                                             },
                                         },
-                                        prolog_expression{
-                                            variable{
-                                                "Z",
+                                    },
+                                    prolog_expression{
+                                        std::list<prolog_expression>{
+                                            prolog_expression{
+                                                unquoted_atom{
+                                                    "add",
+                                                },
+                                            },
+                                            prolog_expression{
+                                                variable{
+                                                    "XT",
+                                                },
+                                            },
+                                            prolog_expression{
+                                                variable{
+                                                    "YT",
+                                                },
+                                            },
+                                            prolog_expression{
+                                                variable{
+                                                    "ZT",
+                                                },
                                             },
                                         },
-                                        prolog_expression{
-                                            variable{
-                                                "ZH",
+                                    },
+                                    prolog_expression{
+                                        std::list<prolog_expression>{
+                                            prolog_expression{
+                                                unquoted_atom{
+                                                    "cons",
+                                                },
                                             },
-                                        },
-                                        prolog_expression{
-                                            variable{
-                                                "ZT",
+                                            prolog_expression{
+                                                variable{
+                                                    "Z",
+                                                },
+                                            },
+                                            prolog_expression{
+                                                variable{
+                                                    "ZH",
+                                                },
+                                            },
+                                            prolog_expression{
+                                                variable{
+                                                    "ZT",
+                                                },
                                             },
                                         },
                                     },
@@ -590,34 +592,33 @@ void test_parser_extract_prolog_expression()
                         },
                     },
                 },
-            },
-            {
-                "[[[] abc] 123]",
-                prolog_expression{
-                    std::list<prolog_expression>{
-                        prolog_expression{
-                            std::list<prolog_expression>{
-                                prolog_expression{
-                                    std::list<prolog_expression>{
+                {
+                    "[[[] abc] 123]",
+                    prolog_expression{
+                        std::list<prolog_expression>{
+                            prolog_expression{
+                                std::list<prolog_expression>{
+                                    prolog_expression{
+                                        std::list<prolog_expression>{
 
+                                        },
                                     },
-                                },
-                                prolog_expression{
-                                    unquoted_atom{
-                                        "abc",
+                                    prolog_expression{
+                                        unquoted_atom{
+                                            "abc",
+                                        },
                                     },
                                 },
                             },
-                        },
-                        prolog_expression{
-                            unquoted_atom{
-                                "123",
+                            prolog_expression{
+                                unquoted_atom{
+                                    "123",
+                                },
                             },
                         },
                     },
                 },
-            },
-        };
+            };
 
     for (const auto &[l_key, l_value] : l_test_cases)
     {
