@@ -4,54 +4,42 @@
 #include <memory>
 #include <variant>
 #include <istream>
-#include <list>
-
-#include "lexer.hpp"
+#include <map>
+#include <SWI-Prolog.h>
 
 namespace unilog
 {
-    // cons cell (defined for unilog terms)
-    template <typename T>
-    struct cons
-    {
-        const T m_car;
-        std::unique_ptr<const T> m_cdr;
-        cons(const T &a_car = T(), const T *a_cdr = nullptr) : m_car(a_car), m_cdr(a_cdr) {}
-    };
-
-    // self-referencial type requires a formal declaration
-    struct term
-    {
-        std::variant<atom, variable, std::list<term>> m_variant;
-    };
+    // term_t cons_nil();
+    // term_t cons_atom(const std::string &a_text);
+    // term_t cons_variable(const std::string &a_identifier, std::map<std::string, term_t> &a_var_alist);
+    // term_t cons_list(const term_t &a_car, const term_t &a_cdr);
 
     struct axiom_statement
     {
-        atom m_tag;
-        term m_theorem;
+        term_t m_tag;
+        term_t m_theorem;
     };
 
     struct guide_statement
     {
-        term m_tag;
-        std::list<variable> m_args;
-        term m_guide;
+        term_t m_tag;
+        term_t m_args;
+        term_t m_guide;
     };
 
     struct infer_statement
     {
-        atom m_tag;
-        term m_theorem;
-        term m_guide;
+        term_t m_tag;
+        term_t m_theorem;
+        term_t m_guide;
     };
 
     struct refer_statement
     {
-        atom m_tag;
-        quoted_atom m_file_path;
+        term_t m_tag;
+        term_t m_file_path;
     };
 
-    bool operator==(const term &a_lhs, const term &a_rhs);
     bool operator==(const axiom_statement &a_lhs, const axiom_statement &a_rhs);
     bool operator==(const guide_statement &a_lhs, const guide_statement &a_rhs);
     bool operator==(const infer_statement &a_lhs, const infer_statement &a_rhs);
@@ -63,7 +51,7 @@ namespace unilog
         infer_statement,
         refer_statement>;
 
-    std::istream &operator>>(std::istream &a_istream, term &a_term);
+    std::istream &extract_term_t(std::istream &a_istream, term_t &a_term_t, std::map<std::string, term_t> &a_var_alist);
     std::istream &operator>>(std::istream &a_istream, axiom_statement &a_axiom_statement);
     std::istream &operator>>(std::istream &a_istream, guide_statement &a_guide_statement);
     std::istream &operator>>(std::istream &a_istream, infer_statement &a_infer_statement);
