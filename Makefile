@@ -21,7 +21,7 @@ $(LIBUNI): $(LIBSWIPL) $(wildcard src_lib/*.cpp) $(wildcard src_lib/*.hpp) $(wil
 	##########################
 
 	# Build our library
-	swipl-ld -std=c++20 -g -shared -goal true -o $(LIBUNI) src_lib/*.cpp src_lib/*.pl
+	swipl-ld -c++ g++ -cc-options,"-std=c++20 -g" -shared -goal true src_lib/*.cpp src_lib/*.pl -o $(LIBUNI)
 
 	##########################
 	##########################

@@ -126,69 +126,7 @@ namespace unilog
         return a_lhs.m_text == a_rhs.m_text;
     }
 
-    bool is_eol_indicator_char(int c)
-    {
-        return c == ';';
-    }
-
-    bool is_list_separator_indicator_char(int c)
-    {
-        return c == '|';
-    }
-
-    bool is_list_open_indicator_char(int c)
-    {
-        return c == '[';
-    }
-
-    bool is_list_close_indicator_char(int c)
-    {
-        return c == ']';
-    }
-
-    bool is_variable_indicator_char(int c)
-    {
-        return isupper(c) ||
-               c == '_';
-    }
-
-    bool is_quoted_atom_indicator_char(int c)
-    {
-        // single OR double-quote.
-        return c == '\'' ||
-               c == '\"';
-    }
-
-    bool is_unquoted_atom_indicator_char(int c)
-    {
-        return !is_eol_indicator_char(c) &&
-               !is_list_separator_indicator_char(c) &&
-               !is_list_open_indicator_char(c) &&
-               !is_list_close_indicator_char(c) &&
-               !is_variable_indicator_char(c) &&
-               !is_quoted_atom_indicator_char(c) &&
-               std::isspace(c) == 0 &&
-               c != std::istream::traits_type::eof();
-    }
-
-    bool is_variable_text_char(int c)
-    {
-        return isalnum(c) ||
-               c == '_';
-    }
-
-    bool is_unquoted_atom_text_char(int c)
-    {
-        return !is_eol_indicator_char(c) &&
-               !is_list_separator_indicator_char(c) &&
-               !is_list_open_indicator_char(c) &&
-               !is_list_close_indicator_char(c) &&
-               !is_quoted_atom_indicator_char(c) &&
-               std::isspace(c) == 0 &&
-               c != std::istream::traits_type::eof();
-    }
-
-    std::istream &consume_whitespace(std::istream &a_istream)
+    static std::istream &consume_whitespace(std::istream &a_istream)
     {
         char l_char;
 
@@ -199,93 +137,8 @@ namespace unilog
         return a_istream;
     }
 
-    std::istream &operator>>(std::istream &a_istream, eol &a_eol)
+    static std::istream &operator>>(std::istream &a_istream, variable &a_variable)
     {
-        ////////////////////////////////////
-        //////// INDICATOR SECTION /////////
-        ////////////////////////////////////
-
-        // consume until non-whitespace char
-        consume_whitespace(a_istream);
-
-        if (!is_eol_indicator_char(a_istream.get()))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
-        return a_istream;
-    }
-
-    std::istream &operator>>(std::istream &a_istream, list_separator &a_list_separator)
-    {
-        ////////////////////////////////////
-        //////// INDICATOR SECTION /////////
-        ////////////////////////////////////
-
-        // consume until non-whitespace char
-        consume_whitespace(a_istream);
-
-        if (!is_list_separator_indicator_char(a_istream.get()))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
-        return a_istream;
-    }
-
-    std::istream &operator>>(std::istream &a_istream, list_open &a_list_open)
-    {
-        ////////////////////////////////////
-        //////// INDICATOR SECTION /////////
-        ////////////////////////////////////
-
-        // consume until non-whitespace char
-        consume_whitespace(a_istream);
-
-        if (!is_list_open_indicator_char(a_istream.get()))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
-        return a_istream;
-    }
-
-    std::istream &operator>>(std::istream &a_istream, list_close &a_list_close)
-    {
-        ////////////////////////////////////
-        //////// INDICATOR SECTION /////////
-        ////////////////////////////////////
-
-        // consume until non-whitespace char
-        consume_whitespace(a_istream);
-
-        if (!is_list_close_indicator_char(a_istream.get()))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
-        return a_istream;
-    }
-
-    std::istream &operator>>(std::istream &a_istream, variable &a_variable)
-    {
-        ////////////////////////////////////
-        //////// INDICATOR SECTION /////////
-        ////////////////////////////////////
-
-        // consume until non-whitespace char
-        consume_whitespace(a_istream);
-
-        if (!is_variable_indicator_char(a_istream.peek()))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
         ////////////////////////////////////
         /////////// TEXT SECTION ///////////
         ////////////////////////////////////
@@ -298,10 +151,11 @@ namespace unilog
         //     beginning with an upper-case letter or underscore.
 
         while (
+            l_char = a_istream.peek(),
             // conditions for consumption
-            is_variable_text_char(a_istream.peek()) &&
-            // Consume char now
-            a_istream.get(l_char))
+            (isalnum(l_char) || l_char == '_') &&
+                // Consume char now
+                a_istream.get(l_char))
         {
             a_variable.m_identifier.push_back(l_char);
         }
@@ -309,27 +163,14 @@ namespace unilog
         return a_istream;
     }
 
-    std::istream &operator>>(std::istream &a_istream, quoted_atom &a_quoted_atom)
+    static std::istream &operator>>(std::istream &a_istream, quoted_atom &a_quoted_atom)
     {
-        ////////////////////////////////////
-        //////// INDICATOR SECTION /////////
-        ////////////////////////////////////
-
-        // consume until non-whitespace char
-        consume_whitespace(a_istream);
-
-        // save the type of quotation. then we can match for closing quote.
-        int l_quote_char = a_istream.get();
-
-        if (!is_quoted_atom_indicator_char(l_quote_char))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
         ////////////////////////////////////
         /////////// TEXT SECTION ///////////
         ////////////////////////////////////
+
+        // save the type of quotation. then we can match for closing quote.
+        int l_quote_char = a_istream.get();
 
         a_quoted_atom.m_text.clear();
 
@@ -353,21 +194,8 @@ namespace unilog
         return a_istream;
     }
 
-    std::istream &operator>>(std::istream &a_istream, unquoted_atom &a_unquoted_atom)
+    static std::istream &operator>>(std::istream &a_istream, unquoted_atom &a_unquoted_atom)
     {
-        ////////////////////////////////////
-        //////// INDICATOR SECTION /////////
-        ////////////////////////////////////
-
-        // consume until non-whitespace char
-        consume_whitespace(a_istream);
-
-        if (!is_unquoted_atom_indicator_char(a_istream.peek()))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
         ////////////////////////////////////
         /////////// TEXT SECTION ///////////
         ////////////////////////////////////
@@ -383,12 +211,70 @@ namespace unilog
         // NOTE: Since we may simply hit EOF before any lexeme separator, we
         //     should not consume the EOF so as to prevent setting the failbit.
         while (
+            l_char = a_istream.peek(),
             // conditions for consumption
-            is_unquoted_atom_text_char(a_istream.peek()) &&
-            // Get the char now
-            a_istream.get(l_char))
+            (isalnum(l_char) || l_char == '_') &&
+                // Get the char now
+                a_istream.get(l_char))
         {
             a_unquoted_atom.m_text.push_back(l_char);
+        }
+
+        return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, lexeme &a_lexeme)
+    {
+        // consume all leading whitespace
+        consume_whitespace(a_istream);
+
+        // get the char which indicates type of lexeme
+        int l_indicator = a_istream.peek();
+
+        if (!a_istream.good())
+            return a_istream;
+
+        if (l_indicator == ';')
+        {
+            a_istream.get(); // extract the character
+            a_lexeme = eol{};
+        }
+        else if (l_indicator == '|')
+        {
+            a_istream.get(); // extract the character
+            a_lexeme = list_separator{};
+        }
+        else if (l_indicator == '[')
+        {
+            a_istream.get(); // extract the character
+            a_lexeme = list_open{};
+        }
+        else if (l_indicator == ']')
+        {
+            a_istream.get(); // extract the character
+            a_lexeme = list_close{};
+        }
+        else if (isupper(l_indicator) || l_indicator == '_')
+        {
+            variable l_result;
+            a_istream >> l_result;
+            a_lexeme = l_result;
+        }
+        else if (l_indicator == '\'' || l_indicator == '\"')
+        {
+            quoted_atom l_result;
+            a_istream >> l_result;
+            a_lexeme = l_result;
+        }
+        else if (isalpha(l_indicator)) // only lower-case letters
+        {
+            unquoted_atom l_result;
+            a_istream >> l_result;
+            a_lexeme = l_result;
+        }
+        else
+        {
+            a_istream.setstate(std::ios::failbit);
         }
 
         return a_istream;

@@ -387,861 +387,10 @@ void test_lexer_unquoted_atom_equivalence()
     }
 }
 
-void test_lexer_extract_eol()
-{
-    constexpr bool ENABLE_DEBUG_LOGS = true;
-
-    using unilog::eol;
-
-    data_points<std::string, eol> l_desired =
-        {
-            {
-                ";",
-                eol{},
-            },
-            {
-                "; []",
-                eol{},
-            },
-            {
-                "; [z]",
-                eol{},
-            },
-            {
-                "; [a b c]",
-                eol{},
-            },
-            {
-                ";[ \'quote\' ]",
-                eol{},
-            },
-        };
-
-    for (const auto &[l_key, l_value] : l_desired)
-    {
-        std::stringstream l_ss(l_key);
-
-        eol l_eol;
-        l_ss >> l_eol;
-
-        // make sure the extraction was successful
-        assert(!l_ss.fail());
-
-        assert(l_eol == l_value);
-
-        // make sure it did not extract more than it needs to
-        l_ss.unget();
-        assert(l_ss.peek() == ';');
-
-        LOG("success, case: extracted eol: " << l_key << std::endl);
-    }
-
-    std::vector<std::string> l_expect_failure_inputs =
-        {
-            "",
-            "!command",
-            "!",
-            ":",
-            ":alg",
-            ": ",
-            "]",
-            "Variable",
-            "_Variable",
-            "\'quoted\'",
-            "unquoted",
-            "@unquoted",
-            "|",
-        };
-
-    for (const auto &l_input : l_expect_failure_inputs)
-    {
-        std::stringstream l_ss(l_input);
-
-        eol l_eol;
-        l_ss >> l_eol;
-
-        // make sure the extraction was unsuccessful
-        assert(l_ss.fail());
-
-        LOG("success, case: expected failure extracting eol: " << l_input << std::endl);
-    }
-}
-
-void test_lexer_extract_list_separator()
-{
-    constexpr bool ENABLE_DEBUG_LOGS = true;
-
-    using unilog::list_separator;
-
-    data_points<std::string, list_separator> l_desired =
-        {
-            {
-                "|",
-                list_separator{},
-            },
-            {
-                "| []",
-                list_separator{},
-            },
-            {
-                "| [z]",
-                list_separator{},
-            },
-            {
-                "| [a b c]",
-                list_separator{},
-            },
-            {
-                "|[ \'quote\' ]",
-                list_separator{},
-            },
-        };
-
-    for (const auto &[l_key, l_value] : l_desired)
-    {
-        std::stringstream l_ss(l_key);
-
-        list_separator l_list_separator;
-        l_ss >> l_list_separator;
-
-        // make sure the extraction was successful
-        assert(!l_ss.fail());
-
-        assert(l_list_separator == l_value);
-
-        // make sure it did not extract more than it needs to
-        l_ss.unget();
-        assert(l_ss.peek() == '|');
-
-        LOG("success, case: extracted list_separator: " << l_key << std::endl);
-    }
-
-    std::vector<std::string> l_expect_failure_inputs =
-        {
-            "",
-            "!command",
-            "!",
-            ":",
-            ":alg",
-            ": ",
-            "]",
-            "Variable",
-            "_Variable",
-            "\'quoted\'",
-            "unquoted",
-            "@unquoted",
-        };
-
-    for (const auto &l_input : l_expect_failure_inputs)
-    {
-        std::stringstream l_ss(l_input);
-
-        list_separator l_list_separator;
-        l_ss >> l_list_separator;
-
-        // make sure the extraction was unsuccessful
-        assert(l_ss.fail());
-
-        LOG("success, case: expected failure extracting list_separator: " << l_input << std::endl);
-    }
-}
-
-void test_lexer_extract_list_open()
-{
-    constexpr bool ENABLE_DEBUG_LOGS = true;
-
-    using unilog::list_open;
-
-    data_points<std::string, list_open> l_desired =
-        {
-            {
-                "[",
-                list_open{},
-            },
-            {
-                "[ ",
-                list_open{},
-            },
-            {
-                "[list]",
-                list_open{},
-            },
-            {
-                "[ list ]",
-                list_open{},
-            },
-            {
-                "[ \'quote\' ]",
-                list_open{},
-            },
-        };
-
-    for (const auto &[l_key, l_value] : l_desired)
-    {
-        std::stringstream l_ss(l_key);
-
-        list_open l_list_open;
-        l_ss >> l_list_open;
-
-        // make sure the extraction was successful
-        assert(!l_ss.fail());
-
-        assert(l_list_open == l_value);
-
-        // make sure it did not extract more than it needs to
-        l_ss.unget();
-        assert(l_ss.peek() == '[');
-
-        LOG("success, case: extracted list_open: " << l_key << std::endl);
-    }
-
-    std::vector<std::string> l_expect_failure_inputs =
-        {
-            "",
-            "!command",
-            ":",
-            ":alg",
-            ": ",
-            "|",
-            "|[]",
-            "| [a]",
-            "!",
-            "]",
-            "Variable",
-            "_Variable",
-            "\'quoted\'",
-            "unquoted",
-            "@unquoted",
-        };
-
-    for (const auto &l_input : l_expect_failure_inputs)
-    {
-        std::stringstream l_ss(l_input);
-
-        list_open l_list_open;
-        l_ss >> l_list_open;
-
-        // make sure the extraction was unsuccessful
-        assert(l_ss.fail());
-
-        LOG("success, case: expected failure extracting list_open: " << l_input << std::endl);
-    }
-}
-
-void test_lexer_extract_list_close()
-{
-    constexpr bool ENABLE_DEBUG_LOGS = true;
-
-    using unilog::list_close;
-
-    data_points<std::string, list_close> l_desired =
-        {
-            {
-                "]",
-                list_close{},
-            },
-            {
-                "] ",
-                list_close{},
-            },
-            {
-                "] list]",
-                list_close{},
-            },
-            {
-                "] list ]",
-                list_close{},
-            },
-            {
-                "] \'quote\' ]",
-                list_close{},
-            },
-        };
-
-    for (const auto &[l_key, l_value] : l_desired)
-    {
-        std::stringstream l_ss(l_key);
-
-        list_close l_list_close;
-        l_ss >> l_list_close;
-
-        // make sure the extraction was successful
-        assert(!l_ss.fail());
-
-        assert(l_list_close == l_value);
-
-        // make sure it did not extract more than it needs to
-        l_ss.unget();
-        assert(l_ss.peek() == ']');
-
-        LOG("success, case: extracted list_close: " << l_key << std::endl);
-    }
-
-    std::vector<std::string> l_expect_failure_inputs =
-        {
-            "",
-            "!command",
-            ":",
-            ":alg",
-            ": ",
-            "|",
-            "|[]",
-            "| [a]",
-            "!",
-            "[",
-            "[]",
-            "Variable",
-            "_Variable",
-            "\'quoted\'",
-            "unquoted",
-            "@unquoted",
-        };
-
-    for (const auto &l_input : l_expect_failure_inputs)
-    {
-        std::stringstream l_ss(l_input);
-
-        list_close l_list_close;
-        l_ss >> l_list_close;
-
-        // make sure the extraction was unsuccessful
-        assert(l_ss.fail());
-
-        LOG("success, case: expected failure extracting list_close: " << l_input << std::endl);
-    }
-}
-
-void test_lexer_extract_variable()
-{
-    constexpr bool ENABLE_DEBUG_LOGS = true;
-
-    using unilog::variable;
-
-    data_points<std::string, variable> l_desired =
-        {
-            {
-                "_",
-                variable{
-                    "_",
-                },
-            },
-            {
-                "_ ",
-                variable{
-                    "_",
-                },
-            },
-            {
-                "_@",
-                variable{
-                    "_",
-                },
-            },
-            {
-                "_\'\'",
-                variable{
-                    "_",
-                },
-            },
-            {
-                "Variable!command",
-                variable{
-                    "Variable",
-                },
-            },
-            {
-                "Variable#sdfgsdfg",
-                variable{
-                    "Variable",
-                },
-            },
-            {
-                "_test",
-                variable{
-                    "_test",
-                },
-            },
-            {
-                "_test ",
-                variable{
-                    "_test",
-                },
-            },
-            {
-                "Test",
-                variable{
-                    "Test",
-                },
-            },
-            {
-                "Test ",
-                variable{
-                    "Test",
-                },
-            },
-            {
-                "Var123",
-                variable{
-                    "Var123",
-                },
-            },
-            {
-                "Var123_456k",
-                variable{
-                    "Var123_456k",
-                },
-            },
-        };
-
-    for (const auto &[l_key, l_value] : l_desired)
-    {
-        std::stringstream l_ss(l_key);
-
-        variable l_variable;
-        l_ss >> l_variable;
-
-        // make sure the extraction was successful
-        assert(!l_ss.fail());
-
-        assert(l_variable == l_value);
-
-        // make sure it did not extract more than it needs to
-        l_ss.unget();
-        assert(l_variable.m_identifier.size() == 0 || l_ss.peek() == l_variable.m_identifier.back());
-
-        LOG("success, case: extracted variable: " << l_key << std::endl);
-    }
-
-    std::vector<std::string> l_expect_failure_inputs =
-        {
-            "",
-            "!command",
-            ":",
-            ":alg",
-            ": ",
-            "|",
-            "|[]",
-            "| [a]",
-            "!",
-            "[",
-            "]",
-            "[]",
-            "\'quoted\'",
-            "unquoted",
-            "@unquoted",
-        };
-
-    for (const auto &l_input : l_expect_failure_inputs)
-    {
-        std::stringstream l_ss(l_input);
-
-        variable l_variable;
-        l_ss >> l_variable;
-
-        // make sure the extraction was unsuccessful
-        assert(l_ss.fail());
-
-        LOG("success, case: expected failure extracting variable: " << l_input << std::endl);
-    }
-}
-
-void test_lexer_extract_quoted_atom()
-{
-    constexpr bool ENABLE_DEBUG_LOGS = true;
-
-    using unilog::quoted_atom;
-
-    data_points<std::string, quoted_atom> l_desired =
-        {
-            {
-                "\'\'",
-                quoted_atom{
-                    "",
-                },
-            },
-            {
-                "\'[\'",
-                quoted_atom{
-                    "[",
-                },
-            },
-            {
-                "\']\'",
-                quoted_atom{
-                    "]",
-                },
-            },
-            {
-                "\'!\'",
-                quoted_atom{
-                    "!",
-                },
-            },
-            {
-                "\'a A \t\n b 1 3 zz\'",
-                quoted_atom{
-                    "a A \t\n b 1 3 zz",
-                },
-            },
-            {
-                "\'\\n\'",
-                quoted_atom{
-                    "\n",
-                },
-            },
-            {
-                "\'\\t\'",
-                quoted_atom{
-                    "\t",
-                },
-            },
-            {
-                "\'\\r\'",
-                quoted_atom{
-                    "\r",
-                },
-            },
-            {
-                "\'\\x88\'",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-            {
-                "\'\\x88\'!command",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-            {
-                "\'\\x88\'[list]",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-            {
-                "\'\\x88\'\'quote2\'",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-            {
-                "\'\\x88\'\"quote2\"",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-
-            {
-                "\"\"",
-                quoted_atom{
-                    "",
-                },
-            },
-            {
-                "\"[\"",
-                quoted_atom{
-                    "[",
-                },
-            },
-            {
-                "\"]\"",
-                quoted_atom{
-                    "]",
-                },
-            },
-            {
-                "\"!\"",
-                quoted_atom{
-                    "!",
-                },
-            },
-            {
-                "\"a A \t\n b 1 3 zz\"",
-                quoted_atom{
-                    "a A \t\n b 1 3 zz",
-                },
-            },
-            {
-                "\"\\n\"",
-                quoted_atom{
-                    "\n",
-                },
-            },
-            {
-                "\"\\t\"",
-                quoted_atom{
-                    "\t",
-                },
-            },
-            {
-                "\"\\r\"",
-                quoted_atom{
-                    "\r",
-                },
-            },
-            {
-                "\"\\x88\"",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-            {
-                "\"\\x88\"!command",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-            {
-                "\"\\x88\"[list]",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-            {
-                "\"\\x88\"\'quote2\'",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-            {
-                "\"\\x88\"\"quote2\"",
-                quoted_atom{
-                    "\x88",
-                },
-            },
-
-        };
-
-    for (const auto &[l_key, l_value] : l_desired)
-    {
-        std::stringstream l_ss(l_key);
-
-        quoted_atom l_quoted_atom;
-        l_ss >> l_quoted_atom;
-
-        // make sure the extraction was successful
-        assert(!l_ss.fail());
-
-        assert(l_quoted_atom == l_value);
-
-        // ensure the trailing quote was consumed
-        l_ss.unget();
-        assert(l_ss.peek() == '\'' || l_ss.peek() == '\"');
-
-        LOG("success, case: extracted quoted_atom: " << l_key << std::endl);
-    }
-
-    std::vector<std::string> l_expect_failure_inputs =
-        {
-            "",
-            "!command",
-            "!",
-            ":",
-            ":alg",
-            ": ",
-            "|",
-            "|[]",
-            "| [a]",
-            "[",
-            "]",
-            "[]",
-            "_",
-            "_ ",
-            "_Variable",
-            "Variable",
-            "#",
-            "$",
-            "\'halfquote",
-            "\"halfquote",
-            "unquoted",
-            "@unquoted",
-        };
-
-    for (const auto &l_input : l_expect_failure_inputs)
-    {
-        std::stringstream l_ss(l_input);
-
-        quoted_atom l_quoted_atom;
-        l_ss >> l_quoted_atom;
-
-        // make sure the extraction was unsuccessful
-        assert(l_ss.fail());
-
-        LOG("success, case: expected failure extracting quoted_atom: " << l_input << std::endl);
-    }
-}
-
-void test_lexer_extract_unquoted_atom()
-{
-    constexpr bool ENABLE_DEBUG_LOGS = true;
-
-    using unilog::unquoted_atom;
-
-    data_points<std::string, unquoted_atom> l_desired =
-        {
-            {
-                "x",
-                unquoted_atom{
-                    "x",
-                },
-            },
-            {
-                "a ",
-                unquoted_atom{
-                    "a",
-                },
-            },
-            {
-                "a1 ",
-                unquoted_atom{
-                    "a1",
-                },
-            },
-            {
-                "a1@",
-                unquoted_atom{
-                    "a1@",
-                },
-            },
-            {
-                "a1.",
-                unquoted_atom{
-                    "a1.",
-                },
-            },
-            {
-                "1.24",
-                unquoted_atom{
-                    "1.24",
-                },
-            },
-            {
-                "atom!",
-                unquoted_atom{
-                    "atom!",
-                },
-            },
-            {
-                "at\\",
-                unquoted_atom{
-                    "at\\",
-                },
-            },
-            {
-                "at@#$%^&*()-_=+",
-                unquoted_atom{
-                    "at@#$%^&*()-_=+",
-                },
-            },
-            {
-                "at\'quote\'",
-                unquoted_atom{
-                    "at",
-                },
-            },
-            {
-                "at\"quote\"",
-                unquoted_atom{
-                    "at",
-                },
-            },
-            {
-                "aTOM\"quote\"",
-                unquoted_atom{
-                    "aTOM",
-                },
-            },
-            {
-                "a123\"quote\"",
-                unquoted_atom{
-                    "a123",
-                },
-            },
-            {
-                "a\\\\\"quote\"",
-                unquoted_atom{
-                    "a\\\\",
-                },
-            },
-            {
-                "a/\"quote\"",
-                unquoted_atom{
-                    "a/",
-                },
-            },
-            {
-                "123",
-                unquoted_atom{
-                    "123",
-                },
-            },
-            {
-                "@#$%^&*()",
-                unquoted_atom{
-                    "@#$%^&*()",
-                },
-            },
-        };
-
-    for (const auto &[l_key, l_value] : l_desired)
-    {
-        std::stringstream l_ss(l_key);
-
-        unquoted_atom l_unquoted_atom;
-        l_ss >> l_unquoted_atom;
-
-        // make sure the extraction was successful
-        assert(!l_ss.fail());
-
-        assert(l_unquoted_atom == l_value);
-
-        // make sure it did not extract more than it needs to
-        l_ss.unget();
-        assert(l_unquoted_atom.m_text.size() == 0 || l_ss.peek() == l_unquoted_atom.m_text.back());
-
-        LOG("success, case: extracted unquoted_atom: " << l_key << std::endl);
-    }
-
-    std::vector<std::string> l_expect_failure_inputs =
-        {
-            "",
-            ";",
-            ";a",
-            "|",
-            "|[]",
-            "| [a]",
-            "[",
-            "]",
-            "[]",
-            "_",
-            "_ ",
-            "Variable",
-            "Var123",
-            "X",
-            "\'quoted\'",
-            "\"quoted\"",
-        };
-
-    for (const auto &l_input : l_expect_failure_inputs)
-    {
-        std::stringstream l_ss(l_input);
-
-        unquoted_atom l_unquoted_atom;
-        l_ss >> l_unquoted_atom;
-
-        // make sure the extraction was unsuccessful
-        assert(l_ss.fail());
-
-        LOG("success, case: expected failure extracting unquoted_atom: " << l_input << std::endl);
-    }
-}
-
 void test_lexer_extract_lexeme()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
-    using unilog::atom;
     using unilog::eol;
     using unilog::lexeme;
     using unilog::list_close;
@@ -1253,97 +402,6 @@ void test_lexer_extract_lexeme()
 
     // Cases where content should be left alone:
     data_points<std::string, std::vector<lexeme>> l_desired_map = {
-        {
-            // Single unquoted_atom lexeme
-            "!test",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "!test",
-                },
-            },
-        },
-        {
-            // Multiple unquoted_atom lexeme
-            "!test1 !test2",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "!test1",
-                },
-                unquoted_atom{
-                    .m_text = "!test2",
-                },
-            },
-        },
-        {
-            ":",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = ":",
-                },
-            },
-        },
-        {
-            ":m2",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    ":m2",
-                },
-            },
-        },
-        {
-            "m1:m2",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    "m1:m2",
-                },
-            },
-        },
-        {
-            "m1:X",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    "m1:X",
-                },
-            },
-        },
-        {
-            "m1::[a b c]",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    "m1::",
-                },
-                list_open{},
-                unquoted_atom{
-                    "a",
-                },
-                unquoted_atom{
-                    "b",
-                },
-                unquoted_atom{
-                    "c",
-                },
-                list_close{},
-            },
-        },
-        {
-            "!axiom [m1::a m1::b m1::c]",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    "!axiom",
-                },
-                list_open{},
-                unquoted_atom{
-                    "m1::a",
-                },
-                unquoted_atom{
-                    "m1::b",
-                },
-                unquoted_atom{
-                    "m1::c",
-                },
-                list_close{},
-            },
-        },
         {
             "a|",
             std::vector<lexeme>{
@@ -1395,99 +453,6 @@ void test_lexer_extract_lexeme()
             std::vector<lexeme>{
                 unquoted_atom{
                     .m_text = "test",
-                },
-            },
-        },
-        {
-            // Command then unquoted atom
-            "!test1 test2",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "!test1",
-                },
-                unquoted_atom{
-                    .m_text = "test2",
-                },
-            },
-        },
-        {
-            // atom followed by command
-            "test1 !test2",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "test1",
-                },
-                unquoted_atom{
-                    .m_text = "!test2",
-                },
-            },
-        },
-        {
-            // Multiple atoms all unquoted
-            "test 123",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "test",
-                },
-                unquoted_atom{
-                    .m_text = "123",
-                },
-            },
-        },
-        {
-            // space escape fails outside quotes
-            "test\\ 123",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "test\\",
-                },
-                unquoted_atom{
-                    .m_text = "123",
-                },
-            },
-        },
-        {
-            // testing multiple failed escape sequences
-            "test\\ 123\\ abc",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "test\\",
-                },
-                unquoted_atom{
-                    .m_text = "123\\",
-                },
-                unquoted_atom{
-                    .m_text = "abc",
-                },
-            },
-        },
-        {
-            // three atoms, with irregular whitespace
-            "test\\\t123\\\nabc",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "test\\",
-                },
-                unquoted_atom{
-                    .m_text = "123\\",
-                },
-                unquoted_atom{
-                    .m_text = "abc",
-                },
-            },
-        },
-        {
-            // Multiple atoms unquoted
-            "test 123 456",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "test",
-                },
-                unquoted_atom{
-                    .m_text = "123",
-                },
-                unquoted_atom{
-                    .m_text = "456",
                 },
             },
         },
@@ -1938,91 +903,26 @@ void test_lexer_extract_lexeme()
             },
         },
         {
-            // Single atom, failing to escape the interpreter's separation of lexemes
-            "test\\[",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "test\\",
-                },
-                list_open{},
-            },
-        },
-        {
-            // Single atom, failing to escape the interpreter's separation of lexemes
-            "test\\xa4\\[",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "test\\xa4\\",
-                },
-                list_open{},
-            },
-        },
-        {
-            // single atom, without separation of command indicator
-            "test!@.$^&*()",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "test!@.$^&*()",
-                },
-            },
-        },
-        {
             // Single atom, with special characters
-            "1.24",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "1.24",
-                },
-            },
-        },
-        {
-            // Single atom, with special characters
-            "[[[1.24]]]",
+            "[[['1.24']]]",
             std::vector<lexeme>{
                 list_open{},
                 list_open{},
                 list_open{},
-                unquoted_atom{
+                quoted_atom{
                     .m_text = "1.24",
                 },
                 list_close{},
                 list_close{},
                 list_close{},
-            },
-        },
-        {
-            // Single atom, with special characters
-            "@",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "@",
-                },
-            },
-        },
-        {
-            // Single atom, with special characters
-            "+",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "+",
-                },
-            },
-        },
-        {
-            // Single atom, with special characters
-            "<-",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "<-",
-                },
             },
         },
         {
             // Having fun, realistic scenario
-            "!axiom add_bc_0 [add [] L L]",
+            "axiom add_bc_0 [add [] L L]",
             std::vector<lexeme>{
                 unquoted_atom{
-                    .m_text = "!axiom",
+                    .m_text = "axiom",
                 },
                 unquoted_atom{
                     .m_text = "add_bc_0",
@@ -2044,7 +944,7 @@ void test_lexer_extract_lexeme()
         },
         {
             // Having fun, realistic scenario
-            "!axiom add_gc\n"
+            "axiom add_gc\n"
             "[if\n"
             "    [add X Y Z]\n"
             "    [and\n"
@@ -2057,7 +957,7 @@ void test_lexer_extract_lexeme()
             "]\n",
             std::vector<lexeme>{
                 unquoted_atom{
-                    .m_text = "!axiom",
+                    .m_text = "axiom",
                 },
                 unquoted_atom{
                     .m_text = "add_gc",
@@ -2176,153 +1076,70 @@ void test_lexer_extract_lexeme()
             },
         },
         {
-            // Single command lexeme
-            "!test1[abc]",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "!test1",
-                },
-                list_open{},
-                unquoted_atom{
-                    .m_text = "abc",
-                },
-                list_close{},
-            },
-        },
-        {
-            // Single command lexeme
-            "[!test1][abc]",
-            std::vector<lexeme>{
-                list_open{},
-                unquoted_atom{
-                    .m_text = "!test1",
-                },
-                list_close{},
-                list_open{},
-                unquoted_atom{
-                    .m_text = "abc",
-                },
-                list_close{},
-            },
-        },
-        {
-            // Test title-case command
-            "!Test",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    .m_text = "!Test",
-                },
-            },
-        },
-        {
             // Test lex stop character: whitespace
-            "1.24 ",
+            "abc ",
             std::vector<lexeme>{
                 unquoted_atom{
-                    .m_text = "1.24",
+                    .m_text = "abc",
                 },
             },
         },
         {
             // Test lex stop character: eof
-            "1.24",
+            "abc",
             std::vector<lexeme>{
                 unquoted_atom{
-                    .m_text = "1.24",
+                    .m_text = "abc",
                 },
             },
         },
         {
             // Test lex stop character: list open
-            "1.24[",
+            "abc[",
             std::vector<lexeme>{
                 unquoted_atom{
-                    .m_text = "1.24",
+                    .m_text = "abc",
                 },
                 list_open{},
             },
         },
         {
             // Test lex stop character: list close
-            "1.24]",
+            "abc]",
             std::vector<lexeme>{
                 unquoted_atom{
-                    .m_text = "1.24",
+                    .m_text = "abc",
                 },
                 list_close{},
             },
         },
         {
-            "Test@",
+            "Test|",
             std::vector<lexeme>{
                 variable{
                     "Test",
                 },
-                unquoted_atom{
-                    "@",
+                list_separator{
+
                 },
             },
         },
         {
-            "Test#",
-            std::vector<lexeme>{
-                variable{
-                    "Test",
-                },
-                unquoted_atom{
-                    "#",
-                },
-            },
-        },
-        {
-            "_#",
+            "_ _",
             std::vector<lexeme>{
                 variable{
                     "_",
                 },
-                unquoted_atom{
-                    "#",
-                },
-            },
-        },
-        {
-            "Test1 Test_ Test_#",
-            std::vector<lexeme>{
                 variable{
-                    "Test1",
-                },
-                variable{
-                    "Test_",
-                },
-                variable{
-                    "Test_",
-                },
-                unquoted_atom{
-                    "#",
+                    "_",
                 },
             },
         },
         {
-            "!tes@t",
+            "tes_t",
             std::vector<lexeme>{
                 unquoted_atom{
-                    "!tes@t",
-                },
-            },
-        },
-        {
-            "!test1\\!test2",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    "!test1\\!test2",
-                },
-            },
-        },
-        {
-            "!test1!test2",
-            std::vector<lexeme>{
-                unquoted_atom{
-                    "!test1!test2",
+                    "tes_t",
                 },
             },
         },
@@ -2389,6 +1206,38 @@ void test_lexer_extract_lexeme()
         {
             "\'hello, this is an unclosed quote",
             "\"hello, this is an unclosed quote",
+            "    ",
+            "",
+            "!test1!test2",
+            "!test1\\!test2",
+
+            "#Test",
+
+            "!Test",
+            "!test1[abc]",
+            "<-",
+            "+",
+            "@",
+            "1.24",
+            "\\test",
+
+            // atoms that start with numbers
+            "1ab",
+
+            // special symbols
+            "!",
+            "@",
+            "#",
+            "$",
+            "%",
+            "^",
+            "&",
+            "*",
+            "(",
+            ")",
+            "-",
+            "=",
+
         };
 
     for (const auto &l_input : l_expect_failure_inputs)
@@ -2408,7 +1257,6 @@ void test_lexer_extract_lexeme()
 
 void test_lex_file_example_0()
 {
-    using unilog::atom;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
@@ -2444,7 +1292,6 @@ void test_lex_file_example_0()
 
 void test_lex_file_example_1()
 {
-    using unilog::atom;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
@@ -2485,7 +1332,6 @@ void test_lex_file_example_1()
 
 void test_lex_file_example_2()
 {
-    using unilog::atom;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
@@ -2538,7 +1384,6 @@ void test_lex_file_example_2()
 
 void test_lex_file_example_3()
 {
-    using unilog::atom;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
@@ -2567,7 +1412,6 @@ void test_lex_file_example_3()
 
 void test_lex_file_example_4()
 {
-    using unilog::atom;
     using unilog::eol;
     using unilog::lexeme;
     using unilog::list_close;
@@ -2621,7 +1465,6 @@ void test_lex_file_example_4()
 
 void test_lex_file_example_5()
 {
-    using unilog::atom;
     using unilog::eol;
     using unilog::lexeme;
     using unilog::list_close;
@@ -2667,7 +1510,6 @@ void test_lex_file_example_5()
 
 void test_lex_file_example_6()
 {
-    using unilog::atom;
     using unilog::eol;
     using unilog::lexeme;
     using unilog::list_close;
@@ -2718,13 +1560,6 @@ void test_lexer_main()
     TEST(test_lexer_unquoted_atom_equivalence);
 
     // extractor tests
-    TEST(test_lexer_extract_eol);
-    TEST(test_lexer_extract_list_separator);
-    TEST(test_lexer_extract_list_open);
-    TEST(test_lexer_extract_list_close);
-    TEST(test_lexer_extract_variable);
-    TEST(test_lexer_extract_quoted_atom);
-    TEST(test_lexer_extract_unquoted_atom);
     TEST(test_lexer_extract_lexeme);
 
     // larger tests, lexing files

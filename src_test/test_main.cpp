@@ -3,7 +3,6 @@
 
 #include "test_utils.hpp"
 
-extern void test_variant_functions_main();
 extern void test_lexer_main();
 extern void test_parser_main();
 
@@ -11,7 +10,6 @@ void unit_test_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
-    TEST(test_variant_functions_main);
     TEST(test_lexer_main);
     TEST(test_parser_main);
 }

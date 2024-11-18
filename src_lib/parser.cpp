@@ -1,14 +1,10 @@
 #include <iterator>
 #include <algorithm>
+#include <map>
 
 #include "variant_functions.hpp"
 #include "parser.hpp"
 #include "lexer.hpp"
-
-#define AXIOM_COMMAND_KEYWORD "axiom"
-#define GUIDE_COMMAND_KEYWORD "guide"
-#define INFER_COMMAND_KEYWORD "infer"
-#define REFER_COMMAND_KEYWORD "refer"
 
 /// This macro function defines
 ///     getting a value from cache if key contained,
@@ -18,37 +14,6 @@
 
 namespace unilog
 {
-
-    bool operator==(const pl_term &a_lhs, const pl_term &a_rhs)
-    {
-        return PL_compare(a_lhs.native_handle(), a_rhs.native_handle()) == 0;
-    }
-
-    bool operator==(const axiom_statement &a_lhs, const axiom_statement &a_rhs)
-    {
-        return a_lhs.m_tag == a_rhs.m_tag &&
-               a_lhs.m_theorem == a_rhs.m_theorem;
-    }
-
-    bool operator==(const guide_statement &a_lhs, const guide_statement &a_rhs)
-    {
-        return a_lhs.m_tag == a_rhs.m_tag &&
-               a_lhs.m_args == a_rhs.m_args &&
-               a_lhs.m_guide == a_rhs.m_guide;
-    }
-
-    bool operator==(const infer_statement &a_lhs, const infer_statement &a_rhs)
-    {
-        return a_lhs.m_tag == a_rhs.m_tag &&
-               a_lhs.m_theorem == a_rhs.m_theorem &&
-               a_lhs.m_guide == a_rhs.m_guide;
-    }
-
-    bool operator==(const refer_statement &a_lhs, const refer_statement &a_rhs)
-    {
-        return a_lhs.m_tag == a_rhs.m_tag &&
-               a_lhs.m_file_path == a_rhs.m_file_path;
-    }
 
     std::istream &extract_term_t(std::istream &a_istream, term_t &a_term_t, std::map<std::string, term_t> &a_var_alist)
     {
@@ -63,12 +28,22 @@ namespace unilog
         if (a_istream.fail())
             return a_istream;
 
-        if (std::holds_alternative<atom>(l_lexeme))
-            a_term.m_variant = std::get<atom>(l_lexeme);
+        if (std::holds_alternative<quoted_atom>(l_lexeme))
+        {
+            const quoted_atom &l_quoted_atom = std::get<quoted_atom>(l_lexeme);
+            a_term_t = PL_new_term_ref();
+            PL_put_atom_chars(a_term_t, l_quoted_atom.m_text.c_str());
+        }
+        else if (std::holds_alternative<unquoted_atom>(l_lexeme))
+        {
+            const unquoted_atom &l_unquoted_atom = std::get<unquoted_atom>(l_lexeme);
+            a_term_t = PL_new_term_ref();
+            PL_put_atom_chars(a_term_t, l_unquoted_atom.m_text.c_str());
+        }
         else if (std::holds_alternative<variable>(l_lexeme))
         {
-            std::string l_identifier = std::get<variable>(l_lexeme).m_identifier;
-            a_term_t = CACHE(a_var_alist, l_identifier, PL_new_term_ref());
+            const variable &l_variable = std::get<variable>(l_lexeme);
+            a_term_t = l_variable.m_identifier == "_" ? PL_new_term_ref() : CACHE(a_var_alist, l_variable.m_identifier, PL_new_term_ref());
         }
         else if (std::holds_alternative<list_open>(l_lexeme))
         {
@@ -97,11 +72,22 @@ namespace unilog
             {
                 // extract the tail of the list. could be var or atom, or any expr
                 extract_term_t(a_istream, a_term_t, a_var_alist);
+
+                // finally, extract the list_close
+                lexeme l_list_close;
+                a_istream >> l_list_close;
+
+                if (!std::holds_alternative<list_close>(l_list_close))
+                {
+                    a_istream.setstate(std::ios::failbit);
+                    return a_istream;
+                }
             }
             else
             {
                 // failed to extract a proper list terminator
                 a_istream.setstate(std::ios::failbit);
+                return a_istream;
             }
 
             // reverse-iterate list
@@ -120,92 +106,58 @@ namespace unilog
         return a_istream;
     }
 
-    std::istream &operator>>(std::istream &a_istream, axiom_statement &a_axiom_statement)
+    std::istream &operator>>(std::istream &a_istream, statement &a_statement)
     {
-        unquoted_atom l_command;
+        // extract the command lexeme
+        lexeme l_command;
         a_istream >> l_command;
 
-        if (l_command.m_text != AXIOM_COMMAND_KEYWORD)
+        // lexing should result in an unquoted atom for the command
+        if (!std::holds_alternative<unquoted_atom>(l_command))
         {
             a_istream.setstate(std::ios::failbit);
             return a_istream;
         }
 
-        a_istream >> a_axiom_statement.m_tag;
-        a_istream >> a_axiom_statement.m_theorem;
+        std::string l_command_text = std::get<unquoted_atom>(l_command).m_text;
 
-        return a_istream;
-    }
+        // declare the variable association-list
+        std::map<std::string, term_t> l_var_alist;
 
-    std::istream &operator>>(std::istream &a_istream, guide_statement &a_guide_statement)
-    {
-        unquoted_atom l_command;
-        a_istream >> l_command;
-
-        if (l_command.m_text != GUIDE_COMMAND_KEYWORD)
+        if (l_command_text == "axiom")
+        {
+            axiom_statement l_result;
+            extract_term_t(a_istream, l_result.m_tag, l_var_alist);
+            extract_term_t(a_istream, l_result.m_theorem, l_var_alist);
+            a_statement = l_result;
+        }
+        else if (l_command_text == "guide")
+        {
+            guide_statement l_result;
+            extract_term_t(a_istream, l_result.m_tag, l_var_alist);
+            extract_term_t(a_istream, l_result.m_args, l_var_alist);
+            extract_term_t(a_istream, l_result.m_guide, l_var_alist);
+            a_statement = l_result;
+        }
+        else if (l_command_text == "infer")
+        {
+            infer_statement l_result;
+            extract_term_t(a_istream, l_result.m_tag, l_var_alist);
+            extract_term_t(a_istream, l_result.m_theorem, l_var_alist);
+            extract_term_t(a_istream, l_result.m_guide, l_var_alist);
+            a_statement = l_result;
+        }
+        else if (l_command_text == "refer")
+        {
+            refer_statement l_result;
+            extract_term_t(a_istream, l_result.m_tag, l_var_alist);
+            extract_term_t(a_istream, l_result.m_file_path, l_var_alist);
+            a_statement = l_result;
+        }
+        else
         {
             a_istream.setstate(std::ios::failbit);
-            return a_istream;
         }
-
-        a_istream >> a_guide_statement.m_tag;
-
-        /////////// read the list open for args list
-        list_open l_args_list_open;
-        if (!(a_istream >> l_args_list_open))
-            return a_istream;
-
-        a_guide_statement.m_args.clear();
-
-        /////////// read in list of args
-        std::copy(std::istream_iterator<variable>(a_istream),
-                  std::istream_iterator<variable>(),
-                  std::back_inserter(a_guide_statement.m_args));
-
-        // reset failbit flag
-        a_istream.clear(a_istream.rdstate() & ~std::ios::failbit);
-
-        /////////// read the list close for args list
-        list_close l_args_list_close;
-        if (!(a_istream >> l_args_list_close))
-            return a_istream;
-
-        a_istream >> a_guide_statement.m_guide;
-
-        return a_istream;
-    }
-
-    std::istream &operator>>(std::istream &a_istream, infer_statement &a_infer_statement)
-    {
-        unquoted_atom l_command;
-        a_istream >> l_command;
-
-        if (l_command.m_text != INFER_COMMAND_KEYWORD)
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
-        a_istream >> a_infer_statement.m_tag;
-        a_istream >> a_infer_statement.m_theorem;
-        a_istream >> a_infer_statement.m_guide;
-
-        return a_istream;
-    }
-
-    std::istream &operator>>(std::istream &a_istream, refer_statement &a_refer_statement)
-    {
-        unquoted_atom l_command;
-        a_istream >> l_command;
-
-        if (l_command.m_text != REFER_COMMAND_KEYWORD)
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
-
-        a_istream >> a_refer_statement.m_tag;
-        a_istream >> a_refer_statement.m_file_path;
 
         return a_istream;
     }
