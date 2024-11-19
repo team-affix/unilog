@@ -2,7 +2,7 @@
 
 #include <iostream>
 #include <SWI-Prolog.h>
-#include "../test_utils.hpp"
+#include "test_utils.hpp"
 
 extern void test_lexer_main();
 extern void test_parser_main();
