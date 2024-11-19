@@ -425,6 +425,14 @@ static void test_extract_quoted_text()
                              "abc"},
             {"\'\\rabc\'", "\rabc"},
             {"\'\\r1\\n23\'", "\r1\n23"},
+
+            {"\"\\n\"", "\n"},
+            {"\"\\t\"", "\t"},
+            {"\"\\tabc\"", "\tabc"},
+            {"\"\\x08abc\"", "\x08"
+                             "abc"},
+            {"\"\\rabc\"", "\rabc"},
+            {"\"\\r1\\n23\"", "\r1\n23"},
         };
 
     for (const auto &[l_key, l_value] : l_data_points)
