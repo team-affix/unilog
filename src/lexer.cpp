@@ -326,6 +326,75 @@ static void test_lexer_escape()
     }
 }
 
+static void test_consume_whitespace()
+{
+    {
+        std::stringstream l_ss("    abc");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 4);
+    };
+
+    {
+        std::stringstream l_ss("   \nabc");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 4);
+    };
+
+    {
+        std::stringstream l_ss("  \t\nabc");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 4);
+    };
+
+    {
+        std::stringstream l_ss(" \r\t\nabc");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 4);
+    };
+
+    {
+        std::stringstream l_ss("\r  \n\r\t\nabc");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 7);
+    };
+
+    {
+        std::stringstream l_ss("\r  \n\r\t\na");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 7);
+    };
+
+    {
+        std::stringstream l_ss("\r  \n\r\t\n1");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 7);
+    };
+
+    {
+        std::stringstream l_ss("\r  \n\r\t\n1 \t");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 7);
+    };
+
+    {
+        std::stringstream l_ss("\r  \n\r\t\n0- \t");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 7);
+    };
+
+    {
+        std::stringstream l_ss("\r  \n\r\t\n/ \t");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 7);
+    };
+
+    {
+        std::stringstream l_ss("\r  \n\r\t\n? \t");
+        assert(consume_whitespace(l_ss));
+        assert(l_ss.tellg() == 7);
+    };
+}
+
 static void test_lexer_eol_equivalence()
 {
     using unilog::eol;
@@ -1425,7 +1494,7 @@ static void test_lex_file_example_0()
     using unilog::variable;
 
     std::stringstream l_ss;
-    std::ifstream l_if("./src/example_unilog_files/lexer_example_0/main.ul");
+    std::ifstream l_if("./src/test_unilog_files/lexer_example_0/main.ul");
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
@@ -1459,7 +1528,7 @@ static void test_lex_file_example_1()
     using unilog::variable;
 
     std::stringstream l_ss;
-    std::ifstream l_if("./src/example_unilog_files/lexer_example_1/main.ul");
+    std::ifstream l_if("./src/test_unilog_files/lexer_example_1/main.ul");
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
@@ -1498,7 +1567,7 @@ static void test_lex_file_example_2()
     using unilog::variable;
 
     std::stringstream l_ss;
-    std::ifstream l_if("./src/example_unilog_files/lexer_example_2/main.ul");
+    std::ifstream l_if("./src/test_unilog_files/lexer_example_2/main.ul");
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
@@ -1549,7 +1618,7 @@ static void test_lex_file_example_3()
     using unilog::variable;
 
     std::stringstream l_ss;
-    std::ifstream l_if("./src/example_unilog_files/lexer_example_3/main.ul");
+    std::ifstream l_if("./src/test_unilog_files/lexer_example_3/main.ul");
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
@@ -1577,7 +1646,7 @@ static void test_lex_file_example_4()
     using unilog::variable;
 
     std::stringstream l_ss;
-    std::ifstream l_if("./src/example_unilog_files/lexer_example_4/jake.u");
+    std::ifstream l_if("./src/test_unilog_files/lexer_example_4/jake.u");
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
@@ -1629,7 +1698,7 @@ static void test_lex_file_example_5()
     using unilog::variable;
 
     std::stringstream l_ss;
-    std::ifstream l_if("./src/example_unilog_files/lexer_example_5/jake.u");
+    std::ifstream l_if("./src/test_unilog_files/lexer_example_5/jake.u");
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
@@ -1673,7 +1742,7 @@ static void test_lex_file_example_6()
     using unilog::variable;
 
     std::stringstream l_ss;
-    std::ifstream l_if("./src/example_unilog_files/lexer_example_6/jake.u");
+    std::ifstream l_if("./src/test_unilog_files/lexer_example_6/jake.u");
     // std::cout << std::filesystem::current_path() << std::endl;
     // std::cout << "is_good: " << l_if.good() << std::endl;
     l_ss << l_if.rdbuf(); // read in contents of file
@@ -1704,6 +1773,7 @@ void test_lexer_main()
 
     // equivalence tests
     TEST(test_lexer_escape);
+    TEST(test_consume_whitespace);
     TEST(test_lexer_eol_equivalence);
     TEST(test_lexer_list_separator_equivalence);
     TEST(test_lexer_list_open_equivalence);
