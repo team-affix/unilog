@@ -328,71 +328,66 @@ static void test_lexer_escape()
 
 static void test_consume_whitespace()
 {
-    {
-        std::stringstream l_ss("    abc");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 4);
-    };
+    data_points<std::string, std::streampos> l_data_points =
+        {
+            {"    abc", 4},
+            {"   \nabc", 4},
+            {"  \t\nabc", 4},
+            {" \r\t\nabc", 4},
+            {"\r  \n\r\t\nabc", 7},
+            {"\r  \n\r\t\na", 7},
+            {"\r  \n\r\t\n1", 7},
+            {"\r  \n\r\t\n1 \t", 7},
+            {"\r  \n\r\t\n0- \t", 7},
+            {"\r  \n\r\t\n/ \t", 7},
+            {"\r  \n\r\t\n? \t", 7},
+        };
 
+    for (const auto &[l_key, l_value] : l_data_points)
     {
-        std::stringstream l_ss("   \nabc");
+        std::stringstream l_ss(l_key);
         assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 4);
-    };
+        assert(l_ss.tellg() == l_value); // make sure we extracted the correct # of chars
+    }
+}
 
-    {
-        std::stringstream l_ss("  \t\nabc");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 4);
-    };
+static void test_extract_unquoted_text()
+{
+    data_points<std::string, std::string> l_data_points =
+        {
+            {"/abc", ""},
+            {"a/abc", "a"},
+            {" abc", ""},                                                  // consume_whitespace() will not be called.
+            {"abcdefghijklmnopqrstuvwxyz", "abcdefghijklmnopqrstuvwxyz"},  // all lowers
+            {"abcdefghijklmnopqrstuvwxyz ", "abcdefghijklmnopqrstuvwxyz"}, // trailing white space
+            {"AbCdEfGhIjKlMnOpQrStUvWxYz", "AbCdEfGhIjKlMnOpQrStUvWxYz"},  // mixed upper/lower
+            {"abc_ ", "abc_"},                                             // containing underscore
+            {"123 ", "123"},                                               // containing numbers
+            {"abc123 ", "abc123"},                                         // alphanumeric
+            {"abc_1_23 ", "abc_1_23"},                                     // alphanumeric with underscores
+            {"abC_D_23 ", "abC_D_23"},                                     // alphanumeric with underscores and uppers
+            {"_abC_D_23 ", "_abC_D_23"},                                   // alphanumeric with underscores, leading underscore
+            {"_abC_D_23\n", "_abC_D_23"},                                  // symbol terminating
+            {"_abC_D_23\n\t", "_abC_D_23"},                                // symbol terminating
+            {"_abC_D_23/", "_abC_D_23"},                                   // symbol terminating
+            {"_abC_D_23\\", "_abC_D_23"},                                  // symbol terminating
+            {"_abC_D_23|", "_abC_D_23"},                                   // symbol terminating
+            {"_abC_D_23[", "_abC_D_23"},                                   // symbol terminating
+            {"_abC_D_23\t", "_abC_D_23"},                                  // symbol terminating
+            {"_abC_D_23\r", "_abC_D_23"},                                  // symbol terminating
+            {"_abC_D_23 abc", "_abC_D_23"},                                // two unquoted texts separated by space
+            {"\r_abC_D_23", ""},                                           // symbol terminating
+            {"\n_abC_D_23", ""},                                           // symbol terminating
+            {"\t_abC_D_23", ""},                                           // symbol terminating
+        };
 
+    for (const auto &[l_key, l_value] : l_data_points)
     {
-        std::stringstream l_ss(" \r\t\nabc");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 4);
-    };
-
-    {
-        std::stringstream l_ss("\r  \n\r\t\nabc");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 7);
-    };
-
-    {
-        std::stringstream l_ss("\r  \n\r\t\na");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 7);
-    };
-
-    {
-        std::stringstream l_ss("\r  \n\r\t\n1");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 7);
-    };
-
-    {
-        std::stringstream l_ss("\r  \n\r\t\n1 \t");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 7);
-    };
-
-    {
-        std::stringstream l_ss("\r  \n\r\t\n0- \t");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 7);
-    };
-
-    {
-        std::stringstream l_ss("\r  \n\r\t\n/ \t");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 7);
-    };
-
-    {
-        std::stringstream l_ss("\r  \n\r\t\n? \t");
-        assert(consume_whitespace(l_ss));
-        assert(l_ss.tellg() == 7);
-    };
+        std::stringstream l_ss(l_key);
+        std::string l_string;
+        assert(extract_unquoted_text(l_ss, l_string));
+        assert(l_string == l_value);
+    }
 }
 
 static void test_lexer_eol_equivalence()
@@ -1774,6 +1769,7 @@ void test_lexer_main()
     // equivalence tests
     TEST(test_lexer_escape);
     TEST(test_consume_whitespace);
+    TEST(test_extract_unquoted_text);
     TEST(test_lexer_eol_equivalence);
     TEST(test_lexer_list_separator_equivalence);
     TEST(test_lexer_list_open_equivalence);
