@@ -1545,7 +1545,7 @@ static void test_parser_extract_prolog_expression()
 //     using unilog::unquoted_atom;
 //     using unilog::variable;
 
-//     std::ifstream l_if("./src/test_unilog_files/parser_example_0/main.ul");
+//     std::ifstream l_if("./src/test_input_files/parser_example_0/main.ul");
 
 //     std::stringstream l_file_contents;
 //     if (!(l_file_contents << l_if.rdbuf())) // read in file content
@@ -1581,7 +1581,7 @@ static void test_parser_extract_prolog_expression()
 //     using unilog::unquoted_atom;
 //     using unilog::variable;
 
-//     std::ifstream l_if("./src/test_unilog_files/parser_example_1/main.ul");
+//     std::ifstream l_if("./src/test_input_files/parser_example_1/main.ul");
 
 //     std::stringstream l_file_contents;
 //     if (!(l_file_contents << l_if.rdbuf())) // read in file content
