@@ -6,9 +6,12 @@
                 "${workspaceFolder}/**",
                 "/usr/lib/swi-prolog/include/**"
             ],
-            "defines": [],
+            "defines": [
+                "UNIT_TEST"
+            ],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
+            "cppStandard": "c++20",
             "intelliSenseMode": "linux-gcc-x64"
         }
     ],

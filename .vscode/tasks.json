@@ -5,7 +5,9 @@
             "label": "make_test",
             "type": "shell",
             "command": "make",
-            "args": [],
+            "args": [
+                "test"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true

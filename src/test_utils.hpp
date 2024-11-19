@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <utility>
+#include <iostream>
 #include <vector>
 
 #define LOG(x)             \

@@ -1,3 +1,5 @@
+#ifndef UNIT_TEST
+
 #include <stdio.h>
 #include <iostream>
 #include <string.h>
@@ -76,3 +78,5 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+#endif
