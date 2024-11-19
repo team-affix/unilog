@@ -390,6 +390,52 @@ static void test_extract_unquoted_text()
     }
 }
 
+static void test_extract_quoted_text()
+{
+    data_points<std::string, std::string> l_data_points =
+        {
+            {"\'/abc\'", "/abc"},
+            {"\'a/abc\'", "a/abc"},
+            {"\' abc\'", " abc"},
+            {"\"abcdefghijklmnopqrstuvwxyz\"", "abcdefghijklmnopqrstuvwxyz"},
+            {"\"abcdefghijklmnopqrstuvwxyz \"", "abcdefghijklmnopqrstuvwxyz "},
+            {"\'AbCdEfGhIjKlMnOpQrStUvWxYz\'", "AbCdEfGhIjKlMnOpQrStUvWxYz"},
+            {"\'abc_ \'", "abc_ "},
+            {"\'123 \'", "123 "},
+            {"\'abc123 \'", "abc123 "},
+            {"\'abc_1_23 \'", "abc_1_23 "},
+            {"\' abC_D_23\' ", " abC_D_23"},
+            {"\"_abC_D_23\" ", "_abC_D_23"},
+            {"\'_abC_D_23\n\'", "_abC_D_23\n"},
+            {"\"_abC_D_23\n\t\"", "_abC_D_23\n\t"},
+            {"\"_abC_D_2\"3/", "_abC_D_2"},
+            {"\'_abC_D_23\\\\\'", "_abC_D_23\\"}, // extract_quote calls escape() when encountering a backslash.
+            {"\'abc 123\'", "abc 123"},
+            {"\"_abC_D_23[\"", "_abC_D_23["},
+            {"\"\t_abC_D_23\t\"", "\t_abC_D_23\t"},
+            {"\'_abC_D_23\r\'", "_abC_D_23\r"},
+            {"\"_abC_D_23\" abc", "_abC_D_23"},
+            {"\'\r_abC_D_23\'", "\r_abC_D_23"},
+            {"\"\n_abC_D_23  \t \"", "\n_abC_D_23  \t "},
+            {"\'\t_abC_D_23\'", "\t_abC_D_23"},
+            {"\'\\n\'", "\n"},
+            {"\'\\t\'", "\t"},
+            {"\'\\tabc\'", "\tabc"},
+            {"\'\\x08abc\'", "\x08"
+                             "abc"},
+            {"\'\\rabc\'", "\rabc"},
+            {"\'\\r1\\n23\'", "\r1\n23"},
+        };
+
+    for (const auto &[l_key, l_value] : l_data_points)
+    {
+        std::stringstream l_ss(l_key);
+        std::string l_string;
+        assert(extract_quoted_text(l_ss, l_string));
+        assert(l_string == l_value);
+    }
+}
+
 static void test_lexer_eol_equivalence()
 {
     using unilog::eol;
@@ -1770,6 +1816,7 @@ void test_lexer_main()
     TEST(test_lexer_escape);
     TEST(test_consume_whitespace);
     TEST(test_extract_unquoted_text);
+    TEST(test_extract_quoted_text);
     TEST(test_lexer_eol_equivalence);
     TEST(test_lexer_list_separator_equivalence);
     TEST(test_lexer_list_open_equivalence);
