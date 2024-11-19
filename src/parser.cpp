@@ -1,6 +1,7 @@
 #include <iterator>
 #include <algorithm>
 #include <map>
+#include <iostream>
 
 #include "parser.hpp"
 #include "lexer.hpp"
@@ -14,7 +15,7 @@
 namespace unilog
 {
 
-    std::istream &extract_term_t(std::istream &a_istream, term_t a_term_t, std::map<std::string, term_t> &a_var_alist)
+    std::istream &extract_term_t(std::istream &a_istream, std::map<std::string, term_t> &a_var_alist, term_t a_term_t, term_t a_list_tail = 0, bool *a_list_terminated = nullptr)
     {
         // we assume a_term_t is already assigned to PL_new_term_ref()
 
@@ -78,65 +79,22 @@ namespace unilog
         {
             std::list<term_t> l_list;
 
-            term_t l_sub_term;
+            // the term to be bound thru extraction
+            term_t l_sub_term = PL_new_term_ref();
+
+            // initialize flag for list termination
+            bool l_list_terminated = false;
 
             // extract until failure, this does NOT have to come from
-            //     eof. It will come from a list_close lexeme or command as well.
-            while (extract_term_t(a_istream, l_sub_term, a_var_alist))
+            //     eof. It will come from any list termination process.
+            //     we supply a_term_t as the list tail reference, because
+            //     we will build the list in reverse order, starting from the tail.
+            while (extract_term_t(a_istream, a_var_alist, l_sub_term, a_term_t, &l_list_terminated) && !l_list_terminated)
                 l_list.push_back(l_sub_term);
 
-            // reset the failbit flag for the stream
-            a_istream.clear(a_istream.rdstate() & ~std::ios::failbit);
-
-            /////////////////////////////////////////
-            // terminator will either be a list_close ']' or list_separator '|'
-            /////////////////////////////////////////
-            lexeme l_list_terminator;
-            a_istream >> l_list_terminator;
-
-            if (a_istream.fail())
+            // ensure the list was terminated
+            if (a_istream.fail() || !l_list_terminated)
             {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
-
-            /////////////////////////////////////////
-            // set the list's tail (into a_term_t)
-            /////////////////////////////////////////
-            if (std::holds_alternative<list_close>(l_list_terminator))
-            {
-                /////////////////////////////////////////
-                // default tail is always nil
-                /////////////////////////////////////////
-                if (!PL_put_nil(a_term_t))
-                {
-                    a_istream.setstate(std::ios::failbit);
-                    return a_istream;
-                }
-            }
-            else if (std::holds_alternative<list_separator>(l_list_terminator))
-            {
-                /////////////////////////////////////////
-                // extract the tail of the list.
-                // could be var or atom, or any expr
-                /////////////////////////////////////////
-                extract_term_t(a_istream, a_term_t, a_var_alist);
-
-                /////////////////////////////////////////
-                // finally, extract the list_close
-                /////////////////////////////////////////
-                lexeme l_list_close;
-                a_istream >> l_list_close;
-
-                if (a_istream.fail() || !std::holds_alternative<list_close>(l_list_close))
-                {
-                    a_istream.setstate(std::ios::failbit);
-                    return a_istream;
-                }
-            }
-            else
-            {
-                // failed to extract a proper list terminator
                 a_istream.setstate(std::ios::failbit);
                 return a_istream;
             }
@@ -152,6 +110,61 @@ namespace unilog
                     return a_istream;
                 }
             }
+        }
+        else if (std::holds_alternative<list_close>(l_lexeme))
+        {
+            // this basically checks if the list termination was expected
+            if (a_list_tail == 0 || a_list_terminated == nullptr)
+            {
+                a_istream.setstate(std::ios::failbit);
+                return a_istream;
+            }
+
+            /////////////////////////////////////////
+            // default tail is always nil
+            /////////////////////////////////////////
+            if (!PL_put_nil(a_list_tail))
+            {
+                a_istream.setstate(std::ios::failbit);
+                return a_istream;
+            }
+
+            /////////////////////////////////////////
+            // notify the caller the list terminated
+            /////////////////////////////////////////
+            *a_list_terminated = true;
+        }
+        else if (std::holds_alternative<list_separator>(l_lexeme))
+        {
+            // this basically checks if the list termination was expected
+            if (a_list_tail == 0 || a_list_terminated == nullptr)
+            {
+                a_istream.setstate(std::ios::failbit);
+                return a_istream;
+            }
+
+            /////////////////////////////////////////
+            // extract the tail of the list.
+            // could be var or atom, or any expr
+            /////////////////////////////////////////
+            extract_term_t(a_istream, a_var_alist, a_list_tail);
+
+            /////////////////////////////////////////
+            // finally, extract the list_close
+            /////////////////////////////////////////
+            lexeme l_list_close;
+            a_istream >> l_list_close;
+
+            if (a_istream.fail() || !std::holds_alternative<list_close>(l_list_close))
+            {
+                a_istream.setstate(std::ios::failbit);
+                return a_istream;
+            }
+
+            /////////////////////////////////////////
+            // notify the caller the list terminated
+            /////////////////////////////////////////
+            *a_list_terminated = true;
         }
         else
         {
@@ -194,8 +207,8 @@ namespace unilog
             l_result.m_tag = PL_new_term_ref();
             l_result.m_theorem = PL_new_term_ref();
 
-            extract_term_t(a_istream, l_result.m_tag, l_var_alist);
-            extract_term_t(a_istream, l_result.m_theorem, l_var_alist);
+            extract_term_t(a_istream, l_var_alist, l_result.m_tag);
+            extract_term_t(a_istream, l_var_alist, l_result.m_theorem);
 
             a_statement = l_result;
         }
@@ -210,9 +223,9 @@ namespace unilog
             l_result.m_args = PL_new_term_ref();
             l_result.m_guide = PL_new_term_ref();
 
-            extract_term_t(a_istream, l_result.m_tag, l_var_alist);
-            extract_term_t(a_istream, l_result.m_args, l_var_alist);
-            extract_term_t(a_istream, l_result.m_guide, l_var_alist);
+            extract_term_t(a_istream, l_var_alist, l_result.m_tag);
+            extract_term_t(a_istream, l_var_alist, l_result.m_args);
+            extract_term_t(a_istream, l_var_alist, l_result.m_guide);
 
             a_statement = l_result;
         }
@@ -227,9 +240,9 @@ namespace unilog
             l_result.m_theorem = PL_new_term_ref();
             l_result.m_guide = PL_new_term_ref();
 
-            extract_term_t(a_istream, l_result.m_tag, l_var_alist);
-            extract_term_t(a_istream, l_result.m_theorem, l_var_alist);
-            extract_term_t(a_istream, l_result.m_guide, l_var_alist);
+            extract_term_t(a_istream, l_var_alist, l_result.m_tag);
+            extract_term_t(a_istream, l_var_alist, l_result.m_theorem);
+            extract_term_t(a_istream, l_var_alist, l_result.m_guide);
 
             a_statement = l_result;
         }
@@ -243,8 +256,8 @@ namespace unilog
             l_result.m_tag = PL_new_term_ref();
             l_result.m_file_path = PL_new_term_ref();
 
-            extract_term_t(a_istream, l_result.m_tag, l_var_alist);
-            extract_term_t(a_istream, l_result.m_file_path, l_var_alist);
+            extract_term_t(a_istream, l_var_alist, l_result.m_tag);
+            extract_term_t(a_istream, l_var_alist, l_result.m_file_path);
 
             a_statement = l_result;
         }
@@ -536,30 +549,86 @@ static void test_parser_extract_prolog_expression()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
-    std::map<std::string, term_t> l_var_alist;
-
-    data_points<std::string, std::function<bool(term_t)>>
+    data_points<std::string, std::function<bool(term_t, const std::map<std::string, term_t> &)>>
         l_test_cases =
             {
                 {
                     "if",
-                    [](term_t a_term)
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
                     {
                         return PL_compare(a_term, make_atom("if")) == 0;
                     },
                 },
                 {
                     "add",
-                    [](term_t a_term)
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
                     {
                         return PL_compare(a_term, make_atom("add")) == 0;
                     },
                 },
                 {
                     "\'\'",
-                    [](term_t a_term)
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
                     {
                         return PL_compare(a_term, make_atom("")) == 0;
+                    },
+                },
+                {
+                    "\'abc123\'",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        return PL_compare(a_term, make_atom("abc123")) == 0;
+                    },
+                },
+                {
+                    "abc123\n",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        return PL_compare(a_term, make_atom("abc123")) == 0;
+                    },
+                },
+                {
+                    "abc123/\n",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        return PL_compare(a_term, make_atom("abc123")) == 0;
+                    },
+                },
+                {
+                    "\'abc123/\\n\'",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        return PL_compare(a_term, make_atom("abc123/\n")) == 0;
+                    },
+                },
+                {
+                    "Var",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        return PL_is_variable(a_term) && l_var_alist.at("Var") == a_term;
+                    },
+                },
+                {
+                    "_",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        return PL_is_variable(a_term) &&
+                               // singletons do NOT get entries in the alist
+                               l_var_alist.size() == 0;
+                    },
+                },
+                {
+                    "Var abc", // second term does not get extracted
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        return PL_is_variable(a_term) && l_var_alist.at("Var") == a_term;
+                    },
+                },
+                {
+                    "[]",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        return PL_get_nil(a_term); // && l_var_alist.size() == 0;
                     },
                 },
                 // {
@@ -777,14 +846,16 @@ static void test_parser_extract_prolog_expression()
     {
         std::stringstream l_ss(l_key);
 
+        std::map<std::string, term_t> l_var_alist;
+
         term_t l_exp = PL_new_term_ref();
 
-        unilog::extract_term_t(l_ss, l_exp, l_var_alist);
+        unilog::extract_term_t(l_ss, l_var_alist, l_exp);
 
         // open PL stack frame
         fid_t l_frame_id = PL_open_foreign_frame();
 
-        assert(l_value(l_exp));
+        assert(l_value(l_exp, l_var_alist));
 
         PL_close_foreign_frame(l_frame_id);
 
