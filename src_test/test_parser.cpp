@@ -69,7 +69,7 @@ term_t make_var(const std::string &a_identifier, std::map<std::string, term_t> &
 
 namespace unilog
 {
-    std::istream &extract_term_t(std::istream &a_istream, term_t &a_term_t, std::map<std::string, term_t> &a_var_alist);
+    std::istream &extract_term_t(std::istream &a_istream, term_t a_term_t, std::map<std::string, term_t> &a_var_alist);
 }
 
 ////////////////////////////////
@@ -555,7 +555,7 @@ void test_parser_extract_prolog_expression()
     {
         std::stringstream l_ss(l_key);
 
-        term_t l_exp;
+        term_t l_exp = PL_new_term_ref();
 
         unilog::extract_term_t(l_ss, l_exp, l_var_alist);
 

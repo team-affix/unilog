@@ -89,8 +89,75 @@ std::istream &escape(std::istream &a_istream, char &a_char)
     return a_istream;
 }
 
+static std::istream &consume_whitespace(std::istream &a_istream)
+{
+    char l_char;
+
+    // Extract character (read until first non-whitespace)
+    while (std::isspace(a_istream.peek()) != 0 && a_istream.get(l_char))
+        ;
+
+    return a_istream;
+}
+
+static std::istream &extract_unquoted_text(std::istream &a_istream, std::string &a_text)
+{
+    ////////////////////////////////////
+    /////////// TEXT SECTION ///////////
+    ////////////////////////////////////
+
+    a_text.clear();
+
+    char l_char;
+
+    // unquoted lexemes may only contain alphanumeric chars and underscores.
+    while (
+        l_char = a_istream.peek(),
+        // conditions for consumption
+        (isalnum(l_char) || l_char == '_') &&
+            // Consume char now
+            a_istream.get(l_char))
+    {
+        a_text.push_back(l_char);
+    }
+
+    return a_istream;
+}
+
+static std::istream &extract_quoted_text(std::istream &a_istream, std::string &a_text)
+{
+    ////////////////////////////////////
+    /////////// TEXT SECTION ///////////
+    ////////////////////////////////////
+
+    // save the type of quotation. then we can match for closing quote.
+    int l_quote_char = a_istream.get();
+
+    a_text.clear();
+
+    char l_char;
+
+    // The input was a quote character. Thus we should scan until the closing quote
+    //     to produce a valid lexeme.
+    while (
+        // Consume char now
+        a_istream.get(l_char))
+    {
+        if (l_char == l_quote_char)
+            break;
+
+        if (l_char == '\\')
+            escape(a_istream, l_char);
+
+        a_text.push_back(l_char);
+    }
+
+    return a_istream;
+}
+
 namespace unilog
 {
+
     bool operator==(const eol &a_lhs, const eol &a_rhs)
     {
         return true;
@@ -116,111 +183,9 @@ namespace unilog
         return a_lhs.m_identifier == a_rhs.m_identifier;
     }
 
-    bool operator==(const quoted_atom &a_lhs, const quoted_atom &a_rhs)
+    bool operator==(const atom &a_lhs, const atom &a_rhs)
     {
         return a_lhs.m_text == a_rhs.m_text;
-    }
-
-    bool operator==(const unquoted_atom &a_lhs, const unquoted_atom &a_rhs)
-    {
-        return a_lhs.m_text == a_rhs.m_text;
-    }
-
-    static std::istream &consume_whitespace(std::istream &a_istream)
-    {
-        char l_char;
-
-        // Extract character (read until first non-whitespace)
-        while (std::isspace(a_istream.peek()) != 0 && a_istream.get(l_char))
-            ;
-
-        return a_istream;
-    }
-
-    static std::istream &operator>>(std::istream &a_istream, variable &a_variable)
-    {
-        ////////////////////////////////////
-        /////////// TEXT SECTION ///////////
-        ////////////////////////////////////
-
-        a_variable.m_identifier.clear();
-
-        char l_char;
-
-        // Variable lexemes must only contain alphanumeric chars,
-        //     beginning with an upper-case letter or underscore.
-
-        while (
-            l_char = a_istream.peek(),
-            // conditions for consumption
-            (isalnum(l_char) || l_char == '_') &&
-                // Consume char now
-                a_istream.get(l_char))
-        {
-            a_variable.m_identifier.push_back(l_char);
-        }
-
-        return a_istream;
-    }
-
-    static std::istream &operator>>(std::istream &a_istream, quoted_atom &a_quoted_atom)
-    {
-        ////////////////////////////////////
-        /////////// TEXT SECTION ///////////
-        ////////////////////////////////////
-
-        // save the type of quotation. then we can match for closing quote.
-        int l_quote_char = a_istream.get();
-
-        a_quoted_atom.m_text.clear();
-
-        char l_char;
-
-        // The input was a quote character. Thus we should scan until the closing quote
-        //     to produce a valid lexeme.
-        while (
-            // Consume char now
-            a_istream.get(l_char))
-        {
-            if (l_char == l_quote_char)
-                break;
-
-            if (l_char == '\\')
-                escape(a_istream, l_char);
-
-            a_quoted_atom.m_text.push_back(l_char);
-        }
-
-        return a_istream;
-    }
-
-    static std::istream &operator>>(std::istream &a_istream, unquoted_atom &a_unquoted_atom)
-    {
-        ////////////////////////////////////
-        /////////// TEXT SECTION ///////////
-        ////////////////////////////////////
-
-        a_unquoted_atom.m_text.clear();
-
-        char l_char;
-
-        // The input was unquoted. Thus it should be treated as text,
-        //     and we must terminate the text at a lexeme separator character OR
-        //     when we reach EOF.
-
-        // NOTE: Since we may simply hit EOF before any lexeme separator, we
-        //     should not consume the EOF so as to prevent setting the failbit.
-        while (
-            l_char = a_istream.peek(),
-            // conditions for consumption
-            (isalnum(l_char) || l_char == '_') &&
-                // Get the char now
-                a_istream.get(l_char))
-        {
-            a_unquoted_atom.m_text.push_back(l_char);
-        }
-
-        return a_istream;
     }
 
     std::istream &operator>>(std::istream &a_istream, lexeme &a_lexeme)
@@ -257,19 +222,19 @@ namespace unilog
         else if (isupper(l_indicator) || l_indicator == '_')
         {
             variable l_result;
-            a_istream >> l_result;
+            extract_unquoted_text(a_istream, l_result.m_identifier);
             a_lexeme = l_result;
         }
         else if (l_indicator == '\'' || l_indicator == '\"')
         {
-            quoted_atom l_result;
-            a_istream >> l_result;
+            atom l_result;
+            extract_quoted_text(a_istream, l_result.m_text);
             a_lexeme = l_result;
         }
         else if (isalpha(l_indicator)) // only lower-case letters
         {
-            unquoted_atom l_result;
-            a_istream >> l_result;
+            atom l_result;
+            extract_unquoted_text(a_istream, l_result.m_text);
             a_lexeme = l_result;
         }
         else

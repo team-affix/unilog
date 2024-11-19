@@ -249,18 +249,18 @@ void test_lexer_variable_equivalence()
     }
 }
 
-void test_lexer_quoted_atom_equivalence()
+void test_lexer_atom_equivalence()
 {
-    using unilog::quoted_atom;
+    using unilog::atom;
 
-    data_points<std::pair<quoted_atom, quoted_atom>, bool> l_desired =
+    data_points<std::pair<atom, atom>, bool> l_desired =
         {
             {
                 {
-                    quoted_atom{
+                    atom{
                         "abc",
                     },
-                    quoted_atom{
+                    atom{
                         "abc",
                     },
                 },
@@ -268,10 +268,10 @@ void test_lexer_quoted_atom_equivalence()
             },
             {
                 {
-                    quoted_atom{
+                    atom{
                         "abc",
                     },
-                    quoted_atom{
+                    atom{
                         "abc1",
                     },
                 },
@@ -279,79 +279,10 @@ void test_lexer_quoted_atom_equivalence()
             },
             {
                 {
-                    quoted_atom{
+                    atom{
                         "",
                     },
-                    quoted_atom{
-                        "",
-                    },
-                },
-                true,
-            },
-            {
-                {
-                    quoted_atom{
-                        "abc",
-                    },
-                    quoted_atom{
-                        "",
-                    },
-                },
-                false,
-            },
-            {
-                {
-                    quoted_atom{
-                        "",
-                    },
-                    quoted_atom{
-                        "abc",
-                    },
-                },
-                false,
-            },
-        };
-
-    for (const auto &[l_key, l_value] : l_desired)
-    {
-        assert((l_key.first == l_key.second) == l_value);
-    }
-}
-
-void test_lexer_unquoted_atom_equivalence()
-{
-    using unilog::unquoted_atom;
-
-    data_points<std::pair<unquoted_atom, unquoted_atom>, bool> l_desired =
-        {
-            {
-                {
-                    unquoted_atom{
-                        "abc",
-                    },
-                    unquoted_atom{
-                        "abc",
-                    },
-                },
-                true,
-            },
-            {
-                {
-                    unquoted_atom{
-                        "abc",
-                    },
-                    unquoted_atom{
-                        "abc1",
-                    },
-                },
-                false,
-            },
-            {
-                {
-                    unquoted_atom{
-                        "",
-                    },
-                    unquoted_atom{
+                    atom{
                         "",
                     },
                 },
@@ -359,10 +290,10 @@ void test_lexer_unquoted_atom_equivalence()
             },
             {
                 {
-                    unquoted_atom{
+                    atom{
                         "abc",
                     },
-                    unquoted_atom{
+                    atom{
                         "",
                     },
                 },
@@ -370,10 +301,10 @@ void test_lexer_unquoted_atom_equivalence()
             },
             {
                 {
-                    unquoted_atom{
+                    atom{
                         "",
                     },
-                    unquoted_atom{
+                    atom{
                         "abc",
                     },
                 },
@@ -391,13 +322,12 @@ void test_lexer_extract_lexeme()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
+    using unilog::atom;
     using unilog::eol;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
     using unilog::list_separator;
-    using unilog::quoted_atom;
-    using unilog::unquoted_atom;
     using unilog::variable;
 
     // Cases where content should be left alone:
@@ -405,7 +335,7 @@ void test_lexer_extract_lexeme()
         {
             "a|",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     "a",
                 },
                 list_separator{},
@@ -414,7 +344,7 @@ void test_lexer_extract_lexeme()
         {
             "a|[]",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     "a",
                 },
                 list_separator{},
@@ -426,19 +356,19 @@ void test_lexer_extract_lexeme()
             "[a|[] b|[] c|[]]",
             std::vector<lexeme>{
                 list_open{},
-                unquoted_atom{
+                atom{
                     "a",
                 },
                 list_separator{},
                 list_open{},
                 list_close{},
-                unquoted_atom{
+                atom{
                     "b",
                 },
                 list_separator{},
                 list_open{},
                 list_close{},
-                unquoted_atom{
+                atom{
                     "c",
                 },
                 list_separator{},
@@ -451,7 +381,7 @@ void test_lexer_extract_lexeme()
             // Single unquoted atom
             "test",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "test",
                 },
             },
@@ -460,7 +390,7 @@ void test_lexer_extract_lexeme()
             // Single unquoted atom
             "test_",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "test_",
                 },
             },
@@ -517,7 +447,7 @@ void test_lexer_extract_lexeme()
             // Test single quoted atom
             "\'test\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test",
                 },
             },
@@ -526,7 +456,7 @@ void test_lexer_extract_lexeme()
             // Test single lexeme quote
             "\"test\"",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test",
                 },
             },
@@ -535,7 +465,7 @@ void test_lexer_extract_lexeme()
             // Test lexeme with both quotation types
             "\"test \' test\"",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test \' test",
                 },
             },
@@ -544,7 +474,7 @@ void test_lexer_extract_lexeme()
             // Test lexeme with both quotation types
             "\'test \" test\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test \" test",
                 },
             },
@@ -553,13 +483,13 @@ void test_lexer_extract_lexeme()
             // Test lexeme with single quotation type
             "\'test \' test \'\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test ",
                 },
-                unquoted_atom{
+                atom{
                     .m_text = "test",
                 },
-                quoted_atom{
+                atom{
                     .m_text = "",
                 },
             },
@@ -568,7 +498,7 @@ void test_lexer_extract_lexeme()
             // Test single lexeme quote WITH UPPERCASE
             "\'Test\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "Test",
                 },
             },
@@ -577,7 +507,7 @@ void test_lexer_extract_lexeme()
             // Test spaces in quote
             "\'test blah blah\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test blah blah",
                 },
             },
@@ -586,13 +516,13 @@ void test_lexer_extract_lexeme()
             // Test spaces BETWEEN quotes
             "\'test\' \'blah\' \'blah\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test",
                 },
-                quoted_atom{
+                atom{
                     .m_text = "blah",
                 },
-                quoted_atom{
+                atom{
                     .m_text = "blah",
                 },
             },
@@ -601,7 +531,7 @@ void test_lexer_extract_lexeme()
             // Test embedding a backslash by escaping with another backslash
             "\'test\\\\\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test\\",
                 },
             },
@@ -610,7 +540,7 @@ void test_lexer_extract_lexeme()
             // Test embedding a \n by escape sequence
             "\'test\\n\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test\n",
                 },
             },
@@ -619,7 +549,7 @@ void test_lexer_extract_lexeme()
             // Test embedding a hex escape sequence
             "\'test\\x12\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test\x12",
                 },
             },
@@ -628,7 +558,7 @@ void test_lexer_extract_lexeme()
             // Test embedding a hex escape sequence
             "\'test\\x123\'",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test\x12"
                               "3",
                 },
@@ -638,10 +568,10 @@ void test_lexer_extract_lexeme()
             // Test quoted escape sequence, followed by unquoted text
             "\'test\\x12\' test12",
             std::vector<lexeme>{
-                quoted_atom{
+                atom{
                     .m_text = "test\x12",
                 },
-                unquoted_atom{
+                atom{
                     .m_text = "test12",
                 },
             },
@@ -693,7 +623,7 @@ void test_lexer_extract_lexeme()
             "[abc]",
             std::vector<lexeme>{
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -704,7 +634,7 @@ void test_lexer_extract_lexeme()
             "[abc][]",
             std::vector<lexeme>{
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -717,12 +647,12 @@ void test_lexer_extract_lexeme()
             "[abc] [def]",
             std::vector<lexeme>{
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_close{},
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "def",
                 },
                 list_close{},
@@ -733,12 +663,12 @@ void test_lexer_extract_lexeme()
             "[abc] [def []]",
             std::vector<lexeme>{
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_close{},
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "def",
                 },
                 list_open{},
@@ -796,7 +726,7 @@ void test_lexer_extract_lexeme()
                 variable{
                     .m_identifier = "B",
                 },
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -813,7 +743,7 @@ void test_lexer_extract_lexeme()
                 variable{
                     .m_identifier = "_",
                 },
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -824,7 +754,7 @@ void test_lexer_extract_lexeme()
             "[abc [_ _] [def A]]",
             std::vector<lexeme>{
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_open{},
@@ -836,7 +766,7 @@ void test_lexer_extract_lexeme()
                 },
                 list_close{},
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "def",
                 },
                 variable{
@@ -850,10 +780,10 @@ void test_lexer_extract_lexeme()
             // Test unconventional white-space
             "abc\ndef\nA\n\t_",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
-                unquoted_atom{
+                atom{
                     .m_text = "def",
                 },
                 variable{
@@ -868,11 +798,11 @@ void test_lexer_extract_lexeme()
             // Test unconventional white-space
             "abc\t[\ndef\nA\n\t_",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "def",
                 },
                 variable{
@@ -887,11 +817,11 @@ void test_lexer_extract_lexeme()
             // Test unconventional white-space
             "abc\t[\n\'\\n \\t \\\\\'\nA\n\t_",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_open{},
-                quoted_atom{
+                atom{
                     .m_text = "\n \t \\",
                 },
                 variable{
@@ -909,7 +839,7 @@ void test_lexer_extract_lexeme()
                 list_open{},
                 list_open{},
                 list_open{},
-                quoted_atom{
+                atom{
                     .m_text = "1.24",
                 },
                 list_close{},
@@ -921,14 +851,14 @@ void test_lexer_extract_lexeme()
             // Having fun, realistic scenario
             "axiom add_bc_0 [add [] L L]",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "axiom",
                 },
-                unquoted_atom{
+                atom{
                     .m_text = "add_bc_0",
                 },
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "add",
                 },
                 list_open{},
@@ -956,18 +886,18 @@ void test_lexer_extract_lexeme()
             "    ]\n"
             "]\n",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "axiom",
                 },
-                unquoted_atom{
+                atom{
                     .m_text = "add_gc",
                 },
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "if",
                 },
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "add",
                 },
                 variable{
@@ -981,12 +911,12 @@ void test_lexer_extract_lexeme()
                 },
                 list_close{},
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "and",
                 },
 
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "cons",
                 },
                 variable{
@@ -1001,7 +931,7 @@ void test_lexer_extract_lexeme()
                 list_close{},
 
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "cons",
                 },
                 variable{
@@ -1016,7 +946,7 @@ void test_lexer_extract_lexeme()
                 list_close{},
 
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "add",
                 },
 
@@ -1041,7 +971,7 @@ void test_lexer_extract_lexeme()
                 list_close{},
 
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "add",
                 },
                 variable{
@@ -1056,7 +986,7 @@ void test_lexer_extract_lexeme()
                 list_close{},
 
                 list_open{},
-                unquoted_atom{
+                atom{
                     .m_text = "cons",
                 },
                 variable{
@@ -1079,7 +1009,7 @@ void test_lexer_extract_lexeme()
             // Test lex stop character: whitespace
             "abc ",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
             },
@@ -1088,7 +1018,7 @@ void test_lexer_extract_lexeme()
             // Test lex stop character: eof
             "abc",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
             },
@@ -1097,7 +1027,7 @@ void test_lexer_extract_lexeme()
             // Test lex stop character: list open
             "abc[",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_open{},
@@ -1107,7 +1037,7 @@ void test_lexer_extract_lexeme()
             // Test lex stop character: list close
             "abc]",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     .m_text = "abc",
                 },
                 list_close{},
@@ -1138,7 +1068,7 @@ void test_lexer_extract_lexeme()
         {
             "tes_t",
             std::vector<lexeme>{
-                unquoted_atom{
+                atom{
                     "tes_t",
                 },
             },
@@ -1146,24 +1076,24 @@ void test_lexer_extract_lexeme()
         {
             "test;",
             std::vector<lexeme>{
-                unquoted_atom{"test"},
+                atom{"test"},
                 eol{},
             },
         },
         {
             "test1;test2",
             std::vector<lexeme>{
-                unquoted_atom{"test1"},
+                atom{"test1"},
                 eol{},
-                unquoted_atom{"test2"},
+                atom{"test2"},
             },
         },
         {
             "[test1 test2];",
             std::vector<lexeme>{
                 list_open{},
-                unquoted_atom{"test1"},
-                unquoted_atom{"test2"},
+                atom{"test1"},
+                atom{"test2"},
                 list_close{},
                 eol{},
             },
@@ -1175,9 +1105,9 @@ void test_lexer_extract_lexeme()
                 eol{},
                 eol{},
                 list_open{},
-                unquoted_atom{"test1"},
+                atom{"test1"},
                 eol{},
-                quoted_atom{"test2"},
+                atom{"test2"},
                 list_close{},
                 eol{},
             },
@@ -1257,12 +1187,11 @@ void test_lexer_extract_lexeme()
 
 void test_lex_file_example_0()
 {
+    using unilog::atom;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
     using unilog::list_separator;
-    using unilog::quoted_atom;
-    using unilog::unquoted_atom;
     using unilog::variable;
 
     std::stringstream l_ss;
@@ -1277,27 +1206,26 @@ void test_lex_file_example_0()
 
     assert(l_ss.eof()); // there is no trailing newline.
     assert(l_lexemes == std::list<lexeme>({
-                            unquoted_atom{"axiom"},
-                            unquoted_atom{"a0"},
+                            atom{"axiom"},
+                            atom{"a0"},
                             list_open{},
-                            unquoted_atom{"if"},
-                            unquoted_atom{"y"},
-                            unquoted_atom{"x"},
+                            atom{"if"},
+                            atom{"y"},
+                            atom{"x"},
                             list_close{},
-                            unquoted_atom{"axiom"},
-                            unquoted_atom{"a1"},
-                            unquoted_atom{"x"},
+                            atom{"axiom"},
+                            atom{"a1"},
+                            atom{"x"},
                         }));
 }
 
 void test_lex_file_example_1()
 {
+    using unilog::atom;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
     using unilog::list_separator;
-    using unilog::quoted_atom;
-    using unilog::unquoted_atom;
     using unilog::variable;
 
     std::stringstream l_ss;
@@ -1312,32 +1240,31 @@ void test_lex_file_example_1()
 
     assert(l_ss.eof()); // there is no trailing newline.
     assert(l_lexemes == std::list<lexeme>({
-                            unquoted_atom{"axiom"},
-                            quoted_atom{"a0"},
-                            unquoted_atom{"test"},
+                            atom{"axiom"},
+                            atom{"a0"},
+                            atom{"test"},
 
-                            unquoted_atom{"axiom"},
+                            atom{"axiom"},
                             list_open{},
-                            unquoted_atom{"a1"},
+                            atom{"a1"},
                             list_close{},
-                            quoted_atom{"x"},
+                            atom{"x"},
 
-                            unquoted_atom{"axiom"},
-                            quoted_atom{"a2"},
+                            atom{"axiom"},
+                            atom{"a2"},
                             list_open{},
-                            unquoted_atom{"x"},
+                            atom{"x"},
                             list_close{},
                         }));
 }
 
 void test_lex_file_example_2()
 {
+    using unilog::atom;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
     using unilog::list_separator;
-    using unilog::quoted_atom;
-    using unilog::unquoted_atom;
     using unilog::variable;
 
     std::stringstream l_ss;
@@ -1352,15 +1279,15 @@ void test_lex_file_example_2()
 
     assert(l_ss.eof()); // there is no trailing newline.
     assert(l_lexemes == std::list<lexeme>({
-                            unquoted_atom{"infer"},
-                            unquoted_atom{"i0"},
+                            atom{"infer"},
+                            atom{"i0"},
                             list_open{},
-                            unquoted_atom{"if"},
+                            atom{"if"},
                             variable{"Y"},
                             list_open{},
-                            unquoted_atom{"and"},
+                            atom{"and"},
                             list_open{},
-                            unquoted_atom{"if"},
+                            atom{"if"},
                             variable{"Y"},
                             variable{"X"},
                             list_close{},
@@ -1368,28 +1295,27 @@ void test_lex_file_example_2()
                             list_close{},
                             list_close{},
 
-                            unquoted_atom{"axiom"},
-                            unquoted_atom{"a0"},
+                            atom{"axiom"},
+                            atom{"a0"},
                             list_open{},
-                            unquoted_atom{"if"},
-                            unquoted_atom{"b"},
-                            unquoted_atom{"a"},
+                            atom{"if"},
+                            atom{"b"},
+                            atom{"a"},
                             list_close{},
 
-                            unquoted_atom{"axiom"},
-                            unquoted_atom{"a1"},
-                            unquoted_atom{"a"},
+                            atom{"axiom"},
+                            atom{"a1"},
+                            atom{"a"},
                         }));
 }
 
 void test_lex_file_example_3()
 {
+    using unilog::atom;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
     using unilog::list_separator;
-    using unilog::quoted_atom;
-    using unilog::unquoted_atom;
     using unilog::variable;
 
     std::stringstream l_ss;
@@ -1412,13 +1338,12 @@ void test_lex_file_example_3()
 
 void test_lex_file_example_4()
 {
+    using unilog::atom;
     using unilog::eol;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
     using unilog::list_separator;
-    using unilog::quoted_atom;
-    using unilog::unquoted_atom;
     using unilog::variable;
 
     std::stringstream l_ss;
@@ -1433,30 +1358,30 @@ void test_lex_file_example_4()
     // assert(l_ss.eof());
     //     above line omitted due to trailing newline at end of file.
     assert(l_lexemes == std::list<lexeme>({
-                            unquoted_atom{"axiom"},
-                            unquoted_atom{"a0"},
+                            atom{"axiom"},
+                            atom{"a0"},
                             list_open{},
-                            unquoted_atom{"if"},
-                            unquoted_atom{"y"},
-                            unquoted_atom{"x"},
+                            atom{"if"},
+                            atom{"y"},
+                            atom{"x"},
                             list_close{},
                             eol{},
-                            unquoted_atom{"axiom"},
-                            unquoted_atom{"a1"},
-                            unquoted_atom{"x"},
+                            atom{"axiom"},
+                            atom{"a1"},
+                            atom{"x"},
                             eol{},
-                            unquoted_atom{"infer"},
-                            unquoted_atom{"i0"},
-                            unquoted_atom{"y"},
+                            atom{"infer"},
+                            atom{"i0"},
+                            atom{"y"},
                             list_open{},
-                            unquoted_atom{"mp"},
+                            atom{"mp"},
                             list_open{},
-                            unquoted_atom{"theorem"},
-                            unquoted_atom{"a0"},
+                            atom{"theorem"},
+                            atom{"a0"},
                             list_close{},
                             list_open{},
-                            unquoted_atom{"theorem"},
-                            unquoted_atom{"a1"},
+                            atom{"theorem"},
+                            atom{"a1"},
                             list_close{},
                             list_close{},
                             eol{},
@@ -1465,13 +1390,12 @@ void test_lex_file_example_4()
 
 void test_lex_file_example_5()
 {
+    using unilog::atom;
     using unilog::eol;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
     using unilog::list_separator;
-    using unilog::quoted_atom;
-    using unilog::unquoted_atom;
     using unilog::variable;
 
     std::stringstream l_ss;
@@ -1486,23 +1410,23 @@ void test_lex_file_example_5()
     // assert(l_ss.eof());
     //     above line omitted due to trailing newline at end of file.
     assert(l_lexemes == std::list<lexeme>({
-                            unquoted_atom{"axiom"},
-                            quoted_atom{"a0"},
+                            atom{"axiom"},
+                            atom{"a0"},
                             list_open{},
-                            unquoted_atom{"awesome"},
+                            atom{"awesome"},
                             variable{"_"},
                             list_close{},
                             eol{},
 
-                            unquoted_atom{"infer"},
-                            quoted_atom{"i0"},
+                            atom{"infer"},
+                            atom{"i0"},
                             list_open{},
-                            unquoted_atom{"awesome"},
-                            unquoted_atom{"leon"},
+                            atom{"awesome"},
+                            atom{"leon"},
                             list_close{},
                             list_open{},
-                            unquoted_atom{"theorem"},
-                            unquoted_atom{"a0"},
+                            atom{"theorem"},
+                            atom{"a0"},
                             list_close{},
                             eol{},
                         }));
@@ -1510,13 +1434,12 @@ void test_lex_file_example_5()
 
 void test_lex_file_example_6()
 {
+    using unilog::atom;
     using unilog::eol;
     using unilog::lexeme;
     using unilog::list_close;
     using unilog::list_open;
     using unilog::list_separator;
-    using unilog::quoted_atom;
-    using unilog::unquoted_atom;
     using unilog::variable;
 
     std::stringstream l_ss;
@@ -1532,15 +1455,15 @@ void test_lex_file_example_6()
                             eol{},
                             eol{},
                             eol{},
-                            unquoted_atom{"guide"},
-                            unquoted_atom{"g0"},
+                            atom{"guide"},
+                            atom{"g0"},
                             list_open{},
                             list_close{},
                             list_open{},
-                            unquoted_atom{"theorem"},
+                            atom{"theorem"},
                             variable{"_"},
                             list_close{},
-                            unquoted_atom{"asdasd"},
+                            atom{"asdasd"},
                             eol{},
                         }));
 }
@@ -1556,8 +1479,7 @@ void test_lexer_main()
     TEST(test_lexer_list_open_equivalence);
     TEST(test_lexer_list_close_equivalence);
     TEST(test_lexer_variable_equivalence);
-    TEST(test_lexer_quoted_atom_equivalence);
-    TEST(test_lexer_unquoted_atom_equivalence);
+    TEST(test_lexer_atom_equivalence);
 
     // extractor tests
     TEST(test_lexer_extract_lexeme);

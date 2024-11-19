@@ -31,12 +31,7 @@ namespace unilog
         std::string m_identifier;
     };
 
-    struct quoted_atom
-    {
-        std::string m_text;
-    };
-
-    struct unquoted_atom
+    struct atom
     {
         std::string m_text;
     };
@@ -49,8 +44,7 @@ namespace unilog
     bool operator==(const list_open &a_lhs, const list_open &a_rhs);
     bool operator==(const list_close &a_lhs, const list_close &a_rhs);
     bool operator==(const variable &a_lhs, const variable &a_rhs);
-    bool operator==(const quoted_atom &a_lhs, const quoted_atom &a_rhs);
-    bool operator==(const unquoted_atom &a_lhs, const unquoted_atom &a_rhs);
+    bool operator==(const atom &a_lhs, const atom &a_rhs);
 
     using lexeme = std::variant<
         eol,
@@ -58,8 +52,7 @@ namespace unilog
         list_open,
         list_close,
         variable,
-        quoted_atom,
-        unquoted_atom>;
+        atom>;
 
     std::istream &operator>>(std::istream &a_istream, lexeme &a_lexeme);
 
