@@ -107,7 +107,14 @@ namespace unilog
                 return a_istream;
             }
 
-            PL_unify(a_term_t, l_list.back());
+            /////////////////////////////////////////
+            // extract the tail of the list
+            /////////////////////////////////////////
+            if (!PL_unify(a_term_t, l_list.back()))
+            {
+                a_istream.setstate(std::ios::failbit);
+                return a_istream;
+            }
             l_list.pop_back();
 
             /////////////////////////////////////////
@@ -1024,7 +1031,7 @@ static void test_parser_extract_prolog_expression()
                     "        [add [XH] [YH] [ZH|C]]\n"
                     "        [add XT YT T]\n"
                     "        [add T [C] ZT]\n"
-                    "    ]"
+                    "    ]\n"
                     "]",
                     [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
@@ -1061,215 +1068,36 @@ static void test_parser_extract_prolog_expression()
                                           })) == 0;
                     },
                 },
-                // {
-                //     "Var",
-                //     make_var("Var", l_var_alist),
-                // },
-                // {
-                //     "_",
-                //     make_var("_", l_var_alist),
-                // },
-                // {
-                //     // Test singular extraction not perturbed by later content
-                //     "_ abc",
-                //     make_var("_", l_var_alist),
-                // },
-                // {
-                //     "[]",
-                //     make_list({}),
-                // },
-                // {
-                //     "[] []",
-                //     make_list({}),
-                // },
-                // {
-                //     "[abc]",
-                //     make_list({
-                //         make_atom("abc"),
-                //     }),
-                // },
-                // {
-                //     "[abc Var]",
-                //     make_list({
-                //         make_atom("abc"),
-                //         make_var("Var", l_var_alist),
-                //     }),
-                // },
-                // {
-                //     "[abc Var def]",
-                //     make_list({
-                //         make_atom("abc"),
-                //         make_var("Var", l_var_alist),
-                //         make_atom("def"),
-                //     }),
-                // },
-                // {
-                //     "[[]]",
-                //     make_list({
-                //         make_list({}),
-                //     }),
-                // },
-                // {
-                //     "[abc []]",
-                //     make_list({
-                //         make_atom("abc"),
-                //         make_list({}),
-                //     }),
-                // },
-                // {
-                //     "[abc [] def]",
-                //     make_list({
-                //         make_atom("abc"),
-                //         make_list({}),
-                //         make_atom("def"),
-                //     }),
-                // },
-                // {
-                //     "[abc [123] def]",
-                //     make_list({
-                //         make_atom("abc"),
-                //         make_list({
-                //             make_atom("123"),
-                //         }),
-                //         make_atom("def"),
-                //     }),
-                // },
-                // {
-                //     "abc []",
-                //     make_atom("abc"),
-                // },
-                // {
-                //     "[abc [123 [def [456 [ghi]]]]]",
-                //     make_list({
-                //         make_atom("abc"),
-                //         make_list({
-                //             make_atom("123"),
-                //             make_list({
-                //                 make_atom("def"),
-                //                 make_list({
-                //                     make_atom("456"),
-                //                     make_list({
-                //                         make_atom("ghi"),
-                //                     }),
-                //                 }),
-                //             }),
-                //         }),
-                //     }),
-                // },
-                // {
-                //     "[abc [_ _] [def A]]",
-                //     make_list({
-                //         make_atom("abc"),
-                //         make_list({
-                //             make_var("_", l_var_alist),
-                //             make_var("_", l_var_alist),
-                //         }),
-                //         make_list({
-                //             make_atom("def"),
-                //             make_var("A", l_var_alist),
-                //         }),
-                //     }),
-                // },
-                // {
-                //     // Single atom, with special characters
-                //     "test!@.$^&*()",
-                //     make_atom("test!@.$^&*()"),
-                // },
-                // {
-                //     // single atom, it will not fail even with the closing paren. this is because,
-                //     //     closing paren is a lexeme separator char and thus it will only extract the
-                //     //     first prolog expression, "abc"
-                //     "abc]",
-                //     make_atom("abc"),
-                // },
-                // {
-                //     "[123 456 7.89]",
-                //     make_list({
-                //         make_atom("123"),
-                //         make_atom("456"),
-                //         make_atom("7.89"),
-                //     }),
-                // },
-                // {
-                //     "[123 456 7.89 A [_ _]]",
-                //     make_list({
-                //         make_atom("123"),
-                //         make_atom("456"),
-                //         make_atom("7.89"),
-                //         make_var("A", l_var_alist),
-                //         make_list({
-                //             make_var("_", l_var_alist),
-                //             make_var("_", l_var_alist),
-                //         }),
-                //     }),
-                // },
-                // {
-                //     // Having fun, realistic scenario
-                //     "[if\n"
-                //     "    [add X Y Z]\n"
-                //     "    [and\n"
-                //     "        [cons X XH XT]\n"
-                //     "        [cons Y YH YT]\n"
-                //     "        [add [XH] [YH] [ZH]]\n"
-                //     "        [add XT YT ZT]\n"
-                //     "        [cons Z ZH ZT]\n"
-                //     "    ]\n"
-                //     "]\n",
-                //     make_list({
-                //         make_atom("if"),
-                //         make_list({
-                //             make_atom("add"),
-                //             make_var("X", l_var_alist),
-                //             make_var("Y", l_var_alist),
-                //             make_var("Z", l_var_alist),
-                //         }),
-                //         make_list({
-                //             make_atom("and"),
-                //             make_list({
-                //                 make_atom("cons"),
-                //                 make_var("X", l_var_alist),
-                //                 make_var("XH", l_var_alist),
-                //                 make_var("XT", l_var_alist),
-                //             }),
-                //             make_list({
-                //                 make_atom("cons"),
-                //                 make_var("Y", l_var_alist),
-                //                 make_var("YH", l_var_alist),
-                //                 make_var("YT", l_var_alist),
-                //             }),
-                //             make_list({
-                //                 make_atom("add"),
-                //                 make_list({make_var("XH", l_var_alist)}),
-                //                 make_list({make_var("YH", l_var_alist)}),
-                //                 make_list({make_var("ZH", l_var_alist)}),
-                //             }),
-                //             make_list({
-                //                 make_atom("add"),
-                //                 make_var("XT", l_var_alist),
-                //                 make_var("YT", l_var_alist),
-                //                 make_var("ZT", l_var_alist),
-                //             }),
-                //             make_list({
-                //                 make_atom("cons"),
-                //                 make_var("Z", l_var_alist),
-                //                 make_var("ZH", l_var_alist),
-                //                 make_var("ZT", l_var_alist),
-                //             }),
-                //         }),
-                //     }),
-                // },
-                // {
-                //     "[[[] abc] 123]",
-                //     make_list({
-                //         make_list({
-                //             make_list({
-
-                //             }),
-                //             make_atom("abc"),
-                //         }),
-                //         make_atom("123"),
-                //     }),
-                // },
+                {
+                    "['\\n\\t']",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term,
+                                          make_list({
+                                              make_atom("\n\t"),
+                                          })) == 0;
+                    },
+                },
+                {
+                    "[\"\\n\\t\"]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term,
+                                          make_list({
+                                              make_atom("\n\t"),
+                                          })) == 0;
+                    },
+                },
+                {
+                    "[\"\\n\\t\'\"]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term,
+                                          make_list({
+                                              make_atom("\n\t\'"),
+                                          })) == 0;
+                    },
+                },
             };
 
     for (const auto &[l_key, l_value] : l_test_cases)
