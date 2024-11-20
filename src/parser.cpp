@@ -631,6 +631,47 @@ static void test_parser_extract_prolog_expression()
                         return PL_get_nil(a_term); // && l_var_alist.size() == 0;
                     },
                 },
+                {
+                    "[[]]",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        term_t l_head = PL_new_term_ref();
+                        term_t l_tail = PL_new_term_ref();
+                        if (PL_get_nil(a_term))
+                            return false;
+                        if (!(PL_get_list(a_term, l_head, l_tail) ||
+                              PL_compare(l_head, make_nil()) != 0 ||
+                              PL_compare(l_tail, make_nil()) != 0))
+                            return false;
+                        return true;
+                    },
+                },
+                {
+                    "[abc]",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        term_t l_head = PL_new_term_ref();
+                        term_t l_tail = PL_new_term_ref();
+                        if (!(PL_get_list(a_term, l_head, l_tail) ||
+                              PL_compare(l_head, make_atom("abc")) != 0 ||
+                              PL_compare(l_tail, make_nil()) != 0))
+                            return false;
+                        return true;
+                    },
+                },
+                {
+                    "[X]",
+                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    {
+                        term_t l_head = PL_new_term_ref();
+                        term_t l_tail = PL_new_term_ref();
+                        if (!(PL_get_list(a_term, l_head, l_tail) ||
+                              PL_compare(l_head, l_var_alist.at("X")) != 0 ||
+                              PL_compare(l_tail, make_nil()) != 0))
+                            return false;
+                        return true;
+                    },
+                },
                 // {
                 //     "Var",
                 //     make_var("Var", l_var_alist),
