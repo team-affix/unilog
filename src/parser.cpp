@@ -1098,6 +1098,20 @@ static void test_parser_extract_prolog_expression()
                                           })) == 0;
                     },
                 },
+                {
+                    "[a|[b|'']]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term,
+                                          make_list({
+                                                        make_atom("a"),
+                                                    },
+                                                    make_list({
+                                                                  make_atom("b"),
+                                                              },
+                                                              make_atom("")))) == 0;
+                    },
+                },
             };
 
     for (const auto &[l_key, l_value] : l_test_cases)
@@ -1123,31 +1137,42 @@ static void test_parser_extract_prolog_expression()
         LOG("success, case: \"" << l_key << "\"" << std::endl);
     }
 
-    // std::vector<std::string> l_expect_failure_inputs =
-    //     {
-    //         "[abc",
-    //         "[[abc] [123]",
-    //         "]",
-    //         "\'",
-    //         "\"",
-    //         // "abc]", // this is NOT an expect failure input.
-    //         // this is because it will only try to parse the first prolog expression before a lexeme separator char.
+    std::vector<std::string> l_expect_failure_inputs =
+        {
+            "[abc",
+            "[[abc] [123]",
+            "]",
+            "\'",
+            "\"",
+            "[a|]",
+            "[a|b|c]",
+            "[a|b c]",
+            "[a|[b|']]",
+            // "abc]", // this is NOT an expect failure input.
+            // this is because it will only try to parse the first prolog expression before a lexeme separator char.
 
-    //     };
+        };
 
-    // for (const auto &l_input : l_expect_failure_inputs)
-    // {
-    //     std::stringstream l_ss(l_input);
+    for (const auto &l_input : l_expect_failure_inputs)
+    {
+        std::stringstream l_ss(l_input);
 
-    //     term_t l_exp;
+        // open PL stack frame
+        fid_t l_frame_id = PL_open_foreign_frame();
 
-    //     unilog::extract_term_t(l_ss, l_exp, l_var_alist);
+        term_t l_exp = PL_new_term_ref();
 
-    //     // make sure the extraction was unsuccessful
-    //     assert(l_ss.fail());
+        std::map<std::string, term_t> l_var_alist;
 
-    //     LOG("success, expected throw, case: " << l_input << std::endl);
-    // }
+        unilog::extract_term_t(l_ss, l_var_alist, l_exp);
+
+        assert(l_ss.fail());
+
+        // close PL stack frame
+        PL_close_foreign_frame(l_frame_id);
+
+        LOG("success, expected failbit, case: " << l_input << std::endl);
+    }
 }
 
 // void test_parser_extract_axiom_statement()
