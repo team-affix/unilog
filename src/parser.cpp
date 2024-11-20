@@ -79,9 +79,6 @@ namespace unilog
         {
             std::list<term_t> l_list;
 
-            // the term to be bound thru extraction
-            term_t l_sub_term = PL_new_term_ref();
-
             // initialize flag for list termination
             bool l_list_terminated = false;
 
@@ -89,8 +86,27 @@ namespace unilog
             //     eof. It will come from any list termination process.
             //     we supply a_term_t as the list tail reference, because
             //     we will build the list in reverse order, starting from the tail.
-            while (extract_term_t(a_istream, a_var_alist, l_sub_term, a_term_t, &l_list_terminated) && !l_list_terminated)
+            while (true)
+            {
+                term_t l_sub_term = PL_new_term_ref();
+
+                /////////////////////////////////////////
+                // extract one list element
+                /////////////////////////////////////////
+                if (!extract_term_t(a_istream, a_var_alist, l_sub_term, a_term_t, &l_list_terminated))
+                {
+                    a_istream.setstate(std::ios::failbit);
+                    return a_istream;
+                }
+
+                /////////////////////////////////////////
+                // callee indicates end of list
+                /////////////////////////////////////////
+                if (l_list_terminated)
+                    break;
+
                 l_list.push_back(l_sub_term);
+            }
 
             // ensure the list was terminated
             if (a_istream.fail() || !l_list_terminated)
@@ -308,11 +324,36 @@ static term_t make_list(const std::list<term_t> &a_elements, term_t a_tail = mak
     return l_result;
 }
 
+// warning: this function ALWAYS creates a new term ref...
 static term_t make_var(const std::string &a_identifier, std::map<std::string, term_t> &a_var_alist)
 {
+    term_t l_result = PL_new_term_ref();
+
+    // singletons never get entries in the table
     if (a_identifier == "_")
-        return PL_new_term_ref(); // singleton always gets own term.
-    return CACHE(a_var_alist, a_identifier, PL_new_term_ref());
+        return l_result;
+
+    /////////////////////////////////////////
+    // see if this variable already has entry
+    /////////////////////////////////////////
+    auto l_search_result = a_var_alist.find(a_identifier);
+
+    /////////////////////////////////////////
+    // no entry exists
+    /////////////////////////////////////////
+    if (l_search_result == a_var_alist.end())
+    {
+        // simply add the entry for this variable.
+        a_var_alist[a_identifier] = l_result;
+        return l_result;
+    }
+
+    /////////////////////////////////////////
+    // entry already exists;
+    /////////////////////////////////////////
+    assert(PL_unify(l_result, l_search_result->second));
+
+    return l_result;
 }
 
 ////////////////////////////////
@@ -549,91 +590,91 @@ static void test_parser_extract_prolog_expression()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
-    data_points<std::string, std::function<bool(term_t, const std::map<std::string, term_t> &)>>
+    data_points<std::string, std::function<bool(term_t, std::map<std::string, term_t> &)>>
         l_test_cases =
             {
                 {
                     "if",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_compare(a_term, make_atom("if")) == 0;
                     },
                 },
                 {
                     "add",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_compare(a_term, make_atom("add")) == 0;
                     },
                 },
                 {
                     "\'\'",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_compare(a_term, make_atom("")) == 0;
                     },
                 },
                 {
                     "\'abc123\'",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_compare(a_term, make_atom("abc123")) == 0;
                     },
                 },
                 {
                     "abc123\n",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_compare(a_term, make_atom("abc123")) == 0;
                     },
                 },
                 {
                     "abc123/\n",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_compare(a_term, make_atom("abc123")) == 0;
                     },
                 },
                 {
                     "\'abc123/\\n\'",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_compare(a_term, make_atom("abc123/\n")) == 0;
                     },
                 },
                 {
                     "Var",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
-                        return PL_is_variable(a_term) && l_var_alist.at("Var") == a_term;
+                        return PL_is_variable(a_term) && a_var_alist.at("Var") == a_term;
                     },
                 },
                 {
                     "_",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_is_variable(a_term) &&
                                // singletons do NOT get entries in the alist
-                               l_var_alist.size() == 0;
+                               a_var_alist.size() == 0;
                     },
                 },
                 {
                     "Var abc", // second term does not get extracted
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
-                        return PL_is_variable(a_term) && l_var_alist.at("Var") == a_term;
+                        return PL_is_variable(a_term) && a_var_alist.at("Var") == a_term;
                     },
                 },
                 {
                     "[]",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_get_nil(a_term); // && l_var_alist.size() == 0;
                     },
                 },
                 {
                     "[[]]",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         term_t l_head = PL_new_term_ref();
                         term_t l_tail = PL_new_term_ref();
@@ -648,7 +689,7 @@ static void test_parser_extract_prolog_expression()
                 },
                 {
                     "[abc]",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         term_t l_head = PL_new_term_ref();
                         term_t l_tail = PL_new_term_ref();
@@ -660,16 +701,88 @@ static void test_parser_extract_prolog_expression()
                     },
                 },
                 {
+                    "[abc abd]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_list(std::list{make_atom("abc"), make_atom("abd")})) == 0;
+                    },
+                },
+                {
+                    "[abc abc2]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_list(std::list{make_atom("abc"), make_atom("abc2")})) == 0;
+                    },
+                },
+                {
+                    "[abc \'1010\']",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_list(std::list{make_atom("abc"), make_atom("1010")})) == 0;
+                    },
+                },
+                {
                     "[X]",
-                    [](term_t a_term, const std::map<std::string, term_t> &l_var_alist)
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         term_t l_head = PL_new_term_ref();
                         term_t l_tail = PL_new_term_ref();
                         if (!(PL_get_list(a_term, l_head, l_tail) ||
-                              PL_compare(l_head, l_var_alist.at("X")) != 0 ||
+                              PL_compare(l_head, a_var_alist.at("X")) != 0 ||
                               PL_compare(l_tail, make_nil()) != 0))
                             return false;
                         return true;
+                    },
+                },
+                {
+                    "[X abc]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_list({make_var("X", a_var_alist), make_atom("abc")})) == 0;
+                    },
+                },
+                {
+                    "[a b c]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_list({
+                                                      make_atom("a"),
+                                                      make_atom("b"),
+                                                      make_atom("c"),
+                                                  })) == 0;
+                    },
+                },
+                {
+                    "[a X c]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_list({
+                                                      make_atom("a"),
+                                                      make_var("X", a_var_alist),
+                                                      make_atom("c"),
+                                                  })) == 0;
+                    },
+                },
+                {
+                    "[a X X]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_list({
+                                                      make_atom("a"),
+                                                      make_var("X", a_var_alist),
+                                                      make_var("X", a_var_alist),
+                                                  })) == 0;
+                    },
+                },
+                {
+                    "[a 'X' X]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_list({
+                                                      make_atom("a"),
+                                                      make_atom("X"),
+                                                      make_var("X", a_var_alist),
+                                                  })) == 0;
                     },
                 },
                 // {
