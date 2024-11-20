@@ -313,7 +313,9 @@ static term_t make_atom(const std::string &a_text)
 
 static term_t make_list(const std::list<term_t> &a_elements, term_t a_tail = make_nil())
 {
-    term_t l_result = a_tail;
+    term_t l_result = PL_new_term_ref();
+
+    assert(PL_unify(l_result, a_tail));
 
     for (auto l_it = a_elements.rbegin(); l_it != a_elements.rend(); l_it++)
     {
@@ -646,7 +648,7 @@ static void test_parser_extract_prolog_expression()
                     "Var",
                     [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
-                        return PL_is_variable(a_term) && a_var_alist.at("Var") == a_term;
+                        return PL_is_variable(a_term) && PL_compare(make_var("Var", a_var_alist), a_term) == 0;
                     },
                 },
                 {
@@ -662,7 +664,7 @@ static void test_parser_extract_prolog_expression()
                     "Var abc", // second term does not get extracted
                     [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
-                        return PL_is_variable(a_term) && a_var_alist.at("Var") == a_term;
+                        return PL_is_variable(a_term) && PL_compare(make_var("Var", a_var_alist), a_term) == 0;
                     },
                 },
                 {
@@ -832,6 +834,31 @@ static void test_parser_extract_prolog_expression()
                                                       }),
                                                       make_var("X", a_var_alist),
                                                   })) == 0;
+                    },
+                },
+                {
+                    "[|a]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_atom("a")) == 0;
+                    },
+                },
+                {
+                    "[a|b]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term, make_list({make_atom("a")}, make_atom("b"))) == 0;
+                    },
+                },
+                {
+                    "[a|Y]",
+                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
+                    {
+                        return PL_compare(a_term,
+                                          make_list({
+                                                        make_atom("a"),
+                                                    },
+                                                    make_var("Y", a_var_alist))) == 0;
                     },
                 },
                 // {
