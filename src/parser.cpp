@@ -1175,7 +1175,7 @@ static void test_parser_extract_prolog_expression()
     }
 }
 
-// void test_parser_extract_axiom_statement()
+// static void test_parser_extract_axiom_statement()
 // {
 //     fid_t l_frame_id = PL_open_foreign_frame();
 
@@ -1205,7 +1205,7 @@ static void test_parser_extract_prolog_expression()
 //                     .m_theorem =
 //                         make_list({
 //                             make_atom("add"),
-//                             make_list({}),
+//                             make_nil(),
 //                             make_var("L", l_var_alist),
 //                             make_var("L", l_var_alist),
 //                         }),
@@ -1224,15 +1224,6 @@ static void test_parser_extract_prolog_expression()
 //                 },
 //             },
 //             {
-//                 "axiom tAg123@#$%^&*() _",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("tAg123@#$%^&*()"),
-//                     .m_theorem =
-//                         make_var("_", l_var_alist),
-//                 },
-//             },
-//             {
 //                 "axiom tag[theorem]",
 //                 axiom_statement{
 //                     .m_tag =
@@ -1244,7 +1235,7 @@ static void test_parser_extract_prolog_expression()
 //                 },
 //             },
 //             {
-//                 "axiom abc 123",
+//                 "axiom abc '123'",
 //                 axiom_statement{
 //                     .m_tag =
 //                         make_atom("abc"),
@@ -1253,7 +1244,7 @@ static void test_parser_extract_prolog_expression()
 //                 },
 //             },
 //             {
-//                 "axiom 123 [[[]] a 123]",
+//                 "axiom \"123\" [[[]] a \"123\"]",
 //                 axiom_statement{
 //                     .m_tag =
 //                         make_atom("123"),
@@ -1270,8 +1261,8 @@ static void test_parser_extract_prolog_expression()
 //                 },
 //             },
 //             {
-//                 "axiom +/bc/0\n"
-//                 "[+\n"
+//                 "axiom \'+/bc/0\'\n"
+//                 "[\'+\'\n"
 //                 "    []\n"
 //                 "    L\n"
 //                 "    L\n"
@@ -1289,7 +1280,7 @@ static void test_parser_extract_prolog_expression()
 //                 },
 //             },
 //             {
-//                 "axiom 123[\'! this is a \\t quotation\']",
+//                 "axiom \'123\'[\'! this is a \\t quotation\']",
 //                 axiom_statement{
 //                     .m_tag =
 //                         make_atom("123"),
@@ -1321,54 +1312,61 @@ static void test_parser_extract_prolog_expression()
 
 //     for (const auto &[l_key, l_value] : l_test_cases)
 //     {
+//         fid_t l_case_frame = PL_open_foreign_frame();
+
+//         // clear the var alist before each iteration
+//         l_var_alist.clear();
+
 //         std::stringstream l_ss(l_key);
 
 //         statement l_exp;
 //         l_ss >> l_exp;
 
-//         axiom_statement l_axiom_statement = std::get<axiom_statement>(l_exp);
-
-//         assert(PL_unify(l_axiom_statement.m_tag, l_value.m_tag));
-//         assert(PL_unify(l_axiom_statement.m_theorem, l_value.m_theorem));
+//         axiom_statement l_axs = std::get<axiom_statement>(l_exp);
 
 //         // make sure the stringstream is not in failstate
 //         assert(!l_ss.fail());
 
+//         assert(PL_compare(l_axs.m_tag, l_value.m_tag) == 0);
+//         assert(PL_compare(l_axs.m_theorem, l_value.m_theorem) == 0);
+
 //         LOG("success, case: \"" << l_key << "\"" << std::endl);
+
+//         PL_close_foreign_frame(l_case_frame);
 //     }
 
-//     std::vector<std::string> l_fail_cases =
-//         {
-//             "",
-//             "abc",
-//             "_ _",
-//             "VariableTag Theorem",
-//             "VariableTag atom",
-//             "VariableTag [elem0 elem1]",
-//             "[] theorem",
-//             "[X] theorem",
-//             "[atom] theorem",
-//             "axiom a0",
-//             "axiom \'a0\'",
-//             "axiom [tag] [expr]",
-//             "guide a0 x",
-//             "infer i0 x",
-//             "refer r0 x",
-//         };
+//     // std::vector<std::string> l_fail_cases =
+//     //     {
+//     //         "",
+//     //         "abc",
+//     //         "_ _",
+//     //         "VariableTag Theorem",
+//     //         "VariableTag atom",
+//     //         "VariableTag [elem0 elem1]",
+//     //         "[] theorem",
+//     //         "[X] theorem",
+//     //         "[atom] theorem",
+//     //         "axiom a0",
+//     //         "axiom \'a0\'",
+//     //         "axiom [tag] [expr]",
+//     //         "guide a0 x",
+//     //         "infer i0 x",
+//     //         "refer r0 x",
+//     //     };
 
-//     for (const auto &l_input : l_fail_cases)
-//     {
-//         std::stringstream l_ss(l_input);
+//     // for (const auto &l_input : l_fail_cases)
+//     // {
+//     //     std::stringstream l_ss(l_input);
 
-//         axiom_statement l_axiom_statement;
+//     //     axiom_statement l_axiom_statement;
 
-//         l_ss >> l_axiom_statement;
+//     //     l_ss >> l_axiom_statement;
 
-//         // ensure failure of extraction
-//         assert(l_ss.fail());
+//     //     // ensure failure of extraction
+//     //     assert(l_ss.fail());
 
-//         LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
-//     }
+//     //     LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
+//     // }
 
 //     PL_close_foreign_frame(l_frame_id);
 // }
