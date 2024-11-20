@@ -61,8 +61,10 @@ namespace unilog
             /////////////////////////////////////////
             if (l_search_result == a_var_alist.end())
             {
+                term_t l_entry = PL_new_term_ref();
                 // simply add the entry for this variable.
-                a_var_alist[l_variable.m_identifier] = a_term_t;
+                a_var_alist[l_variable.m_identifier] = l_entry;
+                PL_unify(a_term_t, l_entry); // temp
                 return a_istream;
             }
 
@@ -855,9 +857,7 @@ static void test_parser_extract_prolog_expression()
                     [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
                     {
                         return PL_compare(a_term,
-                                          make_list({
-                                                        make_atom("a"),
-                                                    },
+                                          make_list({make_atom("a")},
                                                     make_var("Y", a_var_alist))) == 0;
                     },
                 },
