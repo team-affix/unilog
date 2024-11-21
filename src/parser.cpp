@@ -1170,6 +1170,8 @@ static void test_parser_extract_prolog_expression()
             "[a|b|c]",
             "[a|b c]",
             "[a|[b|']]",
+            "[;]",
+            "[|]",
             // "abc]", // this is NOT an expect failure input.
             // this is because it will only try to parse the first prolog expression before a lexeme separator char.
 
@@ -1539,6 +1541,18 @@ void test_parser_extract_guide_statement()
                     }),
                 },
             },
+            {
+                "\"guide\" \"X\" Args [guide g0 Args];",
+                guide_statement{
+                    .m_tag = make_atom("X"),
+                    .m_args = make_var("Args", l_var_alist),
+                    .m_guide = make_list({
+                        make_atom("guide"),
+                        make_atom("g0"),
+                        make_var("Args", l_var_alist),
+                    }),
+                },
+            },
         };
 
     for (const auto &[l_key, l_value] : l_test_cases)
@@ -1565,6 +1579,301 @@ void test_parser_extract_guide_statement()
         PL_close_foreign_frame(l_case_frame);
     }
 
+    std::vector<std::string> l_fail_cases =
+        {
+            "",
+            "abc",
+            "guide",
+            "guide g0",
+            "guide g0 []",
+            "guide g0 [] [theorem a0]",
+        };
+
+    for (const auto &l_input : l_fail_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
+
+        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+
+        // ensure failure of extraction
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
+
+        PL_close_foreign_frame(l_case_frame);
+    }
+
+    PL_close_foreign_frame(l_frame);
+}
+
+void test_parser_extract_infer_statement()
+{
+    fid_t l_frame = PL_open_foreign_frame();
+
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::infer_statement;
+    using unilog::statement;
+
+    std::map<std::string, term_t> l_var_alist;
+
+    data_points<std::string, infer_statement> l_test_cases =
+        {
+            {
+                "infer i0 [claim daniel y] [bout daniel [mp [theorem a0] [theorem a1]]];",
+                infer_statement{
+                    .m_tag = make_atom("i0"),
+                    .m_theorem = make_list({
+                        make_atom("claim"),
+                        make_atom("daniel"),
+                        make_atom("y"),
+                    }),
+                    .m_guide = make_list({
+                        make_atom("bout"),
+                        make_atom("daniel"),
+                        make_list({
+                            make_atom("mp"),
+                            make_list({
+                                make_atom("theorem"),
+                                make_atom("a0"),
+                            }),
+                            make_list({
+                                make_atom("theorem"),
+                                make_atom("a1"),
+                            }),
+                        }),
+                    }),
+                },
+            },
+            {
+                "infer 'i0' [] []\n;",
+                infer_statement{
+                    .m_tag = make_atom("i0"),
+                    .m_theorem = make_list({}),
+                    .m_guide = make_list({}),
+                },
+            },
+            {
+                "infer 'i0' [iff [add Y X Z] [add X Y Z]] [guide commute [guide g_add] [theorem not_add]]\n;",
+                infer_statement{
+                    .m_tag = make_atom("i0"),
+                    .m_theorem = make_list({
+                        make_atom("iff"),
+                        make_list({
+                            make_atom("add"),
+                            make_var("Y", l_var_alist),
+                            make_var("X", l_var_alist),
+                            make_var("Z", l_var_alist),
+                        }),
+                        make_list({
+                            make_atom("add"),
+                            make_var("X", l_var_alist),
+                            make_var("Y", l_var_alist),
+                            make_var("Z", l_var_alist),
+                        }),
+                    }),
+                    .m_guide = make_list({
+                        make_atom("guide"),
+                        make_atom("commute"),
+                        make_list({
+                            make_atom("guide"),
+                            make_atom("g_add"),
+                        }),
+                        make_list({
+                            make_atom("theorem"),
+                            make_atom("not_add"),
+                        }),
+                    }),
+                },
+            },
+            {
+                "infer X [add \'1\' \'2\' \'3\'] [guide g_add_ui];",
+                infer_statement{
+                    .m_tag = make_var("X", l_var_alist),
+                    .m_theorem = make_list({
+                        make_atom("add"),
+                        make_atom("1"),
+                        make_atom("2"),
+                        make_atom("3"),
+                    }),
+                    .m_guide = make_list({
+                        make_atom("guide"),
+                        make_atom("g_add_ui"),
+                    }),
+                },
+            },
+            {
+                "\"infer\" [X|Y] [\'awesome\' leon] [\"theorem\" awes];",
+                infer_statement{
+                    .m_tag = make_list({make_var("X", l_var_alist)}, make_var("Y", l_var_alist)),
+                    .m_theorem = make_list({
+                        make_atom("awesome"),
+                        make_atom("leon"),
+                    }),
+                    .m_guide = make_list({
+                        make_atom("theorem"),
+                        make_atom("awes"),
+                    }),
+                },
+            },
+            {
+                "\"infer\" [X] [awesome|Rest] [\"theorem\" awes1];",
+                infer_statement{
+                    .m_tag = make_list({make_var("X", l_var_alist)}),
+                    .m_theorem = make_list({
+                                               make_atom("awesome"),
+                                           },
+                                           make_var("Rest", l_var_alist)),
+                    .m_guide = make_list({
+                        make_atom("theorem"),
+                        make_atom("awes1"),
+                    }),
+                },
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_test_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_key);
+
+        statement l_statement;
+
+        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+
+        // make sure the stringstream is not in failstate
+        assert(!l_ss.fail());
+
+        infer_statement l_is = std::get<infer_statement>(l_statement);
+
+        assert(PL_compare(l_is.m_tag, l_value.m_tag) == 0);
+        assert(PL_compare(l_is.m_theorem, l_value.m_theorem) == 0);
+        assert(PL_compare(l_is.m_guide, l_value.m_guide) == 0);
+
+        LOG("success, case: \"" << l_key << "\"" << std::endl);
+
+        PL_close_foreign_frame(l_case_frame);
+    }
+
+    std::vector<std::string> l_fail_cases =
+        {
+            "",
+            "a",
+            "infer",
+            "infer i0",
+            "infer i0 theorem",
+            "infer i0 theorem guide",
+            "infer i0 theorem \';",
+            "infer i0 theorem [;",
+            "infer i0 theorem [;];",
+            "infer i0 theorem [a | b | c];",
+        };
+
+    for (const auto &l_input : l_fail_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
+
+        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+
+        // ensure failure of extraction
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
+
+        PL_close_foreign_frame(l_case_frame);
+    }
+
+    PL_close_foreign_frame(l_frame);
+}
+
+void test_parser_extract_refer_statement()
+{
+    fid_t l_frame = PL_open_foreign_frame();
+
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    using unilog::atom;
+    using unilog::refer_statement;
+    using unilog::statement;
+
+    std::map<std::string, term_t> l_var_alist;
+
+    data_points<std::string, refer_statement> l_test_cases =
+        {
+            {
+                "refer leon \'./path/to/leon.u\';",
+                refer_statement{
+                    .m_tag = make_atom("leon"),
+                    .m_file_path = make_atom("./path/to/leon.u"),
+                },
+            },
+            {
+                "refer [] \'./path/to/leon.u\';",
+                refer_statement{
+                    .m_tag = make_list({}),
+                    .m_file_path = make_atom("./path/to/leon.u"),
+                },
+            },
+            {
+                "refer [abc] \'../module.u\'\n;",
+                refer_statement{
+                    .m_tag = make_list({make_atom("abc")}),
+                    .m_file_path = make_atom("../module.u"),
+                },
+            },
+            {
+                "\"refer\" [X|Y] [list]\n;",
+                refer_statement{
+                    .m_tag = make_list({make_var("X", l_var_alist)}, make_var("Y", l_var_alist)),
+                    .m_file_path = make_list({make_atom("list")}),
+                },
+            },
+            {
+                "\'refer\' [a b c | Y] Path\t;",
+                refer_statement{
+                    .m_tag = make_list({
+                                           make_atom("a"),
+                                           make_atom("b"),
+                                           make_atom("c"),
+                                       },
+                                       make_var("Y", l_var_alist)),
+                    .m_file_path = make_var("Path", l_var_alist),
+                },
+            },
+        };
+
+    for (const auto &[l_key, l_value] : l_test_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_key);
+
+        statement l_statement;
+
+        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+
+        // make sure the stringstream is not in failstate
+        assert(!l_ss.fail());
+
+        refer_statement l_rs = std::get<refer_statement>(l_statement);
+
+        assert(PL_compare(l_rs.m_tag, l_value.m_tag) == 0);
+        assert(PL_compare(l_rs.m_file_path, l_value.m_file_path) == 0);
+
+        LOG("success, case: \"" << l_key << "\"" << std::endl);
+
+        PL_close_foreign_frame(l_case_frame);
+    }
+
     // std::vector<std::string> l_fail_cases =
     //     {
     //         "_",
@@ -1580,20 +1889,28 @@ void test_parser_extract_guide_statement()
     //         "axiom a0",
     //         "axiom \'a0\'",
     //         "axiom [tag] [expr]",
+    //         "axiom tag x",
     //         "axiom a0 x"
     //         "infer i0 x",
+    //         "infer [i0] x [theorem a0]",
     //         "refer r0 x",
     //         "guide g0 [",
-    //         "guide g0 [test] [redir]",   // arg list is not comprised of variables
-    //         "guide g0 [V test] [redir]", // arg list is not comprised of only variables
+    //         "guide g0 [test] [redir]",
+    //         "guide g0 [V test] [redir]",
     //         "guide g0 n [theorem a0]",
+    //         "guide g0 [] [theorem a0]",
+    //         "infer [",
+    //         "infer ]",
+    //         "infer \'i0",
+    //         "refer [jake] \'jake.u\'",
+    //         "refer jake ['not_a_quoted_atom']",
     //     };
 
     // for (const auto &l_input : l_fail_cases)
     // {
     //     std::stringstream l_ss(l_input);
 
-    //     guide_statement l_statement;
+    //     refer_statement l_statement;
 
     //     l_ss >> l_statement;
 
@@ -1605,281 +1922,6 @@ void test_parser_extract_guide_statement()
 
     PL_close_foreign_frame(l_frame);
 }
-
-// void test_parser_extract_infer_statement()
-// {
-//     constexpr bool ENABLE_DEBUG_LOGS = true;
-
-//     using unilog::atom;
-//     using unilog::infer_statement;
-//     using unilog::lexeme;
-//     using unilog::list_close;
-//     using unilog::list_open;
-//     using unilog::quoted_atom;
-//     using unilog::term;
-//     using unilog::unquoted_atom;
-//     using unilog::variable;
-
-//     data_points<std::string, infer_statement> l_test_cases =
-//         {
-//             {
-//                 "infer i0 [claim daniel y] [bout daniel [mp [theorem a0] [theorem a1]]]",
-//                 infer_statement{
-//                     .m_tag = unquoted_atom{"i0"},
-//                     .m_theorem = term{std::list<term>({
-//                         term{unquoted_atom{"claim"}},
-//                         term{unquoted_atom{"daniel"}},
-//                         term{unquoted_atom{"y"}},
-//                     })},
-//                     .m_guide = term{std::list<term>({
-//                         term{unquoted_atom{"bout"}},
-//                         term{unquoted_atom{"daniel"}},
-//                         term{std::list<term>({
-//                             term{unquoted_atom{"mp"}},
-//                             term{std::list<term>({
-//                                 term{unquoted_atom{"theorem"}},
-//                                 term{unquoted_atom{"a0"}},
-//                             })},
-//                             term{std::list<term>({
-//                                 term{unquoted_atom{"theorem"}},
-//                                 term{unquoted_atom{"a1"}},
-//                             })},
-//                         })},
-//                     })},
-//                 },
-//             },
-//             {
-//                 "infer 'i0' [claim daniel y] [bout daniel [mp [theorem a0] [theorem a1]]]",
-//                 infer_statement{
-//                     .m_tag = quoted_atom{"i0"},
-//                     .m_theorem = term{std::list<term>({
-//                         term{unquoted_atom{"claim"}},
-//                         term{unquoted_atom{"daniel"}},
-//                         term{unquoted_atom{"y"}},
-//                     })},
-//                     .m_guide = term{std::list<term>({
-//                         term{unquoted_atom{"bout"}},
-//                         term{unquoted_atom{"daniel"}},
-//                         term{std::list<term>({
-//                             term{unquoted_atom{"mp"}},
-//                             term{std::list<term>({
-//                                 term{unquoted_atom{"theorem"}},
-//                                 term{unquoted_atom{"a0"}},
-//                             })},
-//                             term{std::list<term>({
-//                                 term{unquoted_atom{"theorem"}},
-//                                 term{unquoted_atom{"a1"}},
-//                             })},
-//                         })},
-//                     })},
-//                 },
-//             },
-//             {
-//                 "infer 'i0' [claim daniel y] [bout daniel [dout daniel [mp [theorem a2] [theorem a3]]]]",
-//                 infer_statement{
-//                     .m_tag = quoted_atom{"i0"},
-//                     .m_theorem = term{std::list<term>({
-//                         term{unquoted_atom{"claim"}},
-//                         term{unquoted_atom{"daniel"}},
-//                         term{unquoted_atom{"y"}},
-//                     })},
-//                     .m_guide = term{std::list<term>({
-//                         term{unquoted_atom{"bout"}},
-//                         term{unquoted_atom{"daniel"}},
-//                         term{std::list<term>({
-//                             term{unquoted_atom{"dout"}},
-//                             term{unquoted_atom{"daniel"}},
-//                             term{std::list<term>({
-//                                 term{unquoted_atom{"mp"}},
-//                                 term{std::list<term>({
-//                                     term{unquoted_atom{"theorem"}},
-//                                     term{unquoted_atom{"a2"}},
-//                                 })},
-//                                 term{std::list<term>({
-//                                     term{unquoted_atom{"theorem"}},
-//                                     term{unquoted_atom{"a3"}},
-//                                 })},
-//                             })},
-//                         })},
-//                     })},
-//                 },
-//             },
-//             {
-//                 "infer 'i0' [claim daniel y] a0",
-//                 infer_statement{
-//                     .m_tag = quoted_atom{"i0"},
-//                     .m_theorem = term{std::list<term>({
-//                         term{unquoted_atom{"claim"}},
-//                         term{unquoted_atom{"daniel"}},
-//                         term{unquoted_atom{"y"}},
-//                     })},
-//                     .m_guide = term{unquoted_atom{"a0"}},
-//                 },
-//             },
-//         };
-
-//     for (const auto &[l_key, l_value] : l_test_cases)
-//     {
-//         std::stringstream l_ss(l_key);
-
-//         infer_statement l_exp;
-
-//         l_ss >> l_exp;
-
-//         assert(l_exp == l_value);
-
-//         // make sure the stringstream is not in failstate
-//         assert(!l_ss.fail());
-
-//         LOG("success, case: \"" << l_key << "\"" << std::endl);
-//     }
-
-//     std::vector<std::string> l_fail_cases =
-//         {
-//             "_",
-//             "abc",
-//             "",
-//             "_ _",
-//             "VariableTag Guide",
-//             "VariableTag atom",
-//             "VariableTag [elem0 elem1]",
-//             "[] theorem",
-//             "[X] theorem",
-//             "[atom] theorem",
-//             "axiom a0",
-//             "axiom \'a0\'",
-//             "axiom [tag] [expr]",
-//             "axiom tag x",
-//             "axiom a0 x"
-//             "infer i0 x",
-//             "infer [i0] x [theorem a0]", // tag is not atomic
-//             "refer r0 x",
-//             "guide g0 [",
-//             "guide g0 [test] [redir]",
-//             "guide g0 [V test] [redir]",
-//             "guide g0 n [theorem a0]",
-//             "guide g0 [] [theorem a0]",
-//             "infer [",
-//             "infer ]",
-//             "infer \'i0",
-//         };
-
-//     for (const auto &l_input : l_fail_cases)
-//     {
-//         std::stringstream l_ss(l_input);
-
-//         infer_statement l_statement;
-
-//         l_ss >> l_statement;
-
-//         // ensure failure of extraction
-//         assert(l_ss.fail());
-
-//         LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
-//     }
-// }
-
-// void test_parser_extract_refer_statement()
-// {
-//     constexpr bool ENABLE_DEBUG_LOGS = true;
-
-//     using unilog::atom;
-//     using unilog::lexeme;
-//     using unilog::list_close;
-//     using unilog::list_open;
-//     using unilog::quoted_atom;
-//     using unilog::refer_statement;
-//     using unilog::term;
-//     using unilog::unquoted_atom;
-//     using unilog::variable;
-
-//     data_points<std::string, refer_statement> l_test_cases =
-//         {
-//             {
-//                 "refer leon \'./path/to/leon.u\'",
-//                 refer_statement{
-//                     .m_tag = unquoted_atom{"leon"},
-//                     .m_file_path = quoted_atom{"./path/to/leon.u"},
-//                 },
-//             },
-//             {
-//                 "refer 'jake' \'./path /to /jake.u\'",
-//                 refer_statement{
-//                     .m_tag = quoted_atom{"jake"},
-//                     .m_file_path = quoted_atom{"./path /to /jake.u"},
-//                 },
-//             },
-//             {
-//                 "refer 1.1 \"./daniel.u\"",
-//                 refer_statement{
-//                     .m_tag = unquoted_atom{"1.1"},
-//                     .m_file_path = quoted_atom{"./daniel.u"},
-//                 },
-//             },
-//         };
-
-//     for (const auto &[l_key, l_value] : l_test_cases)
-//     {
-//         std::stringstream l_ss(l_key);
-
-//         refer_statement l_exp;
-
-//         l_ss >> l_exp;
-
-//         assert(l_exp == l_value);
-
-//         // make sure the stringstream is not in failstate
-//         assert(!l_ss.fail());
-
-//         LOG("success, case: \"" << l_key << "\"" << std::endl);
-//     }
-
-//     std::vector<std::string> l_fail_cases =
-//         {
-//             "_",
-//             "abc",
-//             "",
-//             "_ _",
-//             "VariableTag Guide",
-//             "VariableTag atom",
-//             "VariableTag [elem0 elem1]",
-//             "[] theorem",
-//             "[X] theorem",
-//             "[atom] theorem",
-//             "axiom a0",
-//             "axiom \'a0\'",
-//             "axiom [tag] [expr]",
-//             "axiom tag x",
-//             "axiom a0 x"
-//             "infer i0 x",
-//             "infer [i0] x [theorem a0]",
-//             "refer r0 x",
-//             "guide g0 [",
-//             "guide g0 [test] [redir]",
-//             "guide g0 [V test] [redir]",
-//             "guide g0 n [theorem a0]",
-//             "guide g0 [] [theorem a0]",
-//             "infer [",
-//             "infer ]",
-//             "infer \'i0",
-//             "refer [jake] \'jake.u\'",
-//             "refer jake ['not_a_quoted_atom']",
-//         };
-
-//     for (const auto &l_input : l_fail_cases)
-//     {
-//         std::stringstream l_ss(l_input);
-
-//         refer_statement l_statement;
-
-//         l_ss >> l_statement;
-
-//         // ensure failure of extraction
-//         assert(l_ss.fail());
-
-//         LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
-//     }
-// }
 
 // void test_parse_file_example_0()
 // {
@@ -1973,6 +2015,8 @@ void test_parser_main()
     TEST(test_parser_extract_prolog_expression);
     TEST(test_parser_extract_axiom_statement);
     TEST(test_parser_extract_guide_statement);
+    TEST(test_parser_extract_infer_statement);
+    TEST(test_parser_extract_refer_statement);
     // TEST(test_parser_extract_axiom_statement);
     // TEST(test_parser_extract_guide_statement);
     // TEST(test_parser_extract_infer_statement);
