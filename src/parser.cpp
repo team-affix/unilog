@@ -1874,51 +1874,35 @@ void test_parser_extract_refer_statement()
         PL_close_foreign_frame(l_case_frame);
     }
 
-    // std::vector<std::string> l_fail_cases =
-    //     {
-    //         "_",
-    //         "abc",
-    //         "",
-    //         "_ _",
-    //         "VariableTag Guide",
-    //         "VariableTag atom",
-    //         "VariableTag [elem0 elem1]",
-    //         "[] theorem",
-    //         "[X] theorem",
-    //         "[atom] theorem",
-    //         "axiom a0",
-    //         "axiom \'a0\'",
-    //         "axiom [tag] [expr]",
-    //         "axiom tag x",
-    //         "axiom a0 x"
-    //         "infer i0 x",
-    //         "infer [i0] x [theorem a0]",
-    //         "refer r0 x",
-    //         "guide g0 [",
-    //         "guide g0 [test] [redir]",
-    //         "guide g0 [V test] [redir]",
-    //         "guide g0 n [theorem a0]",
-    //         "guide g0 [] [theorem a0]",
-    //         "infer [",
-    //         "infer ]",
-    //         "infer \'i0",
-    //         "refer [jake] \'jake.u\'",
-    //         "refer jake ['not_a_quoted_atom']",
-    //     };
+    std::vector<std::string> l_fail_cases =
+        {
+            "",
+            "abc",
+            "X",
+            "refer r0",
+            "refer r0 \'file/path\'",
+            "refer r0 \';",
+            "refer r0 \";",
+            "refer r0 [;];",
+        };
 
-    // for (const auto &l_input : l_fail_cases)
-    // {
-    //     std::stringstream l_ss(l_input);
+    for (const auto &l_input : l_fail_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
 
-    //     refer_statement l_statement;
+        std::stringstream l_ss(l_input);
 
-    //     l_ss >> l_statement;
+        statement l_statement;
 
-    //     // ensure failure of extraction
-    //     assert(l_ss.fail());
+        unilog::extract_statement(l_ss, l_var_alist, l_statement);
 
-    //     LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
-    // }
+        // ensure failure of extraction
+        assert(l_ss.fail());
+
+        LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
+
+        PL_close_foreign_frame(l_case_frame);
+    }
 
     PL_close_foreign_frame(l_frame);
 }
