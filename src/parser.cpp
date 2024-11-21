@@ -15,7 +15,7 @@
 namespace unilog
 {
 
-    std::istream &extract_term_t(std::istream &a_istream, std::map<std::string, term_t> &a_var_alist, term_t a_term_t, bool *a_list_terminated = nullptr)
+    static std::istream &extract_term_t(std::istream &a_istream, std::map<std::string, term_t> &a_var_alist, term_t a_term_t, bool *a_list_terminated = nullptr)
     {
         // we assume a_term_t is already assigned to PL_new_term_ref()
 
@@ -193,7 +193,7 @@ namespace unilog
         return a_istream;
     }
 
-    std::istream &operator>>(std::istream &a_istream, statement &a_statement)
+    static std::istream &extract_statement(std::istream &a_istream, std::map<std::string, term_t> &a_var_alist, statement &a_statement)
     {
         /////////////////////////////////////////
         // extract the command lexeme
@@ -202,18 +202,13 @@ namespace unilog
         a_istream >> l_command;
 
         // atom is expected for the command
-        if (!std::holds_alternative<atom>(l_command))
+        if (a_istream.fail() || !std::holds_alternative<atom>(l_command))
         {
             a_istream.setstate(std::ios::failbit);
             return a_istream;
         }
 
         std::string l_command_text = std::get<atom>(l_command).m_text;
-
-        /////////////////////////////////////////
-        // declare the variable association-list
-        /////////////////////////////////////////
-        std::map<std::string, term_t> l_var_alist;
 
         if (l_command_text == "axiom")
         {
@@ -225,8 +220,9 @@ namespace unilog
             l_result.m_tag = PL_new_term_ref();
             l_result.m_theorem = PL_new_term_ref();
 
-            extract_term_t(a_istream, l_var_alist, l_result.m_tag);
-            extract_term_t(a_istream, l_var_alist, l_result.m_theorem);
+            if (!(extract_term_t(a_istream, a_var_alist, l_result.m_tag) &&
+                  extract_term_t(a_istream, a_var_alist, l_result.m_theorem)))
+                return a_istream;
 
             a_statement = l_result;
         }
@@ -241,9 +237,10 @@ namespace unilog
             l_result.m_args = PL_new_term_ref();
             l_result.m_guide = PL_new_term_ref();
 
-            extract_term_t(a_istream, l_var_alist, l_result.m_tag);
-            extract_term_t(a_istream, l_var_alist, l_result.m_args);
-            extract_term_t(a_istream, l_var_alist, l_result.m_guide);
+            if (!(extract_term_t(a_istream, a_var_alist, l_result.m_tag) &&
+                  extract_term_t(a_istream, a_var_alist, l_result.m_args) &&
+                  extract_term_t(a_istream, a_var_alist, l_result.m_guide)))
+                return a_istream;
 
             a_statement = l_result;
         }
@@ -258,9 +255,10 @@ namespace unilog
             l_result.m_theorem = PL_new_term_ref();
             l_result.m_guide = PL_new_term_ref();
 
-            extract_term_t(a_istream, l_var_alist, l_result.m_tag);
-            extract_term_t(a_istream, l_var_alist, l_result.m_theorem);
-            extract_term_t(a_istream, l_var_alist, l_result.m_guide);
+            if (!(extract_term_t(a_istream, a_var_alist, l_result.m_tag) &&
+                  extract_term_t(a_istream, a_var_alist, l_result.m_theorem) &&
+                  extract_term_t(a_istream, a_var_alist, l_result.m_guide)))
+                return a_istream;
 
             a_statement = l_result;
         }
@@ -274,17 +272,41 @@ namespace unilog
             l_result.m_tag = PL_new_term_ref();
             l_result.m_file_path = PL_new_term_ref();
 
-            extract_term_t(a_istream, l_var_alist, l_result.m_tag);
-            extract_term_t(a_istream, l_var_alist, l_result.m_file_path);
+            if (!(extract_term_t(a_istream, a_var_alist, l_result.m_tag) &&
+                  extract_term_t(a_istream, a_var_alist, l_result.m_file_path)))
+                return a_istream;
 
             a_statement = l_result;
         }
         else
         {
             a_istream.setstate(std::ios::failbit);
+            return a_istream;
+        }
+
+        /////////////////////////////////////////
+        // extracts the expected eol character.
+        /////////////////////////////////////////
+        lexeme l_eol;
+        a_istream >> l_eol;
+
+        if (a_istream.fail() || !std::holds_alternative<eol>(l_eol))
+        {
+            a_istream.setstate(std::ios::failbit);
+            return a_istream;
         }
 
         return a_istream;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, statement &a_statement)
+    {
+        /////////////////////////////////////////
+        // declare the variable association-list
+        /////////////////////////////////////////
+        std::map<std::string, term_t> l_var_alist;
+
+        return extract_statement(a_istream, l_var_alist, a_statement);
     }
 
 }
@@ -1175,436 +1197,414 @@ static void test_parser_extract_prolog_expression()
     }
 }
 
-// static void test_parser_extract_axiom_statement()
-// {
-//     fid_t l_frame_id = PL_open_foreign_frame();
+static void test_parser_extract_axiom_statement()
+{
+    fid_t l_frame_id = PL_open_foreign_frame();
 
-//     constexpr bool ENABLE_DEBUG_LOGS = true;
+    constexpr bool ENABLE_DEBUG_LOGS = true;
 
-//     using unilog::axiom_statement;
-//     using unilog::statement;
+    using unilog::axiom_statement;
+    using unilog::statement;
 
-//     std::map<std::string, term_t> l_var_alist;
+    std::map<std::string, term_t> l_var_alist;
 
-//     data_points<std::string, axiom_statement> l_test_cases =
-//         {
-//             {
-//                 "axiom a0 x",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("a0"),
-//                     .m_theorem =
-//                         make_atom("x"),
-//                 },
-//             },
-//             {
-//                 "axiom add_bc_0 [add [] L L]",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("add_bc_0"),
-//                     .m_theorem =
-//                         make_list({
-//                             make_atom("add"),
-//                             make_nil(),
-//                             make_var("L", l_var_alist),
-//                             make_var("L", l_var_alist),
-//                         }),
-//                 },
-//             },
-//             {
-//                 "axiom @tag [awesome X]",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("@tag"),
-//                     .m_theorem =
-//                         make_list({
-//                             make_atom("awesome"),
-//                             make_var("X", l_var_alist),
-//                         }),
-//                 },
-//             },
-//             {
-//                 "axiom tag[theorem]",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("tag"),
-//                     .m_theorem =
-//                         make_list({
-//                             make_atom("theorem"),
-//                         }),
-//                 },
-//             },
-//             {
-//                 "axiom abc '123'",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("abc"),
-//                     .m_theorem =
-//                         make_atom("123"),
-//                 },
-//             },
-//             {
-//                 "axiom \"123\" [[[]] a \"123\"]",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("123"),
-//                     .m_theorem =
-//                         make_list({
-//                             make_list({
-//                                 make_list({
+    data_points<std::string, axiom_statement> l_test_cases =
+        {
+            {
+                "axiom a0 x ;",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("a0"),
+                    .m_theorem =
+                        make_atom("x"),
+                },
+            },
+            {
+                "axiom add_bc_0 [add [] L L];",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("add_bc_0"),
+                    .m_theorem =
+                        make_list({
+                            make_atom("add"),
+                            make_nil(),
+                            make_var("L", l_var_alist),
+                            make_var("L", l_var_alist),
+                        }),
+                },
+            },
+            {
+                "axiom \"@tag\" [awesome X];",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("@tag"),
+                    .m_theorem =
+                        make_list({
+                            make_atom("awesome"),
+                            make_var("X", l_var_alist),
+                        }),
+                },
+            },
+            {
+                "axiom tag[theorem]\n\t;",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("tag"),
+                    .m_theorem =
+                        make_list({
+                            make_atom("theorem"),
+                        }),
+                },
+            },
+            {
+                "axiom abc '123';",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("abc"),
+                    .m_theorem =
+                        make_atom("123"),
+                },
+            },
+            {
+                "\'axiom\' \"123\" [[[]] a \"123\"]\t\r;",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("123"),
+                    .m_theorem =
+                        make_list({
+                            make_list({
+                                make_list({
 
-//                                 }),
-//                             }),
-//                             make_atom("a"),
-//                             make_atom("123"),
-//                         }),
-//                 },
-//             },
-//             {
-//                 "axiom \'+/bc/0\'\n"
-//                 "[\'+\'\n"
-//                 "    []\n"
-//                 "    L\n"
-//                 "    L\n"
-//                 "]",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("+/bc/0"),
-//                     .m_theorem =
-//                         make_list({
-//                             make_atom("+"),
-//                             make_list({}),
-//                             make_var("L", l_var_alist),
-//                             make_var("L", l_var_alist),
-//                         }),
-//                 },
-//             },
-//             {
-//                 "axiom \'123\'[\'! this is a \\t quotation\']",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("123"),
-//                     .m_theorem =
-//                         make_list({
-//                             make_atom("! this is a \t quotation"),
-//                         }),
-//                 },
-//             },
-//             {
-//                 "axiom \'tag\' theorem",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("tag"),
-//                     .m_theorem =
-//                         make_atom("theorem"),
-//                 },
-//             },
-//             {
-//                 "axiom \"tag\" theorem",
-//                 axiom_statement{
-//                     .m_tag =
-//                         make_atom("tag"),
-//                     .m_theorem =
-//                         make_atom("theorem"),
-//                 },
-//             },
-//         };
+                                }),
+                            }),
+                            make_atom("a"),
+                            make_atom("123"),
+                        }),
+                },
+            },
+            {
+                "axiom \'+/bc/0\'\n"
+                "[\'+\'\n"
+                "    []\n"
+                "    L\n"
+                "    L\n"
+                "]\t;",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("+/bc/0"),
+                    .m_theorem =
+                        make_list({
+                            make_atom("+"),
+                            make_list({}),
+                            make_var("L", l_var_alist),
+                            make_var("L", l_var_alist),
+                        }),
+                },
+            },
+            {
+                "axiom \'123\'[\'! this is a \\t quotation\']\n\n;",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("123"),
+                    .m_theorem =
+                        make_list({
+                            make_atom("! this is a \t quotation"),
+                        }),
+                },
+            },
+            {
+                "\"axiom\" \'tag\' theorem;",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("tag"),
+                    .m_theorem =
+                        make_atom("theorem"),
+                },
+            },
+            {
+                "\'axiom\' \"tag\" theorem\t;",
+                axiom_statement{
+                    .m_tag =
+                        make_atom("tag"),
+                    .m_theorem =
+                        make_atom("theorem"),
+                },
+            },
+        };
 
-//     for (const auto &[l_key, l_value] : l_test_cases)
-//     {
-//         fid_t l_case_frame = PL_open_foreign_frame();
+    for (const auto &[l_key, l_value] : l_test_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
 
-//         // clear the var alist before each iteration
-//         l_var_alist.clear();
+        // clear the var alist before each iteration
+        // l_var_alist.clear();
 
-//         std::stringstream l_ss(l_key);
+        // WE DO NOT WANT TO CLEAR THE ALIST BETWEEN ITERATIONS.
+        //     THIS IS BECAUSE THE VARIABLES IN l_test_cases WERE CREATED BEFORE THIS
+        //     ITERATION. INSTEAD, IF ANY ERRONIOUS UNIFICATION OCCURS ON THIS ITERATION,
+        //     THE FRAME WILL BE POPPED AT THE END OF THIS CODE BLOCK (PL_close_foreign_frame())
 
-//         statement l_exp;
-//         l_ss >> l_exp;
+        std::stringstream l_ss(l_key);
 
-//         axiom_statement l_axs = std::get<axiom_statement>(l_exp);
+        statement l_statement;
+        // l_ss >> l_exp;
+        unilog::extract_statement(l_ss, l_var_alist, l_statement);
 
-//         // make sure the stringstream is not in failstate
-//         assert(!l_ss.fail());
+        axiom_statement l_axs = std::get<axiom_statement>(l_statement);
 
-//         assert(PL_compare(l_axs.m_tag, l_value.m_tag) == 0);
-//         assert(PL_compare(l_axs.m_theorem, l_value.m_theorem) == 0);
+        // make sure the stringstream is not in failstate
+        assert(!l_ss.fail());
 
-//         LOG("success, case: \"" << l_key << "\"" << std::endl);
+        assert(PL_compare(l_axs.m_tag, l_value.m_tag) == 0);
+        assert(PL_compare(l_axs.m_theorem, l_value.m_theorem) == 0);
 
-//         PL_close_foreign_frame(l_case_frame);
-//     }
+        LOG("success, case: \"" << l_key << "\"" << std::endl);
 
-//     // std::vector<std::string> l_fail_cases =
-//     //     {
-//     //         "",
-//     //         "abc",
-//     //         "_ _",
-//     //         "VariableTag Theorem",
-//     //         "VariableTag atom",
-//     //         "VariableTag [elem0 elem1]",
-//     //         "[] theorem",
-//     //         "[X] theorem",
-//     //         "[atom] theorem",
-//     //         "axiom a0",
-//     //         "axiom \'a0\'",
-//     //         "axiom [tag] [expr]",
-//     //         "guide a0 x",
-//     //         "infer i0 x",
-//     //         "refer r0 x",
-//     //     };
+        PL_close_foreign_frame(l_case_frame);
+    }
 
-//     // for (const auto &l_input : l_fail_cases)
-//     // {
-//     //     std::stringstream l_ss(l_input);
+    std::vector<std::string> l_fail_cases =
+        {
+            "",
+            "abc",
+            "X",
+            ";",
+            "[]",
+            "axiom",
+            "axiom a0",
+            "axiom a0;",
+            "axiom a0 x",
+            "axiom a0 x y;",
+            "\'axiom\'",
+            "axiom \'a0\'",
+            "axiom \'a0\';",
+            "axiom \'a0\' \'x\'",
+            "axiom \'a0\' \'x\' \'y\';",
+        };
 
-//     //     axiom_statement l_axiom_statement;
+    for (const auto &l_input : l_fail_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
 
-//     //     l_ss >> l_axiom_statement;
+        std::stringstream l_ss(l_input);
 
-//     //     // ensure failure of extraction
-//     //     assert(l_ss.fail());
+        statement l_statement;
+        l_ss >> l_statement;
 
-//     //     LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
-//     // }
+        // ensure failure of extraction
+        assert(l_ss.fail());
 
-//     PL_close_foreign_frame(l_frame_id);
-// }
+        LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
 
-// void test_parser_extract_guide_statement()
-// {
-//     constexpr bool ENABLE_DEBUG_LOGS = true;
+        PL_close_foreign_frame(l_case_frame);
+    }
 
-//     using unilog::atom;
-//     using unilog::guide_statement;
-//     using unilog::lexeme;
-//     using unilog::list_close;
-//     using unilog::list_open;
-//     using unilog::quoted_atom;
-//     using unilog::term;
-//     using unilog::unquoted_atom;
-//     using unilog::variable;
+    PL_close_foreign_frame(l_frame_id);
+}
 
-//     data_points<std::string, guide_statement> l_test_cases =
-//         {
-//             {
-//                 "guide g_add_bc []\n"
-//                 "[gor\n"
-//                 "    add_bc_0\n"
-//                 "    add_bc_1\n"
-//                 "    add_bc_2\n"
-//                 "    add_bc_3\n"
-//                 "    add_bc_4\n"
-//                 "    add_bc_5\n"
-//                 "]\n",
-//                 guide_statement{
-//                     .m_tag =
-//                         term{
-//                             unquoted_atom{
-//                                 "g_add_bc",
-//                             },
-//                         },
-//                     .m_args = std::list<variable>({}),
-//                     .m_guide =
-//                         term{
-//                             std::list<term>{
-//                                 term{
-//                                     unquoted_atom{
-//                                         "gor",
-//                                     },
-//                                 },
-//                                 term{
-//                                     unquoted_atom{
-//                                         "add_bc_0",
-//                                     },
-//                                 },
-//                                 term{
-//                                     unquoted_atom{
-//                                         "add_bc_1",
-//                                     },
-//                                 },
-//                                 term{
-//                                     unquoted_atom{
-//                                         "add_bc_2",
-//                                     },
-//                                 },
-//                                 term{
-//                                     unquoted_atom{
-//                                         "add_bc_3",
-//                                     },
-//                                 },
-//                                 term{
-//                                     unquoted_atom{
-//                                         "add_bc_4",
-//                                     },
-//                                 },
-//                                 term{
-//                                     unquoted_atom{
-//                                         "add_bc_5",
-//                                     },
-//                                 },
-//                             },
-//                         },
-//                 },
-//             },
-//             {
-//                 "guide g0[][bind K [theorem a0]]",
-//                 guide_statement{
-//                     .m_tag = unquoted_atom{"g0"},
-//                     .m_args = std::list<variable>({}),
-//                     .m_guide = term{std::list<term>({
-//                         term{
-//                             unquoted_atom{"bind"},
-//                         },
-//                         term{
-//                             variable{"K"},
-//                         },
-//                         term{std::list<term>({
-//                             term{
-//                                 unquoted_atom{"theorem"},
-//                             },
-//                             term{
-//                                 unquoted_atom{"a0"},
-//                             },
-//                         })},
-//                     })}},
-//             },
-//             {"guide \"g\"[] [sub thm [theorem a0] [theorem a1]]",
-//              guide_statement{
-//                  .m_tag = quoted_atom{"g"},
-//                  .m_args = std::list<variable>({}),
-//                  .m_guide = term{
-//                      std::list<term>({
-//                          term{unquoted_atom{"sub"}},
-//                          term{unquoted_atom{"thm"}},
-//                          term{std::list<term>({
-//                              term{unquoted_atom{"theorem"}},
-//                              term{unquoted_atom{"a0"}},
-//                          })},
-//                          term{std::list<term>({
-//                              term{unquoted_atom{"theorem"}},
-//                              term{unquoted_atom{"a1"}},
-//                          })},
-//                      })}}},
-//             {
-//                 "guide \"g\" [Subgoal Subguide][sub Subgoal Subguide [theorem a1]]",
-//                 guide_statement{
-//                     .m_tag = quoted_atom{"g"},
-//                     .m_args = std::list<variable>({
-//                         variable{"Subgoal"},
-//                         variable{"Subguide"},
-//                     }),
-//                     .m_guide = term{std::list<term>({
-//                         term{
-//                             unquoted_atom{"sub"},
-//                         },
-//                         term{
-//                             variable{"Subgoal"},
-//                         },
-//                         term{
-//                             variable{"Subguide"},
-//                         },
-//                         term{std::list<term>({
-//                             term{
-//                                 unquoted_atom{"theorem"},
-//                             },
-//                             term{
-//                                 unquoted_atom{"a1"},
-//                             },
-//                         })},
-//                     })},
-//                 },
-//             },
-//             {
-//                 "guide gt [] [mp [theorem a0] [theorem a1]]",
-//                 guide_statement{
-//                     .m_tag = unquoted_atom{"gt"},
-//                     .m_args = std::list<variable>({}),
-//                     .m_guide = term{
-//                         std::list<term>({
-//                             term{
-//                                 unquoted_atom{"mp"},
-//                             },
-//                             term{
-//                                 std::list<term>({
-//                                     term{
-//                                         unquoted_atom{"theorem"},
-//                                     },
-//                                     term{
-//                                         unquoted_atom{"a0"},
-//                                     },
-//                                 }),
-//                             },
-//                             term{
-//                                 std::list<term>({
-//                                     term{
-//                                         unquoted_atom{"theorem"},
-//                                     },
-//                                     term{
-//                                         unquoted_atom{"a1"},
-//                                     },
-//                                 }),
-//                             },
-//                         }),
-//                     },
-//                 },
-//             },
-//         };
+void test_parser_extract_guide_statement()
+{
+    fid_t l_frame = PL_open_foreign_frame();
 
-//     for (const auto &[l_key, l_value] : l_test_cases)
-//     {
-//         std::stringstream l_ss(l_key);
+    constexpr bool ENABLE_DEBUG_LOGS = true;
 
-//         guide_statement l_exp;
+    using unilog::guide_statement;
+    using unilog::statement;
 
-//         l_ss >> l_exp;
+    std::map<std::string, term_t> l_var_alist;
 
-//         assert(l_exp == l_value);
+    data_points<std::string, guide_statement> l_test_cases =
+        {
+            {
+                "guide g_add_bc []\n"
+                "[gor\n"
+                "    add_bc_0\n"
+                "    add_bc_1\n"
+                "    add_bc_2\n"
+                "    add_bc_3\n"
+                "    add_bc_4\n"
+                "    add_bc_5\n"
+                "]\n;",
+                guide_statement{
+                    .m_tag = make_atom("g_add_bc"),
+                    .m_args = make_list({}),
+                    .m_guide = make_list({
+                        make_atom("gor"),
+                        make_atom("add_bc_0"),
+                        make_atom("add_bc_1"),
+                        make_atom("add_bc_2"),
+                        make_atom("add_bc_3"),
+                        make_atom("add_bc_4"),
+                        make_atom("add_bc_5"),
+                    }),
+                },
+            },
+            {
+                "guide g0[][bind K [theorem a0]]\t;",
+                guide_statement{
+                    .m_tag = make_atom("g0"),
+                    .m_args = make_list({}),
+                    .m_guide = make_list({
+                        make_atom("bind"),
+                        make_var("K", l_var_alist),
+                        make_list({
+                            make_atom("theorem"),
+                            make_atom("a0"),
+                        }),
+                    }),
+                },
+            },
+            {
+                "guide \"g\"[] [sub thm [theorem a0] [theorem a1]];",
+                guide_statement{
+                    .m_tag = make_atom("g"),
+                    .m_args = make_list({}),
+                    .m_guide = make_list({
+                        make_atom("sub"),
+                        make_atom("thm"),
+                        make_list({
+                            make_atom("theorem"),
+                            make_atom("a0"),
+                        }),
+                        make_list({
+                            make_atom("theorem"),
+                            make_atom("a1"),
+                        }),
+                    }),
+                },
+            },
+            {
+                "guide \"g\" [Subgoal Subguide][sub Subgoal Subguide [theorem a1]]\n;",
+                guide_statement{
+                    .m_tag = make_atom("g"),
+                    .m_args = make_list({
+                        make_var("Subgoal", l_var_alist),
+                        make_var("Subguide", l_var_alist),
+                    }),
+                    .m_guide = make_list({
+                        make_atom("sub"),
+                        make_var("Subgoal", l_var_alist),
+                        make_var("Subguide", l_var_alist),
+                        make_list({
+                            make_atom("theorem"),
+                            make_atom("a1"),
+                        }),
+                    }),
+                },
 
-//         // make sure the stringstream is not in failstate
-//         assert(!l_ss.fail());
+            },
+            {
+                "guide gt [] [mp [theorem a0] [theorem a1]];",
+                guide_statement{
+                    .m_tag = make_atom("gt"),
+                    .m_args = make_list({}),
+                    .m_guide = make_list({
+                        make_atom("mp"),
+                        make_list({
+                            make_atom("theorem"),
+                            make_atom("a0"),
+                        }),
+                        make_list({
+                            make_atom("theorem"),
+                            make_atom("a1"),
+                        }),
+                    }),
+                },
+            },
+            {
+                "guide gt [x z] [eval];",
+                guide_statement{
+                    .m_tag = make_atom("gt"),
+                    .m_args = make_list({
+                        make_atom("x"),
+                        make_atom("z"),
+                    }),
+                    .m_guide = make_list({
+                        make_atom("eval"),
+                    }),
+                },
+            },
+            {
+                "\'guide\' \"t a g\" [X Y| Rest] [\"theorem\" \'a0\'];",
+                guide_statement{
+                    .m_tag = make_atom("t a g"),
+                    .m_args = make_list({
+                                            make_var("X", l_var_alist),
+                                            make_var("Y", l_var_alist),
+                                        },
+                                        make_var("Rest", l_var_alist)),
+                    .m_guide = make_list({
+                        make_atom("theorem"),
+                        make_atom("a0"),
+                    }),
+                },
+            },
+        };
 
-//         LOG("success, case: \"" << l_key << "\"" << std::endl);
-//     }
+    for (const auto &[l_key, l_value] : l_test_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
 
-//     std::vector<std::string> l_fail_cases =
-//         {
-//             "_",
-//             "abc",
-//             "",
-//             "_ _",
-//             "VariableTag Guide",
-//             "VariableTag atom",
-//             "VariableTag [elem0 elem1]",
-//             "[] theorem",
-//             "[X] theorem",
-//             "[atom] theorem",
-//             "axiom a0",
-//             "axiom \'a0\'",
-//             "axiom [tag] [expr]",
-//             "axiom a0 x"
-//             "infer i0 x",
-//             "refer r0 x",
-//             "guide g0 [",
-//             "guide g0 [test] [redir]",   // arg list is not comprised of variables
-//             "guide g0 [V test] [redir]", // arg list is not comprised of only variables
-//             "guide g0 n [theorem a0]",
-//         };
+        std::stringstream l_ss(l_key);
 
-//     for (const auto &l_input : l_fail_cases)
-//     {
-//         std::stringstream l_ss(l_input);
+        statement l_statement;
 
-//         guide_statement l_statement;
+        unilog::extract_statement(l_ss, l_var_alist, l_statement);
 
-//         l_ss >> l_statement;
+        // make sure the stringstream is not in failstate
+        assert(!l_ss.fail());
 
-//         // ensure failure of extraction
-//         assert(l_ss.fail());
+        guide_statement l_gs = std::get<guide_statement>(l_statement);
 
-//         LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
-//     }
-// }
+        assert(PL_compare(l_gs.m_tag, l_value.m_tag) == 0);
+        assert(PL_compare(l_gs.m_args, l_value.m_args) == 0);
+        assert(PL_compare(l_gs.m_guide, l_value.m_guide) == 0);
+
+        LOG("success, case: \"" << l_key << "\"" << std::endl);
+
+        PL_close_foreign_frame(l_case_frame);
+    }
+
+    // std::vector<std::string> l_fail_cases =
+    //     {
+    //         "_",
+    //         "abc",
+    //         "",
+    //         "_ _",
+    //         "VariableTag Guide",
+    //         "VariableTag atom",
+    //         "VariableTag [elem0 elem1]",
+    //         "[] theorem",
+    //         "[X] theorem",
+    //         "[atom] theorem",
+    //         "axiom a0",
+    //         "axiom \'a0\'",
+    //         "axiom [tag] [expr]",
+    //         "axiom a0 x"
+    //         "infer i0 x",
+    //         "refer r0 x",
+    //         "guide g0 [",
+    //         "guide g0 [test] [redir]",   // arg list is not comprised of variables
+    //         "guide g0 [V test] [redir]", // arg list is not comprised of only variables
+    //         "guide g0 n [theorem a0]",
+    //     };
+
+    // for (const auto &l_input : l_fail_cases)
+    // {
+    //     std::stringstream l_ss(l_input);
+
+    //     guide_statement l_statement;
+
+    //     l_ss >> l_statement;
+
+    //     // ensure failure of extraction
+    //     assert(l_ss.fail());
+
+    //     LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
+    // }
+
+    PL_close_foreign_frame(l_frame);
+}
 
 // void test_parser_extract_infer_statement()
 // {
@@ -1971,6 +1971,8 @@ void test_parser_main()
     TEST(test_make_list);
     TEST(test_make_variable);
     TEST(test_parser_extract_prolog_expression);
+    TEST(test_parser_extract_axiom_statement);
+    TEST(test_parser_extract_guide_statement);
     // TEST(test_parser_extract_axiom_statement);
     // TEST(test_parser_extract_guide_statement);
     // TEST(test_parser_extract_infer_statement);
