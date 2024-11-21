@@ -3338,78 +3338,137 @@ static void test_parser_extract_refer_statement()
     PL_discard_foreign_frame(l_frame);
 }
 
-// static void test_parse_file_example_0()
-// {
-//     using unilog::atom;
-//     using unilog::axiom_statement;
-//     using unilog::guide_statement;
-//     using unilog::infer_statement;
-//     using unilog::refer_statement;
-//     using unilog::statement;
+static void test_parse_file_examples()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
 
-//     std::ifstream l_if("./src/test_input_files/parser_example_0/main.ul");
+    using unilog::atom;
+    using unilog::axiom_statement;
+    using unilog::guide_statement;
+    using unilog::infer_statement;
+    using unilog::refer_statement;
+    using unilog::statement;
 
-//     std::stringstream l_file_contents;
-//     if (!(l_file_contents << l_if.rdbuf())) // read in file content
-//         throw std::runtime_error("Failed to read file");
+    std::map<std::string, term_t> l_var_alist;
 
-//     std::list<statement> l_statements;
-//     std::copy(std::istream_iterator<statement>(l_file_contents), std::istream_iterator<statement>(), std::back_inserter(l_statements));
+    data_points<std::string, std::list<statement>> l_data_points =
+        {
+            {
+                "./src/test_input_files/parser_example_0/main.ul",
+                {
+                    axiom_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_atom("test"),
+                    },
+                    axiom_statement{
+                        .m_tag = make_list({
+                            make_atom("a1"),
+                        }),
+                        .m_theorem = make_atom("x"),
+                    },
+                    axiom_statement{
+                        .m_tag = make_atom("a2"),
+                        .m_theorem = make_list({
+                            make_atom("x"),
+                        }),
+                    },
+                },
+            },
+            {
+                "./src/test_input_files/parser_example_1/main.ul",
+                {
+                    axiom_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_atom("if"),
+                            make_atom("y"),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_atom("a1"),
+                        .m_theorem = make_atom("x"),
+                    },
+                },
+            },
+            {
+                "./src/test_input_files/parser_example_2/main.u",
+                {
+                    axiom_statement{
+                        .m_tag = make_list({
+                                               make_atom("a0"),
+                                               make_var("X", l_var_alist),
+                                           },
+                                           make_var("X", l_var_alist)),
+                        .m_theorem = make_list({
+                            make_atom("claim"),
+                            make_atom("daniel"),
+                            make_list({
+                                make_atom("if"),
+                                make_atom("y"),
+                                make_atom("x"),
+                            }),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_list({
+                                               make_atom("a1"),
+                                               make_var("Y", l_var_alist),
+                                           },
+                                           make_var("Z", l_var_alist)),
+                        .m_theorem = make_list({
+                            make_atom("claim"),
+                            make_atom("daniel"),
+                            make_atom("x"),
+                        }),
+                    },
+                    infer_statement{
+                        .m_tag = make_atom("i0"),
+                        .m_theorem = make_list({
+                            make_atom("claim"),
+                            make_atom("daniel"),
+                            make_atom("y"),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("bout"),
+                            make_atom("daniel"),
+                            make_list({
+                                make_atom("mp"),
+                                make_list({
+                                    make_atom("theorem"),
+                                    make_list({
+                                                  make_atom("a0"),
+                                                  make_var("A", l_var_alist),
+                                              },
+                                              make_var("B", l_var_alist)),
+                                }),
+                                make_list({
+                                    make_atom("theorem"),
+                                    make_list({
+                                                  make_atom("a1"),
+                                                  make_var("A", l_var_alist),
+                                              },
+                                              make_var("B", l_var_alist)),
+                                }),
+                            }),
+                        }),
+                    },
+                },
+            },
+        };
 
-//     assert(!l_file_contents.eof()); // invalid syntax, will be detected and cause failure
-//     assert(l_statements == std::list<statement>(
-//                                {
-//                                    axiom_statement{
-//                                        .m_tag = quoted_atom{"a0"},
-//                                        .m_theorem = term{unquoted_atom{"test"}},
-//                                    },
-//                                }));
-// }
+    for (const auto &[l_file_path, l_expected] : l_data_points)
+    {
+        std::ifstream l_if(l_file_path);
 
-// void test_parse_file_example_1()
-// {
-//     using unilog::atom;
-//     using unilog::axiom_statement;
-//     using unilog::guide_statement;
-//     using unilog::infer_statement;
-//     using unilog::lexeme;
-//     using unilog::list_close;
-//     using unilog::list_open;
-//     using unilog::list_separator;
-//     using unilog::quoted_atom;
-//     using unilog::refer_statement;
-//     using unilog::statement;
-//     using unilog::term;
-//     using unilog::unquoted_atom;
-//     using unilog::variable;
+        std::list<statement> l_statements;
+        std::copy(std::istream_iterator<statement>(l_if), std::istream_iterator<statement>(), std::back_inserter(l_statements));
 
-//     std::ifstream l_if("./src/test_input_files/parser_example_1/main.ul");
+        assert(l_statements == l_expected);
 
-//     std::stringstream l_file_contents;
-//     if (!(l_file_contents << l_if.rdbuf())) // read in file content
-//         throw std::runtime_error("Failed to read file");
-
-//     std::list<statement> l_statements;
-//     std::copy(std::istream_iterator<statement>(l_file_contents), std::istream_iterator<statement>(), std::back_inserter(l_statements));
-
-//     assert(l_file_contents.eof()); // assert successful parse
-//     assert(l_statements == std::list<statement>(
-//                                {
-//                                    axiom_statement{
-//                                        .m_tag = unquoted_atom{"a0"},
-//                                        .m_theorem = term{std::list<term>({
-//                                            term{unquoted_atom{"if"}},
-//                                            term{unquoted_atom{"y"}},
-//                                            term{unquoted_atom{"x"}},
-//                                        })},
-//                                    },
-//                                    axiom_statement{
-//                                        .m_tag = unquoted_atom{"a1"},
-//                                        .m_theorem = term{unquoted_atom{"x"}},
-//                                    },
-
-//                                }));
-// }
+        LOG("success, parsed file: " << l_file_path << std::endl);
+    }
+}
 
 void test_parser_main()
 {
@@ -3430,8 +3489,7 @@ void test_parser_main()
     TEST(test_parser_extract_guide_statement);
     TEST(test_parser_extract_infer_statement);
     TEST(test_parser_extract_refer_statement);
-    // TEST(test_parse_file_example_0);
-    // TEST(test_parse_file_example_1);
+    TEST(test_parse_file_examples);
 }
 
 #endif
