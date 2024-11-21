@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <map>
 #include <iostream>
+#include <random>
 
 #include "parser.hpp"
 #include "lexer.hpp"
@@ -11,6 +12,123 @@
 ///     otherwise, computing value and caching it.
 #define CACHE(cache, key, value) \
     (cache.contains(key) ? cache[key] : cache[key] = value)
+
+static std::string random_string(size_t a_length)
+{
+    // Character set: alphanumeric (you can customize this)
+    static const std::string s_chars =
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789";
+
+    // Random number generator
+    static std::random_device s_rd;          // Seed
+    static std::mt19937 s_generator(s_rd()); // Random-number engine
+    static std::uniform_int_distribution<> s_distribution(0, s_chars.size() - 1);
+
+    // Generate random string
+    std::string l_result;
+
+    for (size_t i = 0; i < a_length; ++i)
+    {
+        l_result += s_chars[s_distribution(s_generator)];
+    }
+
+    return l_result;
+}
+
+// determines if the two terms share the same form. consult function definition for more details.
+// this WILL MODIFY these terms, on the current prolog frame.
+static bool equal_forms(term_t a_lhs, term_t a_rhs)
+{
+    // Formal equivalence is different than ability to unify,
+    //     and is different than PL_compare() == 0.
+    //
+    // Examples of formal equivalence:
+    // 1.
+    //     [X X Y]
+    //     [A A B]
+    // 2.
+    //     [X [X a] b]
+    //     [A [A a] b]
+    //
+    // Examples of formal inequivalence:
+    // 1.
+    //     [X X Y]
+    //     [A A A]
+    // 2.
+    //     [a a a]
+    //     [A A A]
+    //
+
+    if (PL_get_nil(a_lhs) && PL_get_nil(a_rhs))
+    {
+        /////////////////////////////////////////
+        // nil is universal
+        /////////////////////////////////////////
+        return true;
+    }
+
+    if (PL_is_atom(a_lhs) && PL_is_atom(a_rhs))
+    {
+        /////////////////////////////////////////
+        // simply compare the atoms
+        /////////////////////////////////////////
+        return PL_compare(a_lhs, a_rhs) == 0;
+    }
+
+    if (PL_is_list(a_lhs) && PL_is_list(a_rhs))
+    {
+        term_t l_lhs_car = PL_new_term_ref();
+        term_t l_lhs_cdr = PL_new_term_ref();
+        if (!PL_get_list(a_lhs, l_lhs_car, l_lhs_cdr))
+            return false;
+
+        term_t l_rhs_car = PL_new_term_ref();
+        term_t l_rhs_cdr = PL_new_term_ref();
+        if (!PL_get_list(a_rhs, l_rhs_car, l_rhs_cdr))
+            return false;
+
+        /////////////////////////////////////////
+        // ensure both the cars and cdrs are formally equivalent
+        /////////////////////////////////////////
+        return equal_forms(l_lhs_car, l_rhs_car) &&
+               equal_forms(l_lhs_cdr, l_rhs_cdr);
+    }
+
+    if (PL_is_variable(a_lhs) && PL_is_variable(a_rhs))
+    {
+        constexpr int VAR_RANDOM_BIND_LEN = 50;
+
+        /////////////////////////////////////////
+        // generate a random binding string.
+        // the purpose of this is the ensure that
+        // all instances of this variable assume this new value,
+        // which will reveal the difference in distribution
+        // of the lhs variable and rhs variable.
+        /////////////////////////////////////////
+        std::string l_random_string = random_string(VAR_RANDOM_BIND_LEN);
+
+        /////////////////////////////////////////
+        // construct random atom
+        /////////////////////////////////////////
+        term_t l_random_atom = PL_new_term_ref();
+        if (!PL_put_atom_chars(l_random_atom, l_random_string.c_str()))
+            return false;
+
+        /////////////////////////////////////////
+        // unify random atom into both vars
+        /////////////////////////////////////////
+        if (!PL_unify(l_random_atom, a_lhs))
+            return false;
+        if (!PL_unify(l_random_atom, a_rhs))
+            return false;
+
+        return true;
+    }
+
+    return false;
+}
 
 namespace unilog
 {
@@ -299,6 +417,48 @@ namespace unilog
         return a_istream;
     }
 
+    bool operator==(const axiom_statement &a_lhs, const axiom_statement &a_rhs)
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        return equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
+               equal_forms(a_lhs.m_theorem, a_rhs.m_theorem);
+
+        PL_discard_foreign_frame(l_frame);
+    }
+
+    bool operator==(const guide_statement &a_lhs, const guide_statement &a_rhs)
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        return equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
+               equal_forms(a_lhs.m_args, a_rhs.m_args) &&
+               equal_forms(a_lhs.m_guide, a_rhs.m_guide);
+
+        PL_discard_foreign_frame(l_frame);
+    }
+
+    bool operator==(const infer_statement &a_lhs, const infer_statement &a_rhs)
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        return equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
+               equal_forms(a_lhs.m_theorem, a_rhs.m_theorem) &&
+               equal_forms(a_lhs.m_guide, a_rhs.m_guide);
+
+        PL_discard_foreign_frame(l_frame);
+    }
+
+    bool operator==(const refer_statement &a_lhs, const refer_statement &a_rhs)
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        return equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
+               equal_forms(a_lhs.m_file_path, a_rhs.m_file_path);
+
+        PL_discard_foreign_frame(l_frame);
+    }
+
     std::istream &operator>>(std::istream &a_istream, statement &a_statement)
     {
         /////////////////////////////////////////
@@ -390,7 +550,7 @@ static void test_make_nil()
 
     assert(PL_get_nil(l_nil));
 
-    PL_close_foreign_frame(l_frame_id);
+    PL_discard_foreign_frame(l_frame_id);
 }
 
 static void test_make_atom()
@@ -431,7 +591,7 @@ static void test_make_atom()
         assert(PL_compare(l_atom_0, l_atom_1) != 0);
     };
 
-    PL_close_foreign_frame(l_frame_id);
+    PL_discard_foreign_frame(l_frame_id);
 }
 
 static void test_make_list()
@@ -556,7 +716,7 @@ static void test_make_list()
         assert(PL_compare(make_list({make_list({l_caar}), l_cadr, l_caddr}), l_native_list) == 0);
     };
 
-    PL_close_foreign_frame(l_frame_id);
+    PL_discard_foreign_frame(l_frame_id);
 }
 
 static void test_make_variable()
@@ -605,446 +765,968 @@ static void test_make_variable()
         assert(l_var_alist.size() == 2);
     };
 
-    PL_close_foreign_frame(l_frame_id);
+    PL_discard_foreign_frame(l_frame_id);
+}
+
+static void test_random_string()
+{
+    // check outputs different value each time
+    {
+        std::string l_lhs = random_string(30);
+        std::string l_rhs = random_string(30);
+        assert(l_lhs != l_rhs);
+    };
+
+    // check size is correct
+    {
+        constexpr size_t STR_SZ = 30;
+        std::string l_str = random_string(STR_SZ);
+        assert(l_str.size() == STR_SZ);
+    };
+
+    // check size is correct
+    {
+        constexpr size_t STR_SZ = 10;
+        std::string l_str = random_string(STR_SZ);
+        assert(l_str.size() == STR_SZ);
+    };
+
+    // check size is correct
+    {
+        constexpr size_t STR_SZ = 1;
+        std::string l_str = random_string(STR_SZ);
+        assert(l_str.size() == STR_SZ);
+    };
+
+    // check size is correct
+    {
+        constexpr size_t STR_SZ = 12;
+        std::string l_str = random_string(STR_SZ);
+        assert(l_str.size() == STR_SZ);
+    };
+}
+
+static void test_equal_forms()
+{
+    // nil == nil
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({});
+        term_t l_rhs = make_list({});
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // equal atom check
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        term_t l_lhs = make_atom("abc");
+        term_t l_rhs = make_atom("abc");
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // inequal atom check
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        term_t l_lhs = make_atom("abc");
+        term_t l_rhs = make_atom("abc1");
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_atom("abc");
+        term_t l_rhs = make_var("A", l_var_alist);
+
+        assert(PL_is_variable(l_rhs));
+        assert(!equal_forms(l_lhs, l_rhs));
+        assert(PL_is_variable(l_rhs)); // rhs REMAINS var since lhs was not var
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // singular vars have eq forms
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_var("A", l_var_alist);
+        term_t l_rhs = make_var("B", l_var_alist);
+
+        assert(PL_is_variable(l_lhs));
+        assert(PL_is_variable(l_rhs));
+        assert(equal_forms(l_lhs, l_rhs));
+        assert(!PL_is_variable(l_lhs)); // vars will be bound to random atoms
+        assert(!PL_is_variable(l_rhs)); // vars will be bound to random atoms
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // single-element list eq
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_atom("a")});
+        term_t l_rhs = make_list({make_atom("a")});
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // single-element list neq
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_atom("a")});
+        term_t l_rhs = make_list({make_atom("b")});
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // single-element list neq
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_atom("a")});
+        term_t l_rhs = make_list({make_var("A", l_var_alist)});
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // car & cdr eq
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_atom("a")}, make_atom("b"));
+        term_t l_rhs = make_list({make_atom("a")}, make_atom("b"));
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq in structure
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_atom("a")}, make_atom("b"));
+        term_t l_rhs = make_list({make_atom("a"), make_atom("b")});
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq in structure
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_atom("a")}, make_atom("b"));
+        term_t l_rhs = make_list({make_atom("a")});
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq in structure
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_nil();
+        term_t l_rhs = make_list({make_atom("a")});
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // two-element list eq
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_atom("a"), make_atom("b")});
+        term_t l_rhs = make_list({make_atom("a"), make_atom("b")});
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // two-element list neq
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_atom("a"), make_atom("b")});
+        term_t l_rhs = make_list({make_atom("a"), make_atom("c")});
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq structures
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_atom("a")});
+        term_t l_rhs = make_var("X", l_var_alist);
+
+        assert(!equal_forms(l_lhs, l_rhs));
+        assert(PL_is_variable(l_rhs)); // rhs remains var
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // eq forms, nested lists
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_atom("b"),
+                                               },
+                                               make_atom("c")),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+        term_t l_rhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_atom("b"),
+                                               },
+                                               make_atom("c")),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq forms, nested lists
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_atom("b1"),
+                                               },
+                                               make_atom("c")),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+        term_t l_rhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_atom("b"),
+                                               },
+                                               make_atom("c")),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq forms, nested lists
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_atom("b"),
+                                               },
+                                               make_var("X", l_var_alist)),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+        term_t l_rhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_atom("b"),
+                                               },
+                                               make_atom("c")),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // eq forms, nested lists
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_atom("b"),
+                                               },
+                                               make_var("X", l_var_alist)),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+        term_t l_rhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_atom("b"),
+                                               },
+                                               make_var("Y", l_var_alist)),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq forms, nested lists
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_var("Z", l_var_alist),
+                                               },
+                                               make_var("X", l_var_alist)),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+        term_t l_rhs = make_list({
+                                     make_list({
+                                                   make_atom("a"),
+                                                   make_atom("b"),
+                                               },
+                                               make_var("Y", l_var_alist)),
+                                     make_atom("d"),
+                                 },
+                                 make_atom("e"));
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // eq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_var("X", l_var_alist), make_var("Y", l_var_alist)});
+        term_t l_rhs = make_list({make_var("Z", l_var_alist), make_var("W", l_var_alist)});
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_var("X", l_var_alist), make_var("X", l_var_alist)});
+        term_t l_rhs = make_list({make_var("Z", l_var_alist), make_var("W", l_var_alist)});
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // eq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_var("X", l_var_alist), make_var("X", l_var_alist)});
+        term_t l_rhs = make_list({make_var("Z", l_var_alist), make_var("Z", l_var_alist)});
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_var("X", l_var_alist), make_var("X", l_var_alist), make_atom("a")});
+        term_t l_rhs = make_list({make_var("Z", l_var_alist), make_var("Z", l_var_alist)});
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // eq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_var("X", l_var_alist), make_var("X", l_var_alist), make_atom("a")});
+        term_t l_rhs = make_list({make_var("Z", l_var_alist), make_var("Z", l_var_alist), make_atom("a")});
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // eq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_var("X", l_var_alist), make_var("X", l_var_alist), make_atom("a"), make_var("X", l_var_alist)});
+        term_t l_rhs = make_list({make_var("Z", l_var_alist), make_var("Z", l_var_alist), make_atom("a"), make_var("Z", l_var_alist)});
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({make_var("X", l_var_alist), make_var("X", l_var_alist), make_atom("a"), make_var("X", l_var_alist)});
+        term_t l_rhs = make_list({make_var("Z", l_var_alist), make_var("Z", l_var_alist), make_atom("a"), make_var("Y", l_var_alist)});
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // eq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({
+            make_atom("abc"),
+            make_list({
+                          make_var("X", l_var_alist),
+                      },
+                      make_var("T", l_var_alist)),
+            make_var("Y", l_var_alist),
+            make_var("Y", l_var_alist),
+            make_atom("def"),
+        });
+        term_t l_rhs = make_list({
+            make_atom("abc"),
+            make_list({
+                          make_var("A", l_var_alist),
+                      },
+                      make_var("B", l_var_alist)),
+            make_var("C", l_var_alist),
+            make_var("C", l_var_alist),
+            make_atom("def"),
+        });
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({
+            make_atom("abc"),
+            make_list({
+                          make_var("X", l_var_alist),
+                      },
+                      make_var("T", l_var_alist)),
+            make_var("Y", l_var_alist),
+            make_var("Y", l_var_alist),
+            make_atom("def"),
+        });
+        term_t l_rhs = make_list({
+            make_atom("abc"),
+            make_list({
+                          make_var("A", l_var_alist),
+                      },
+                      make_var("B", l_var_alist)),
+            make_var("C", l_var_alist),
+            make_var("C", l_var_alist),
+            make_var("D", l_var_alist),
+        });
+
+        assert(!equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // eq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({
+            make_atom("abc"),
+            make_list({
+                          make_var("X", l_var_alist),
+                          make_var("T", l_var_alist),
+                      },
+                      make_var("T", l_var_alist)),
+            make_var("Y", l_var_alist),
+            make_var("Y", l_var_alist),
+            make_atom("def"),
+        });
+        term_t l_rhs = make_list({
+            make_atom("abc"),
+            make_list({
+                          make_var("A", l_var_alist),
+                          make_var("B", l_var_alist),
+                      },
+                      make_var("B", l_var_alist)),
+            make_var("C", l_var_alist),
+            make_var("C", l_var_alist),
+            make_atom("def"),
+        });
+
+        assert(equal_forms(l_lhs, l_rhs));
+
+        PL_discard_foreign_frame(l_frame);
+    };
+
+    // neq forms, lists of vars
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        term_t l_lhs = make_list({
+            make_atom("abc"),
+            make_list({
+                          make_var("X", l_var_alist),
+                          make_var("Y", l_var_alist),
+                      },
+                      make_var("T", l_var_alist)),
+            make_var("Y", l_var_alist),
+            make_var("Y", l_var_alist),
+            make_atom("def"),
+        });
+        term_t l_rhs = make_list({
+            make_atom("abc"),
+            make_list({
+                          make_var("A", l_var_alist),
+                          make_var("B", l_var_alist),
+                      },
+                      make_var("B", l_var_alist)),
+            make_var("C", l_var_alist),
+            make_var("C", l_var_alist),
+            make_atom("def"),
+        });
+
+        assert(!equal_forms(l_lhs, l_rhs));
+        assert(!PL_is_variable(make_var("X", l_var_alist)));
+        assert(!PL_is_variable(make_var("Y", l_var_alist)));
+        assert(!PL_is_variable(make_var("A", l_var_alist)));
+        assert(!PL_is_variable(make_var("B", l_var_alist)));
+        assert(PL_is_variable(make_var("T", l_var_alist))); // T should STILL be var since counterpart was atom and form eq fails.
+        assert(PL_is_variable(make_var("C", l_var_alist))); // form eq does not make it to checking C thus it remains var.
+
+        PL_discard_foreign_frame(l_frame);
+    };
 }
 
 static void test_parser_extract_prolog_expression()
 {
+    fid_t l_function_frame = PL_open_foreign_frame();
+
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
-    data_points<std::string, std::function<bool(term_t, std::map<std::string, term_t> &)>>
+    std::map<std::string, term_t> l_data_points_var_alist;
+
+    data_points<std::string, term_t>
         l_test_cases =
             {
                 {
                     "if",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_atom("if")) == 0;
-                    },
+                    make_atom("if"),
                 },
                 {
                     "add",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_atom("add")) == 0;
-                    },
+                    make_atom("add"),
                 },
                 {
                     "\'\'",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_atom("")) == 0;
-                    },
+                    make_atom(""),
                 },
                 {
                     "\'abc123\'",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_atom("abc123")) == 0;
-                    },
+                    make_atom("abc123"),
                 },
                 {
                     "abc123\n",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_atom("abc123")) == 0;
-                    },
+                    make_atom("abc123"),
                 },
                 {
                     "abc123/\n",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_atom("abc123")) == 0;
-                    },
+                    make_atom("abc123"),
                 },
                 {
                     "\'abc123/\\n\'",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_atom("abc123/\n")) == 0;
-                    },
+                    make_atom("abc123/\n"),
                 },
                 {
                     "Var",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_is_variable(a_term) && PL_compare(make_var("Var", a_var_alist), a_term) == 0;
-                    },
+                    make_var("Var", l_data_points_var_alist),
                 },
                 {
                     "_",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_is_variable(a_term) &&
-                               // singletons do NOT get entries in the alist
-                               a_var_alist.size() == 0;
-                    },
+                    make_var("_", l_data_points_var_alist),
                 },
                 {
                     "Var abc", // second term does not get extracted
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_is_variable(a_term) && PL_compare(make_var("Var", a_var_alist), a_term) == 0;
-                    },
+                    make_var("Var", l_data_points_var_alist),
                 },
                 {
                     "[]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_get_nil(a_term); // && l_var_alist.size() == 0;
-                    },
+                    make_nil(),
                 },
                 {
                     "[[]]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        term_t l_head = PL_new_term_ref();
-                        term_t l_tail = PL_new_term_ref();
-                        if (PL_get_nil(a_term))
-                            return false;
-                        if (!(PL_get_list(a_term, l_head, l_tail) ||
-                              PL_compare(l_head, make_nil()) != 0 ||
-                              PL_compare(l_tail, make_nil()) != 0))
-                            return false;
-                        return true;
-                    },
+                    make_list({
+                        make_nil(),
+                    }),
                 },
                 {
                     "[abc]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        term_t l_head = PL_new_term_ref();
-                        term_t l_tail = PL_new_term_ref();
-                        if (!(PL_get_list(a_term, l_head, l_tail) ||
-                              PL_compare(l_head, make_atom("abc")) != 0 ||
-                              PL_compare(l_tail, make_nil()) != 0))
-                            return false;
-                        return true;
-                    },
+                    make_list({
+                        make_atom("abc"),
+                    }),
                 },
                 {
                     "[abc abd]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list(std::list{make_atom("abc"), make_atom("abd")})) == 0;
-                    },
+                    make_list({
+                        make_atom("abc"),
+                        make_atom("abd"),
+                    }),
                 },
                 {
                     "[abc abc2]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list(std::list{make_atom("abc"), make_atom("abc2")})) == 0;
-                    },
+                    make_list({
+                        make_atom("abc"),
+                        make_atom("abc2"),
+                    }),
                 },
                 {
                     "[abc \'1010\']",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list(std::list{make_atom("abc"), make_atom("1010")})) == 0;
-                    },
+                    make_list({
+                        make_atom("abc"),
+                        make_atom("1010"),
+                    }),
                 },
                 {
                     "[X]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        term_t l_head = PL_new_term_ref();
-                        term_t l_tail = PL_new_term_ref();
-                        if (!(PL_get_list(a_term, l_head, l_tail) ||
-                              PL_compare(l_head, a_var_alist.at("X")) != 0 ||
-                              PL_compare(l_tail, make_nil()) != 0))
-                            return false;
-                        return true;
-                    },
+                    make_list({
+                        make_var("X", l_data_points_var_alist),
+                    }),
                 },
                 {
                     "[X abc]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({make_var("X", a_var_alist), make_atom("abc")})) == 0;
-                    },
+                    make_list({
+                        make_var("X", l_data_points_var_alist),
+                        make_atom("abc"),
+                    }),
                 },
                 {
                     "[a b c]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_atom("a"),
-                                                      make_atom("b"),
-                                                      make_atom("c"),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_atom("b"),
+                        make_atom("c"),
+                    }),
                 },
                 {
                     "[a X c]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_atom("a"),
-                                                      make_var("X", a_var_alist),
-                                                      make_atom("c"),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_var("X", l_data_points_var_alist),
+                        make_atom("c"),
+                    }),
                 },
                 {
                     "[a X X]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_atom("a"),
-                                                      make_var("X", a_var_alist),
-                                                      make_var("X", a_var_alist),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_var("X", l_data_points_var_alist),
+                        make_var("X", l_data_points_var_alist),
+                    }),
                 },
                 {
                     "[a 'X' X]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_atom("a"),
-                                                      make_atom("X"),
-                                                      make_var("X", a_var_alist),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_atom("X"),
+                        make_var("X", l_data_points_var_alist),
+                    }),
                 },
                 {
                     "[[a]]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_list({
-                                                          make_atom("a"),
-                                                      }),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_list({
+                            make_atom("a"),
+                        }),
+                    }),
                 },
                 {
                     "[[a b]]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_list({
-                                                          make_atom("a"),
-                                                          make_atom("b"),
-                                                      }),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_list({
+                            make_atom("a"),
+                            make_atom("b"),
+                        }),
+                    }),
                 },
                 {
                     "[[a b] c]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_list({
-                                                          make_atom("a"),
-                                                          make_atom("b"),
-                                                      }),
-                                                      make_atom("c"),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_list({
+                            make_atom("a"),
+                            make_atom("b"),
+                        }),
+                        make_atom("c"),
+                    }),
                 },
                 {
                     "[[a X] X]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_list({
-                                                          make_atom("a"),
-                                                          make_var("X", a_var_alist),
-                                                      }),
-                                                      make_var("X", a_var_alist),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_list({
+                            make_atom("a"),
+                            make_var("X", l_data_points_var_alist),
+                        }),
+                        make_var("X", l_data_points_var_alist),
+                    }),
                 },
                 {
                     "[|a]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_atom("a")) == 0;
-                    },
+                    make_atom("a"),
                 },
                 {
                     "[a|b]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({make_atom("a")}, make_atom("b"))) == 0;
-                    },
+                    make_list({
+                                  make_atom("a"),
+                              },
+                              make_atom("b")),
                 },
                 {
                     "[a|Y]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({make_atom("a")},
-                                                    make_var("Y", a_var_alist))) == 0;
-                    },
+                    make_list({
+                                  make_atom("a"),
+                              },
+                              make_var("Y", l_data_points_var_alist)),
                 },
                 {
                     "[a|[]]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({make_atom("a")}, make_nil())) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                    }),
                 },
                 {
                     "[a|[b|c]]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({make_atom("a")},
-                                                    make_list({make_atom("b")},
-                                                              make_atom("c")))) == 0;
-                    },
+                    make_list({
+                                  make_atom("a"),
+                                  make_atom("b"),
+                              },
+                              make_atom("c")),
                 },
                 {
                     "[a|[b|X]]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({make_atom("a")},
-                                                    make_list({make_atom("b")},
-                                                              make_var("X", a_var_alist)))) == 0;
-                    },
+                    make_list({
+                                  make_atom("a"),
+                                  make_atom("b"),
+                              },
+                              make_var("X", l_data_points_var_alist)),
                 },
                 {
                     "['1'|[b|X]]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({make_atom("1")},
-                                                    make_list({make_atom("b")},
-                                                              make_var("X", a_var_alist)))) == 0;
-                    },
+                    make_list({
+                                  make_atom("1"),
+                                  make_atom("b"),
+                              },
+                              make_var("X", l_data_points_var_alist)),
                 },
                 {
                     "[a\nb]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({make_atom("a"), make_atom("b")})) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_atom("b"),
+                    }),
                 },
                 {
                     "[a\tb]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({make_atom("a"), make_atom("b")})) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_atom("b"),
+                    }),
                 },
                 {
                     "[a\tb\n]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({make_atom("a"), make_atom("b")})) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_atom("b"),
+                    }),
                 },
                 {
                     "[a b c d e f g]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({
-                                              make_atom("a"),
-                                              make_atom("b"),
-                                              make_atom("c"),
-                                              make_atom("d"),
-                                              make_atom("e"),
-                                              make_atom("f"),
-                                              make_atom("g"),
-                                          })) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_atom("b"),
+                        make_atom("c"),
+                        make_atom("d"),
+                        make_atom("e"),
+                        make_atom("f"),
+                        make_atom("g"),
+                    }),
                 },
                 {
                     "[a\tb\n\rc  d\t\tE\nf_g]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({
-                                              make_atom("a"),
-                                              make_atom("b"),
-                                              make_atom("c"),
-                                              make_atom("d"),
-                                              make_var("E", a_var_alist),
-                                              make_atom("f_g"),
-                                          })) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_atom("b"),
+                        make_atom("c"),
+                        make_atom("d"),
+                        make_var("E", l_data_points_var_alist),
+                        make_atom("f_g"),
+                    }),
                 },
                 {
                     "[A|B]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({make_var("A", a_var_alist)},
-                                                    make_var("B", a_var_alist))) == 0;
-                    },
+                    make_list({
+                                  make_var("A", l_data_points_var_alist),
+                              },
+                              make_var("B", l_data_points_var_alist)),
                 },
                 {
                     "[X X Y|X]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({
-                                                        make_var("X", a_var_alist),
-                                                        make_var("X", a_var_alist),
-                                                        make_var("Y", a_var_alist),
-                                                    },
-                                                    make_var("X", a_var_alist))) == 0;
-                    },
+                    make_list({
+                                  make_var("X", l_data_points_var_alist),
+                                  make_var("X", l_data_points_var_alist),
+                                  make_var("Y", l_data_points_var_alist),
+                              },
+                              make_var("X", l_data_points_var_alist)),
                 },
                 {
                     "[X a [B\t|\tX\t]\t[[[a\tb\nc] d e] f g|\r\n[[]]] B | Y]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({
-                                                        make_var("X", a_var_alist),
+                    make_list({
+                                  make_var("X", l_data_points_var_alist),
+                                  make_atom("a"),
+                                  make_list({make_var("B", l_data_points_var_alist)}, make_var("X", l_data_points_var_alist)),
+                                  make_list({
+                                                make_list({
+                                                    make_list({
                                                         make_atom("a"),
-                                                        make_list({make_var("B", a_var_alist)}, make_var("X", a_var_alist)),
-                                                        make_list({
-                                                                      make_list({
-                                                                          make_list({
-                                                                              make_atom("a"),
-                                                                              make_atom("b"),
-                                                                              make_atom("c"),
-                                                                          }),
-                                                                          make_atom("d"),
-                                                                          make_atom("e"),
-                                                                      }),
-                                                                      make_atom("f"),
-                                                                      make_atom("g"),
-                                                                  },
-                                                                  make_list({
-                                                                      make_nil(),
-                                                                  })),
-                                                        make_var("B", a_var_alist),
-                                                    },
-                                                    make_var("Y", a_var_alist))) == 0;
-                    },
+                                                        make_atom("b"),
+                                                        make_atom("c"),
+                                                    }),
+                                                    make_atom("d"),
+                                                    make_atom("e"),
+                                                }),
+                                                make_atom("f"),
+                                                make_atom("g"),
+                                            },
+                                            make_list({
+                                                make_nil(),
+                                            })),
+                                  make_var("B", l_data_points_var_alist),
+                              },
+                              make_var("Y", l_data_points_var_alist)),
                 },
                 {
                     "[a|[b|[c|[d]]]]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_atom("a"),
-                                                      make_atom("b"),
-                                                      make_atom("c"),
-                                                      make_atom("d"),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_atom("a"),
+                        make_atom("b"),
+                        make_atom("c"),
+                        make_atom("d"),
+                    }),
                 },
                 {
                     "[X X X]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term, make_list({
-                                                      make_var("X", a_var_alist),
-                                                      make_var("X", a_var_alist),
-                                                      make_var("X", a_var_alist),
-                                                  })) == 0;
-                    },
+                    make_list({
+                        make_var("X", l_data_points_var_alist),
+                        make_var("X", l_data_points_var_alist),
+                        make_var("X", l_data_points_var_alist),
+                    }),
                 },
                 {
                     "[if\n"
@@ -1055,84 +1737,64 @@ static void test_parser_extract_prolog_expression()
                     "        [add T [C] ZT]\n"
                     "    ]\n"
                     "]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({
-                                              make_atom("if"),
-                                              make_list({
-                                                  make_atom("add"),
-                                                  make_list({make_var("XH", a_var_alist)}, make_var("XT", a_var_alist)),
-                                                  make_list({make_var("YH", a_var_alist)}, make_var("YT", a_var_alist)),
-                                                  make_list({make_var("ZH", a_var_alist)}, make_var("ZT", a_var_alist)),
-                                              }),
-                                              make_list({
-                                                  make_atom("and"),
-                                                  make_list({
-                                                      make_atom("add"),
-                                                      make_list({make_var("XH", a_var_alist)}),
-                                                      make_list({make_var("YH", a_var_alist)}),
-                                                      make_list({make_var("ZH", a_var_alist)}, make_var("C", a_var_alist)),
-                                                  }),
-                                                  make_list({
-                                                      make_atom("add"),
-                                                      make_var("XT", a_var_alist),
-                                                      make_var("YT", a_var_alist),
-                                                      make_var("T", a_var_alist),
-                                                  }),
-                                                  make_list({
-                                                      make_atom("add"),
-                                                      make_var("T", a_var_alist),
-                                                      make_list({make_var("C", a_var_alist)}),
-                                                      make_var("ZT", a_var_alist),
-                                                  }),
-                                              }),
-                                          })) == 0;
-                    },
+                    make_list({
+                        make_atom("if"),
+                        make_list({
+                            make_atom("add"),
+                            make_list({make_var("XH", l_data_points_var_alist)}, make_var("XT", l_data_points_var_alist)),
+                            make_list({make_var("YH", l_data_points_var_alist)}, make_var("YT", l_data_points_var_alist)),
+                            make_list({make_var("ZH", l_data_points_var_alist)}, make_var("ZT", l_data_points_var_alist)),
+                        }),
+                        make_list({
+                            make_atom("and"),
+                            make_list({
+                                make_atom("add"),
+                                make_list({make_var("XH", l_data_points_var_alist)}),
+                                make_list({make_var("YH", l_data_points_var_alist)}),
+                                make_list({make_var("ZH", l_data_points_var_alist)}, make_var("C", l_data_points_var_alist)),
+                            }),
+                            make_list({
+                                make_atom("add"),
+                                make_var("XT", l_data_points_var_alist),
+                                make_var("YT", l_data_points_var_alist),
+                                make_var("T", l_data_points_var_alist),
+                            }),
+                            make_list({
+                                make_atom("add"),
+                                make_var("T", l_data_points_var_alist),
+                                make_list({make_var("C", l_data_points_var_alist)}),
+                                make_var("ZT", l_data_points_var_alist),
+                            }),
+                        }),
+                    }),
                 },
                 {
                     "['\\n\\t']",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({
-                                              make_atom("\n\t"),
-                                          })) == 0;
-                    },
+                    make_list({
+                        make_atom("\n\t"),
+                    }),
                 },
                 {
                     "[\"\\n\\t\"]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({
-                                              make_atom("\n\t"),
-                                          })) == 0;
-                    },
+                    make_list({
+                        make_atom("\n\t"),
+                    }),
                 },
                 {
                     "[\"\\n\\t\'\"]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({
-                                              make_atom("\n\t\'"),
-                                          })) == 0;
-                    },
+                    make_list({
+                        make_atom("\n\t\'"),
+                    }),
                 },
                 {
                     "[a|[b|'']]",
-                    [](term_t a_term, std::map<std::string, term_t> &a_var_alist)
-                    {
-                        return PL_compare(a_term,
-                                          make_list({
-                                                        make_atom("a"),
-                                                    },
-                                                    make_list({
-                                                                  make_atom("b"),
-                                                              },
-                                                              make_atom("")))) == 0;
-                    },
+                    make_list({
+                                  make_atom("a"),
+                              },
+                              make_list({
+                                            make_atom("b"),
+                                        },
+                                        make_atom(""))),
                 },
             };
 
@@ -1151,10 +1813,10 @@ static void test_parser_extract_prolog_expression()
 
         assert(!l_ss.fail());
 
-        assert(l_value(l_exp, l_var_alist));
+        assert(equal_forms(l_exp, l_value));
 
         // close PL stack frame
-        PL_close_foreign_frame(l_frame_id);
+        PL_discard_foreign_frame(l_frame_id);
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
     }
@@ -1193,10 +1855,12 @@ static void test_parser_extract_prolog_expression()
         assert(l_ss.fail());
 
         // close PL stack frame
-        PL_close_foreign_frame(l_frame_id);
+        PL_discard_foreign_frame(l_frame_id);
 
         LOG("success, expected failbit, case: " << l_input << std::endl);
     }
+
+    PL_discard_foreign_frame(l_function_frame);
 }
 
 static void test_parser_extract_axiom_statement()
@@ -1344,7 +2008,7 @@ static void test_parser_extract_axiom_statement()
         // WE DO NOT WANT TO CLEAR THE ALIST BETWEEN ITERATIONS.
         //     THIS IS BECAUSE THE VARIABLES IN l_test_cases WERE CREATED BEFORE THIS
         //     ITERATION. INSTEAD, IF ANY ERRONIOUS UNIFICATION OCCURS ON THIS ITERATION,
-        //     THE FRAME WILL BE POPPED AT THE END OF THIS CODE BLOCK (PL_close_foreign_frame())
+        //     THE FRAME WILL BE POPPED AT THE END OF THIS CODE BLOCK (PL_discard_foreign_frame())
 
         std::stringstream l_ss(l_key);
 
@@ -1362,7 +2026,7 @@ static void test_parser_extract_axiom_statement()
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
 
-        PL_close_foreign_frame(l_case_frame);
+        PL_discard_foreign_frame(l_case_frame);
     }
 
     std::vector<std::string> l_fail_cases =
@@ -1398,13 +2062,13 @@ static void test_parser_extract_axiom_statement()
 
         LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
 
-        PL_close_foreign_frame(l_case_frame);
+        PL_discard_foreign_frame(l_case_frame);
     }
 
-    PL_close_foreign_frame(l_frame_id);
+    PL_discard_foreign_frame(l_frame_id);
 }
 
-void test_parser_extract_guide_statement()
+static void test_parser_extract_guide_statement()
 {
     fid_t l_frame = PL_open_foreign_frame();
 
@@ -1576,7 +2240,7 @@ void test_parser_extract_guide_statement()
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
 
-        PL_close_foreign_frame(l_case_frame);
+        PL_discard_foreign_frame(l_case_frame);
     }
 
     std::vector<std::string> l_fail_cases =
@@ -1604,13 +2268,13 @@ void test_parser_extract_guide_statement()
 
         LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
 
-        PL_close_foreign_frame(l_case_frame);
+        PL_discard_foreign_frame(l_case_frame);
     }
 
-    PL_close_foreign_frame(l_frame);
+    PL_discard_foreign_frame(l_frame);
 }
 
-void test_parser_extract_infer_statement()
+static void test_parser_extract_infer_statement()
 {
     fid_t l_frame = PL_open_foreign_frame();
 
@@ -1757,7 +2421,7 @@ void test_parser_extract_infer_statement()
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
 
-        PL_close_foreign_frame(l_case_frame);
+        PL_discard_foreign_frame(l_case_frame);
     }
 
     std::vector<std::string> l_fail_cases =
@@ -1789,13 +2453,13 @@ void test_parser_extract_infer_statement()
 
         LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
 
-        PL_close_foreign_frame(l_case_frame);
+        PL_discard_foreign_frame(l_case_frame);
     }
 
-    PL_close_foreign_frame(l_frame);
+    PL_discard_foreign_frame(l_frame);
 }
 
-void test_parser_extract_refer_statement()
+static void test_parser_extract_refer_statement()
 {
     fid_t l_frame = PL_open_foreign_frame();
 
@@ -1871,7 +2535,7 @@ void test_parser_extract_refer_statement()
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
 
-        PL_close_foreign_frame(l_case_frame);
+        PL_discard_foreign_frame(l_case_frame);
     }
 
     std::vector<std::string> l_fail_cases =
@@ -1901,28 +2565,20 @@ void test_parser_extract_refer_statement()
 
         LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
 
-        PL_close_foreign_frame(l_case_frame);
+        PL_discard_foreign_frame(l_case_frame);
     }
 
-    PL_close_foreign_frame(l_frame);
+    PL_discard_foreign_frame(l_frame);
 }
 
-// void test_parse_file_example_0()
+// static void test_parse_file_example_0()
 // {
 //     using unilog::atom;
 //     using unilog::axiom_statement;
 //     using unilog::guide_statement;
 //     using unilog::infer_statement;
-//     using unilog::lexeme;
-//     using unilog::list_close;
-//     using unilog::list_open;
-//     using unilog::list_separator;
-//     using unilog::quoted_atom;
 //     using unilog::refer_statement;
 //     using unilog::statement;
-//     using unilog::term;
-//     using unilog::unquoted_atom;
-//     using unilog::variable;
 
 //     std::ifstream l_if("./src/test_input_files/parser_example_0/main.ul");
 
@@ -1996,15 +2652,13 @@ void test_parser_main()
     TEST(test_make_atom);
     TEST(test_make_list);
     TEST(test_make_variable);
+    TEST(test_random_string);
+    TEST(test_equal_forms);
     TEST(test_parser_extract_prolog_expression);
     TEST(test_parser_extract_axiom_statement);
     TEST(test_parser_extract_guide_statement);
     TEST(test_parser_extract_infer_statement);
     TEST(test_parser_extract_refer_statement);
-    // TEST(test_parser_extract_axiom_statement);
-    // TEST(test_parser_extract_guide_statement);
-    // TEST(test_parser_extract_infer_statement);
-    // TEST(test_parser_extract_refer_statement);
     // TEST(test_parse_file_example_0);
     // TEST(test_parse_file_example_1);
 }

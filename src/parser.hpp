@@ -34,6 +34,11 @@ namespace unilog
         term_t m_file_path;
     };
 
+    bool operator==(const axiom_statement &a_lhs, const axiom_statement &a_rhs);
+    bool operator==(const guide_statement &a_lhs, const guide_statement &a_rhs);
+    bool operator==(const infer_statement &a_lhs, const infer_statement &a_rhs);
+    bool operator==(const refer_statement &a_lhs, const refer_statement &a_rhs);
+
     using statement = std::variant<
         axiom_statement,
         guide_statement,
