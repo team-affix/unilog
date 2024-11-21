@@ -311,7 +311,57 @@ namespace unilog
         return a_istream;
     }
 
-    static std::istream &extract_statement(std::istream &a_istream, std::map<std::string, term_t> &a_var_alist, statement &a_statement)
+    bool operator==(const axiom_statement &a_lhs, const axiom_statement &a_rhs)
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        bool l_result = equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
+                        equal_forms(a_lhs.m_theorem, a_rhs.m_theorem);
+
+        PL_discard_foreign_frame(l_frame);
+
+        return l_result;
+    }
+
+    bool operator==(const guide_statement &a_lhs, const guide_statement &a_rhs)
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        bool l_result = equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
+                        equal_forms(a_lhs.m_args, a_rhs.m_args) &&
+                        equal_forms(a_lhs.m_guide, a_rhs.m_guide);
+
+        PL_discard_foreign_frame(l_frame);
+
+        return l_result;
+    }
+
+    bool operator==(const infer_statement &a_lhs, const infer_statement &a_rhs)
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        bool l_result = equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
+                        equal_forms(a_lhs.m_theorem, a_rhs.m_theorem) &&
+                        equal_forms(a_lhs.m_guide, a_rhs.m_guide);
+
+        PL_discard_foreign_frame(l_frame);
+
+        return l_result;
+    }
+
+    bool operator==(const refer_statement &a_lhs, const refer_statement &a_rhs)
+    {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        bool l_result = equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
+                        equal_forms(a_lhs.m_file_path, a_rhs.m_file_path);
+
+        PL_discard_foreign_frame(l_frame);
+
+        return l_result;
+    }
+
+    std::istream &operator>>(std::istream &a_istream, statement &a_statement)
     {
         /////////////////////////////////////////
         // extract the command lexeme
@@ -328,6 +378,11 @@ namespace unilog
 
         std::string l_command_text = std::get<atom>(l_command).m_text;
 
+        /////////////////////////////////////////
+        // declare the variable association-list
+        /////////////////////////////////////////
+        std::map<std::string, term_t> l_var_alist;
+
         if (l_command_text == "axiom")
         {
             axiom_statement l_result;
@@ -338,8 +393,8 @@ namespace unilog
             l_result.m_tag = PL_new_term_ref();
             l_result.m_theorem = PL_new_term_ref();
 
-            if (!(extract_term_t(a_istream, a_var_alist, l_result.m_tag) &&
-                  extract_term_t(a_istream, a_var_alist, l_result.m_theorem)))
+            if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
+                  extract_term_t(a_istream, l_var_alist, l_result.m_theorem)))
                 return a_istream;
 
             a_statement = l_result;
@@ -355,9 +410,9 @@ namespace unilog
             l_result.m_args = PL_new_term_ref();
             l_result.m_guide = PL_new_term_ref();
 
-            if (!(extract_term_t(a_istream, a_var_alist, l_result.m_tag) &&
-                  extract_term_t(a_istream, a_var_alist, l_result.m_args) &&
-                  extract_term_t(a_istream, a_var_alist, l_result.m_guide)))
+            if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
+                  extract_term_t(a_istream, l_var_alist, l_result.m_args) &&
+                  extract_term_t(a_istream, l_var_alist, l_result.m_guide)))
                 return a_istream;
 
             a_statement = l_result;
@@ -373,9 +428,9 @@ namespace unilog
             l_result.m_theorem = PL_new_term_ref();
             l_result.m_guide = PL_new_term_ref();
 
-            if (!(extract_term_t(a_istream, a_var_alist, l_result.m_tag) &&
-                  extract_term_t(a_istream, a_var_alist, l_result.m_theorem) &&
-                  extract_term_t(a_istream, a_var_alist, l_result.m_guide)))
+            if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
+                  extract_term_t(a_istream, l_var_alist, l_result.m_theorem) &&
+                  extract_term_t(a_istream, l_var_alist, l_result.m_guide)))
                 return a_istream;
 
             a_statement = l_result;
@@ -390,8 +445,8 @@ namespace unilog
             l_result.m_tag = PL_new_term_ref();
             l_result.m_file_path = PL_new_term_ref();
 
-            if (!(extract_term_t(a_istream, a_var_alist, l_result.m_tag) &&
-                  extract_term_t(a_istream, a_var_alist, l_result.m_file_path)))
+            if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
+                  extract_term_t(a_istream, l_var_alist, l_result.m_file_path)))
                 return a_istream;
 
             a_statement = l_result;
@@ -415,58 +470,6 @@ namespace unilog
         }
 
         return a_istream;
-    }
-
-    bool operator==(const axiom_statement &a_lhs, const axiom_statement &a_rhs)
-    {
-        fid_t l_frame = PL_open_foreign_frame();
-
-        return equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
-               equal_forms(a_lhs.m_theorem, a_rhs.m_theorem);
-
-        PL_discard_foreign_frame(l_frame);
-    }
-
-    bool operator==(const guide_statement &a_lhs, const guide_statement &a_rhs)
-    {
-        fid_t l_frame = PL_open_foreign_frame();
-
-        return equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
-               equal_forms(a_lhs.m_args, a_rhs.m_args) &&
-               equal_forms(a_lhs.m_guide, a_rhs.m_guide);
-
-        PL_discard_foreign_frame(l_frame);
-    }
-
-    bool operator==(const infer_statement &a_lhs, const infer_statement &a_rhs)
-    {
-        fid_t l_frame = PL_open_foreign_frame();
-
-        return equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
-               equal_forms(a_lhs.m_theorem, a_rhs.m_theorem) &&
-               equal_forms(a_lhs.m_guide, a_rhs.m_guide);
-
-        PL_discard_foreign_frame(l_frame);
-    }
-
-    bool operator==(const refer_statement &a_lhs, const refer_statement &a_rhs)
-    {
-        fid_t l_frame = PL_open_foreign_frame();
-
-        return equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
-               equal_forms(a_lhs.m_file_path, a_rhs.m_file_path);
-
-        PL_discard_foreign_frame(l_frame);
-    }
-
-    std::istream &operator>>(std::istream &a_istream, statement &a_statement)
-    {
-        /////////////////////////////////////////
-        // declare the variable association-list
-        /////////////////////////////////////////
-        std::map<std::string, term_t> l_var_alist;
-
-        return extract_statement(a_istream, l_var_alist, a_statement);
     }
 
 }
@@ -1407,6 +1410,797 @@ static void test_equal_forms()
     };
 }
 
+static void test_axiom_statement_equal()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    fid_t l_frame = PL_open_foreign_frame();
+
+    using unilog::axiom_statement;
+    using unilog::statement;
+
+    std::map<std::string, term_t> l_var_alist;
+
+    data_points<std::pair<axiom_statement, axiom_statement>, bool> l_data_points =
+        {
+            {
+                {
+                    axiom_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_atom("claims"),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_atom("a1"),
+                        .m_theorem = make_list({
+                            make_atom("claims"),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    axiom_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_atom("claims"),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_atom("claims"),
+                            make_atom("leon1"),
+                            make_atom("x"),
+                        }),
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    axiom_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_atom("claims"),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_atom("claims"),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    axiom_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_var("B", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    axiom_statement{
+                        .m_tag = make_var("A", l_var_alist),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_var("B", l_var_alist),
+                        .m_theorem = make_list({
+                            make_var("B", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    axiom_statement{
+                        .m_tag = make_var("A", l_var_alist),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_var("B", l_var_alist),
+                        .m_theorem = make_list({
+                            make_var("C", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    axiom_statement{
+                        .m_tag = make_atom("a"),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_atom("a"),
+                        .m_theorem = make_list({
+                            make_var("C", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    axiom_statement{
+                        .m_tag = make_list({make_var("A", l_var_alist)}),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_list({make_var("B", l_var_alist)}),
+                        .m_theorem = make_list({
+                            make_var("B", l_var_alist),
+                            make_atom("leon"),
+                            make_atom("x"),
+                        }),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    axiom_statement{
+                        .m_tag = make_list({make_var("A", l_var_alist)}),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_var("A", l_var_alist),
+                            make_atom("x"),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_list({make_var("B", l_var_alist)}),
+                        .m_theorem = make_list({
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                            make_atom("x"),
+                        }),
+                    },
+                },
+                false,
+            },
+        };
+
+    for (const auto &[l_pair, l_value] : l_data_points)
+    {
+        // do the equality comparison
+        assert((l_pair.first == l_pair.second) == l_value);
+
+        LOG("success, axiom_statement op== test" << std::endl);
+    }
+
+    PL_discard_foreign_frame(l_frame);
+}
+
+static void test_guide_statement_equal()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    fid_t l_frame = PL_open_foreign_frame();
+
+    using unilog::guide_statement;
+    using unilog::statement;
+
+    std::map<std::string, term_t> l_var_alist;
+
+    data_points<std::pair<guide_statement, guide_statement>, bool> l_data_points =
+        {
+            {
+                {
+                    guide_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_args = make_list({
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    guide_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_args = make_list({
+                            make_var("D", l_var_alist),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("D", l_var_alist),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                        }),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    guide_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_args = make_list({
+                            make_var("B", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    guide_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_args = make_list({
+                            make_var("D", l_var_alist),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("D", l_var_alist),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                        }),
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    guide_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_args = make_list({
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("D", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    guide_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_args = make_list({
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    guide_statement{
+                        .m_tag = make_var("X", l_var_alist),
+                        .m_args = make_list({
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("X", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    guide_statement{
+                        .m_tag = make_var("Y", l_var_alist),
+                        .m_args = make_list({
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    guide_statement{
+                        .m_tag = make_var("X", l_var_alist),
+                        .m_args = make_list({
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("X", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    guide_statement{
+                        .m_tag = make_var("Y", l_var_alist),
+                        .m_args = make_list({
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("Y", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    guide_statement{
+                        .m_tag = make_var("X", l_var_alist),
+                        .m_args = make_list({
+                                                make_var("A", l_var_alist),
+                                            },
+                                            make_var("B", l_var_alist)),
+                        .m_guide = make_list({
+                                                 make_atom("sub"),
+                                                 make_var("A", l_var_alist),
+                                             },
+                                             make_var("B", l_var_alist)),
+                    },
+                    guide_statement{
+                        .m_tag = make_var("Y", l_var_alist),
+                        .m_args = make_list({
+                                                make_var("C", l_var_alist),
+                                            },
+                                            make_var("D", l_var_alist)),
+                        .m_guide = make_list({
+                                                 make_atom("sub"),
+                                                 make_var("C", l_var_alist),
+                                             },
+                                             make_var("D", l_var_alist)),
+                    },
+                },
+                true,
+            },
+        };
+
+    for (const auto &[l_pair, l_value] : l_data_points)
+    {
+        // do the equality comparison
+        assert((l_pair.first == l_pair.second) == l_value);
+
+        LOG("success, guide_statement op== test" << std::endl);
+    }
+
+    PL_discard_foreign_frame(l_frame);
+}
+
+static void test_infer_statement_equal()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    fid_t l_frame = PL_open_foreign_frame();
+
+    using unilog::infer_statement;
+    using unilog::statement;
+
+    std::map<std::string, term_t> l_var_alist;
+
+    data_points<std::pair<infer_statement, infer_statement>, bool> l_data_points =
+        {
+            {
+                {
+                    infer_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    infer_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_var("D", l_var_alist),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("D", l_var_alist),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                        }),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    infer_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_var("B", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    infer_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_var("D", l_var_alist),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("D", l_var_alist),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                        }),
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    infer_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("D", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    infer_statement{
+                        .m_tag = make_atom("a0"),
+                        .m_theorem = make_list({
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    infer_statement{
+                        .m_tag = make_var("X", l_var_alist),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("X", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    infer_statement{
+                        .m_tag = make_var("Y", l_var_alist),
+                        .m_theorem = make_list({
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                    },
+                },
+                false,
+            },
+            {
+                {
+                    infer_statement{
+                        .m_tag = make_var("X", l_var_alist),
+                        .m_theorem = make_list({
+                            make_var("A", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("X", l_var_alist),
+                            make_var("B", l_var_alist),
+                            make_var("C", l_var_alist),
+                        }),
+                    },
+                    infer_statement{
+                        .m_tag = make_var("Y", l_var_alist),
+                        .m_theorem = make_list({
+                            make_var("E", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("sub"),
+                            make_var("Y", l_var_alist),
+                            make_var("F", l_var_alist),
+                            make_var("G", l_var_alist),
+                        }),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    infer_statement{
+                        .m_tag = make_var("X", l_var_alist),
+                        .m_theorem = make_list({
+                                                   make_var("A", l_var_alist),
+                                               },
+                                               make_var("B", l_var_alist)),
+                        .m_guide = make_list({
+                                                 make_atom("sub"),
+                                                 make_var("A", l_var_alist),
+                                             },
+                                             make_var("B", l_var_alist)),
+                    },
+                    infer_statement{
+                        .m_tag = make_var("Y", l_var_alist),
+                        .m_theorem = make_list({
+                                                   make_var("C", l_var_alist),
+                                               },
+                                               make_var("D", l_var_alist)),
+                        .m_guide = make_list({
+                                                 make_atom("sub"),
+                                                 make_var("C", l_var_alist),
+                                             },
+                                             make_var("D", l_var_alist)),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    infer_statement{
+                        .m_tag = make_var("X", l_var_alist),
+                        .m_theorem = make_list({
+                                                   make_atom("abc"),
+                                               },
+                                               make_var("B", l_var_alist)),
+                        .m_guide = make_list({
+                                                 make_atom("sub"),
+                                                 make_var("A", l_var_alist),
+                                             },
+                                             make_var("B", l_var_alist)),
+                    },
+                    infer_statement{
+                        .m_tag = make_var("Y", l_var_alist),
+                        .m_theorem = make_list({
+                                                   make_atom("abc"),
+                                               },
+                                               make_var("D", l_var_alist)),
+                        .m_guide = make_list({
+                                                 make_atom("sub"),
+                                                 make_var("C", l_var_alist),
+                                             },
+                                             make_var("D", l_var_alist)),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    infer_statement{
+                        .m_tag = make_var("X", l_var_alist),
+                        .m_theorem = make_list({
+                                                   make_atom("abc"),
+                                               },
+                                               make_var("B", l_var_alist)),
+                        .m_guide = make_list({
+                                                 make_atom("sub"),
+                                                 make_var("A", l_var_alist),
+                                             },
+                                             make_var("B", l_var_alist)),
+                    },
+                    infer_statement{
+                        .m_tag = make_var("Y", l_var_alist),
+                        .m_theorem = make_list({
+                                                   make_atom("abc1"),
+                                               },
+                                               make_var("D", l_var_alist)),
+                        .m_guide = make_list({
+                                                 make_atom("sub"),
+                                                 make_var("C", l_var_alist),
+                                             },
+                                             make_var("D", l_var_alist)),
+                    },
+                },
+                false,
+            },
+        };
+
+    for (const auto &[l_pair, l_value] : l_data_points)
+    {
+        // do the equality comparison
+        assert((l_pair.first == l_pair.second) == l_value);
+
+        LOG("success, guide_statement op== test" << std::endl);
+    }
+
+    PL_discard_foreign_frame(l_frame);
+}
+
+static void test_refer_statement_equal()
+{
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
+    fid_t l_frame = PL_open_foreign_frame();
+
+    using unilog::refer_statement;
+    using unilog::statement;
+
+    std::map<std::string, term_t> l_var_alist;
+
+    data_points<std::pair<refer_statement, refer_statement>, bool> l_data_points =
+        {
+            {
+                {
+                    refer_statement{
+                        .m_tag = make_atom("leon"),
+                        .m_file_path = make_atom("./inlcude/leon.u"),
+                    },
+                    refer_statement{
+                        .m_tag = make_atom("leon"),
+                        .m_file_path = make_atom("./inlcude/leon.u"),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    refer_statement{
+                        .m_tag = make_atom("leon"),
+                        .m_file_path = make_var("X", l_var_alist),
+                    },
+                    refer_statement{
+                        .m_tag = make_atom("leon"),
+                        .m_file_path = make_var("Y", l_var_alist),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    refer_statement{
+                        .m_tag = make_list({make_atom("abc"), make_var("X", l_var_alist)}),
+                        .m_file_path = make_var("X", l_var_alist),
+                    },
+                    refer_statement{
+                        .m_tag = make_list({make_atom("abc"), make_var("Y", l_var_alist)}),
+                        .m_file_path = make_var("Y", l_var_alist),
+                    },
+                },
+                true,
+            },
+            {
+                {
+                    refer_statement{
+                        .m_tag = make_list({make_atom("abc"), make_var("X", l_var_alist)}),
+                        .m_file_path = make_var("X", l_var_alist),
+                    },
+                    refer_statement{
+                        .m_tag = make_list({make_atom("abc"), make_var("Y", l_var_alist)}),
+                        .m_file_path = make_var("Z", l_var_alist),
+                    },
+                },
+                false,
+            },
+        };
+
+    for (const auto &[l_pair, l_value] : l_data_points)
+    {
+        // do the equality comparison
+        assert((l_pair.first == l_pair.second) == l_value);
+
+        LOG("success, axiom_statement op== test" << std::endl);
+    }
+
+    PL_discard_foreign_frame(l_frame);
+}
+
 static void test_parser_extract_prolog_expression()
 {
     fid_t l_function_frame = PL_open_foreign_frame();
@@ -1874,7 +2668,7 @@ static void test_parser_extract_axiom_statement()
 
     std::map<std::string, term_t> l_var_alist;
 
-    data_points<std::string, axiom_statement> l_test_cases =
+    data_points<std::string, statement> l_test_cases =
         {
             {
                 "axiom a0 x ;",
@@ -2002,27 +2796,15 @@ static void test_parser_extract_axiom_statement()
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
-        // clear the var alist before each iteration
-        // l_var_alist.clear();
-
-        // WE DO NOT WANT TO CLEAR THE ALIST BETWEEN ITERATIONS.
-        //     THIS IS BECAUSE THE VARIABLES IN l_test_cases WERE CREATED BEFORE THIS
-        //     ITERATION. INSTEAD, IF ANY ERRONIOUS UNIFICATION OCCURS ON THIS ITERATION,
-        //     THE FRAME WILL BE POPPED AT THE END OF THIS CODE BLOCK (PL_discard_foreign_frame())
-
         std::stringstream l_ss(l_key);
 
         statement l_statement;
-        // l_ss >> l_exp;
-        unilog::extract_statement(l_ss, l_var_alist, l_statement);
-
-        axiom_statement l_axs = std::get<axiom_statement>(l_statement);
+        l_ss >> l_statement;
 
         // make sure the stringstream is not in failstate
         assert(!l_ss.fail());
-
-        assert(PL_compare(l_axs.m_tag, l_value.m_tag) == 0);
-        assert(PL_compare(l_axs.m_theorem, l_value.m_theorem) == 0);
+        assert(std::holds_alternative<axiom_statement>(l_statement));
+        assert(l_statement == l_value);
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
 
@@ -2079,7 +2861,7 @@ static void test_parser_extract_guide_statement()
 
     std::map<std::string, term_t> l_var_alist;
 
-    data_points<std::string, guide_statement> l_test_cases =
+    data_points<std::string, statement> l_test_cases =
         {
             {
                 "guide g_add_bc []\n"
@@ -2226,17 +3008,12 @@ static void test_parser_extract_guide_statement()
         std::stringstream l_ss(l_key);
 
         statement l_statement;
-
-        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+        l_ss >> l_statement;
 
         // make sure the stringstream is not in failstate
         assert(!l_ss.fail());
-
-        guide_statement l_gs = std::get<guide_statement>(l_statement);
-
-        assert(PL_compare(l_gs.m_tag, l_value.m_tag) == 0);
-        assert(PL_compare(l_gs.m_args, l_value.m_args) == 0);
-        assert(PL_compare(l_gs.m_guide, l_value.m_guide) == 0);
+        assert(std::holds_alternative<guide_statement>(l_statement));
+        assert(l_statement == l_value);
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
 
@@ -2261,7 +3038,7 @@ static void test_parser_extract_guide_statement()
 
         statement l_statement;
 
-        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+        l_ss >> l_statement;
 
         // ensure failure of extraction
         assert(l_ss.fail());
@@ -2285,7 +3062,7 @@ static void test_parser_extract_infer_statement()
 
     std::map<std::string, term_t> l_var_alist;
 
-    data_points<std::string, infer_statement> l_test_cases =
+    data_points<std::string, statement> l_test_cases =
         {
             {
                 "infer i0 [claim daniel y] [bout daniel [mp [theorem a0] [theorem a1]]];",
@@ -2408,16 +3185,12 @@ static void test_parser_extract_infer_statement()
 
         statement l_statement;
 
-        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+        l_ss >> l_statement;
 
         // make sure the stringstream is not in failstate
         assert(!l_ss.fail());
-
-        infer_statement l_is = std::get<infer_statement>(l_statement);
-
-        assert(PL_compare(l_is.m_tag, l_value.m_tag) == 0);
-        assert(PL_compare(l_is.m_theorem, l_value.m_theorem) == 0);
-        assert(PL_compare(l_is.m_guide, l_value.m_guide) == 0);
+        assert(std::holds_alternative<infer_statement>(l_statement));
+        assert(l_statement == l_value);
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
 
@@ -2445,8 +3218,7 @@ static void test_parser_extract_infer_statement()
         std::stringstream l_ss(l_input);
 
         statement l_statement;
-
-        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+        l_ss >> l_statement;
 
         // ensure failure of extraction
         assert(l_ss.fail());
@@ -2471,7 +3243,7 @@ static void test_parser_extract_refer_statement()
 
     std::map<std::string, term_t> l_var_alist;
 
-    data_points<std::string, refer_statement> l_test_cases =
+    data_points<std::string, statement> l_test_cases =
         {
             {
                 "refer leon \'./path/to/leon.u\';",
@@ -2522,16 +3294,12 @@ static void test_parser_extract_refer_statement()
         std::stringstream l_ss(l_key);
 
         statement l_statement;
-
-        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+        l_ss >> l_statement;
 
         // make sure the stringstream is not in failstate
         assert(!l_ss.fail());
-
-        refer_statement l_rs = std::get<refer_statement>(l_statement);
-
-        assert(PL_compare(l_rs.m_tag, l_value.m_tag) == 0);
-        assert(PL_compare(l_rs.m_file_path, l_value.m_file_path) == 0);
+        assert(std::holds_alternative<refer_statement>(l_statement));
+        assert(l_statement == l_value);
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
 
@@ -2557,8 +3325,7 @@ static void test_parser_extract_refer_statement()
         std::stringstream l_ss(l_input);
 
         statement l_statement;
-
-        unilog::extract_statement(l_ss, l_var_alist, l_statement);
+        l_ss >> l_statement;
 
         // ensure failure of extraction
         assert(l_ss.fail());
@@ -2654,6 +3421,10 @@ void test_parser_main()
     TEST(test_make_variable);
     TEST(test_random_string);
     TEST(test_equal_forms);
+    TEST(test_axiom_statement_equal);
+    TEST(test_guide_statement_equal);
+    TEST(test_infer_statement_equal);
+    TEST(test_refer_statement_equal);
     TEST(test_parser_extract_prolog_expression);
     TEST(test_parser_extract_axiom_statement);
     TEST(test_parser_extract_guide_statement);
