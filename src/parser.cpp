@@ -3455,6 +3455,82 @@ static void test_parse_file_examples()
                     },
                 },
             },
+            {
+                "./src/test_input_files/parser_example_3/main.u",
+                {
+                    axiom_statement{
+                        .m_tag = make_list({
+                                               make_atom("a0\n"),
+                                               make_var("X", l_var_alist),
+                                           },
+                                           make_var("X", l_var_alist)),
+                        .m_theorem = make_list({
+                            make_atom("claim"),
+                            make_atom("daniel"),
+                            make_list({
+                                make_atom("if"),
+                                make_atom("y"),
+                                make_atom("x"),
+                            }),
+                        }),
+                    },
+                    axiom_statement{
+                        .m_tag = make_list({
+                                               make_atom("a1"),
+                                               make_var("Y", l_var_alist),
+                                           },
+                                           make_var("Z", l_var_alist)),
+                        .m_theorem = make_list({
+                            make_atom("claim"),
+                            make_atom("daniel"),
+                            make_atom("x"),
+                        }),
+                    },
+                    guide_statement{
+                        .m_tag = make_list({
+                            make_atom("g0"),
+                        }),
+                        .m_args = make_var("_", l_var_alist),
+                        .m_guide = make_list({
+                            make_atom("bout"),
+                            make_atom("daniel"),
+                            make_list({
+                                make_atom("mp"),
+                                make_list({
+                                    make_atom("theorem"),
+                                    make_list({
+                                                  make_atom("a0"),
+                                                  make_var("A", l_var_alist),
+                                              },
+                                              make_var("B", l_var_alist)),
+                                }),
+                                make_list({
+                                    make_atom("theorem"),
+                                    make_list({
+                                                  make_atom("a1"),
+                                                  make_var("A", l_var_alist),
+                                              },
+                                              make_var("B", l_var_alist)),
+                                }),
+                            }),
+                        }),
+                    },
+                    infer_statement{
+                        .m_tag = make_atom("i0"),
+                        .m_theorem = make_list({
+                            make_atom("claim"),
+                            make_atom("daniel"),
+                            make_atom("y"),
+                        }),
+                        .m_guide = make_list({
+                            make_atom("guide"),
+                            make_list({
+                                make_atom("g0"),
+                            }),
+                        }),
+                    },
+                },
+            },
         };
 
     for (const auto &[l_file_path, l_expected] : l_data_points)
