@@ -15,5 +15,18 @@ axiom [a1 Y |Z] [claim daniel x];
         ]
     ];
 
-infer i0 [claim daniel y]
-    [guide [g0]];
+    infer
+    i0
+    
+    
+    [claim daniel y]
+
+
+    [guide 
+    
+    
+    
+    
+    [g0]        ]       ;
+
+
