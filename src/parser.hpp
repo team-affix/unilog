@@ -8,6 +8,7 @@
 
 namespace unilog
 {
+
     struct axiom_statement
     {
         term_t m_tag;

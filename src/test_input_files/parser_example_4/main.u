@@ -1,0 +1,3 @@
+refer [[[abc] X]|X] "path to file";
+
+axiom A [claim daniel A];
