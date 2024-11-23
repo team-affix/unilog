@@ -1,6 +1,6 @@
 axiom [a0 X|X] [claim daniel [if y x]];
 axiom [a1 Y |Z] [claim daniel x];
-infer i0 [claim daniel y]
+infer i0
     [bout daniel
         [mp
             [theorem [a0 A|B]]

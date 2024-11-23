@@ -328,7 +328,6 @@ namespace unilog
         fid_t l_frame = PL_open_foreign_frame();
 
         bool l_result = equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
-                        equal_forms(a_lhs.m_args, a_rhs.m_args) &&
                         equal_forms(a_lhs.m_guide, a_rhs.m_guide);
 
         PL_discard_foreign_frame(l_frame);
@@ -341,7 +340,6 @@ namespace unilog
         fid_t l_frame = PL_open_foreign_frame();
 
         bool l_result = equal_forms(a_lhs.m_tag, a_rhs.m_tag) &&
-                        equal_forms(a_lhs.m_theorem, a_rhs.m_theorem) &&
                         equal_forms(a_lhs.m_guide, a_rhs.m_guide);
 
         PL_discard_foreign_frame(l_frame);
@@ -407,11 +405,9 @@ namespace unilog
             // creates new term refs
             /////////////////////////////////////////
             l_result.m_tag = PL_new_term_ref();
-            l_result.m_args = PL_new_term_ref();
             l_result.m_guide = PL_new_term_ref();
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
-                  extract_term_t(a_istream, l_var_alist, l_result.m_args) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_guide)))
                 return a_istream;
 
@@ -425,11 +421,9 @@ namespace unilog
             // creates new term refs
             /////////////////////////////////////////
             l_result.m_tag = PL_new_term_ref();
-            l_result.m_theorem = PL_new_term_ref();
             l_result.m_guide = PL_new_term_ref();
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
-                  extract_term_t(a_istream, l_var_alist, l_result.m_theorem) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_guide)))
                 return a_istream;
 
@@ -1641,8 +1635,8 @@ static void test_guide_statement_equal()
             {
                 {
                     guide_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("A", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -1655,8 +1649,8 @@ static void test_guide_statement_equal()
                         }),
                     },
                     guide_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("D", l_var_alist),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
@@ -1674,8 +1668,8 @@ static void test_guide_statement_equal()
             {
                 {
                     guide_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("B", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -1688,8 +1682,8 @@ static void test_guide_statement_equal()
                         }),
                     },
                     guide_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("D", l_var_alist),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
@@ -1707,8 +1701,8 @@ static void test_guide_statement_equal()
             {
                 {
                     guide_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("A", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -1721,8 +1715,8 @@ static void test_guide_statement_equal()
                         }),
                     },
                     guide_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
                             make_var("G", l_var_alist),
@@ -1740,8 +1734,8 @@ static void test_guide_statement_equal()
             {
                 {
                     guide_statement{
-                        .m_tag = make_var("X", l_var_alist),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_var("X", l_var_alist),
                             make_var("A", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -1754,8 +1748,8 @@ static void test_guide_statement_equal()
                         }),
                     },
                     guide_statement{
-                        .m_tag = make_var("Y", l_var_alist),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_var("Y", l_var_alist),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
                             make_var("G", l_var_alist),
@@ -1773,8 +1767,8 @@ static void test_guide_statement_equal()
             {
                 {
                     guide_statement{
-                        .m_tag = make_var("X", l_var_alist),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_var("X", l_var_alist),
                             make_var("A", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -1787,8 +1781,8 @@ static void test_guide_statement_equal()
                         }),
                     },
                     guide_statement{
-                        .m_tag = make_var("Y", l_var_alist),
-                        .m_args = make_list({
+                        .m_tag = make_list({
+                            make_var("Y", l_var_alist),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
                             make_var("G", l_var_alist),
@@ -1806,11 +1800,11 @@ static void test_guide_statement_equal()
             {
                 {
                     guide_statement{
-                        .m_tag = make_var("X", l_var_alist),
-                        .m_args = make_list({
-                                                make_var("A", l_var_alist),
-                                            },
-                                            make_var("B", l_var_alist)),
+                        .m_tag = make_list({
+                                               make_var("X", l_var_alist),
+                                               make_var("A", l_var_alist),
+                                           },
+                                           make_var("B", l_var_alist)),
                         .m_guide = make_list({
                                                  make_atom("sub"),
                                                  make_var("A", l_var_alist),
@@ -1818,11 +1812,11 @@ static void test_guide_statement_equal()
                                              make_var("B", l_var_alist)),
                     },
                     guide_statement{
-                        .m_tag = make_var("Y", l_var_alist),
-                        .m_args = make_list({
-                                                make_var("C", l_var_alist),
-                                            },
-                                            make_var("D", l_var_alist)),
+                        .m_tag = make_list({
+                                               make_var("Y", l_var_alist),
+                                               make_var("C", l_var_alist),
+                                           },
+                                           make_var("D", l_var_alist)),
                         .m_guide = make_list({
                                                  make_atom("sub"),
                                                  make_var("C", l_var_alist),
@@ -1861,8 +1855,8 @@ static void test_infer_statement_equal()
             {
                 {
                     infer_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("A", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -1875,8 +1869,8 @@ static void test_infer_statement_equal()
                         }),
                     },
                     infer_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("D", l_var_alist),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
@@ -1894,8 +1888,8 @@ static void test_infer_statement_equal()
             {
                 {
                     infer_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("B", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -1908,8 +1902,8 @@ static void test_infer_statement_equal()
                         }),
                     },
                     infer_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("D", l_var_alist),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
@@ -1927,8 +1921,8 @@ static void test_infer_statement_equal()
             {
                 {
                     infer_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("A", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -1941,8 +1935,8 @@ static void test_infer_statement_equal()
                         }),
                     },
                     infer_statement{
-                        .m_tag = make_atom("a0"),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_atom("a0"),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
                             make_var("G", l_var_alist),
@@ -1960,8 +1954,8 @@ static void test_infer_statement_equal()
             {
                 {
                     infer_statement{
-                        .m_tag = make_var("X", l_var_alist),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_var("X", l_var_alist),
                             make_var("A", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -1974,8 +1968,8 @@ static void test_infer_statement_equal()
                         }),
                     },
                     infer_statement{
-                        .m_tag = make_var("Y", l_var_alist),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_var("Y", l_var_alist),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
                             make_var("G", l_var_alist),
@@ -1993,8 +1987,8 @@ static void test_infer_statement_equal()
             {
                 {
                     infer_statement{
-                        .m_tag = make_var("X", l_var_alist),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_var("X", l_var_alist),
                             make_var("A", l_var_alist),
                             make_var("B", l_var_alist),
                             make_var("C", l_var_alist),
@@ -2007,8 +2001,8 @@ static void test_infer_statement_equal()
                         }),
                     },
                     infer_statement{
-                        .m_tag = make_var("Y", l_var_alist),
-                        .m_theorem = make_list({
+                        .m_tag = make_list({
+                            make_var("Y", l_var_alist),
                             make_var("E", l_var_alist),
                             make_var("F", l_var_alist),
                             make_var("G", l_var_alist),
@@ -2026,11 +2020,11 @@ static void test_infer_statement_equal()
             {
                 {
                     infer_statement{
-                        .m_tag = make_var("X", l_var_alist),
-                        .m_theorem = make_list({
-                                                   make_var("A", l_var_alist),
-                                               },
-                                               make_var("B", l_var_alist)),
+                        .m_tag = make_list({
+                                               make_var("X", l_var_alist),
+                                               make_var("A", l_var_alist),
+                                           },
+                                           make_var("B", l_var_alist)),
                         .m_guide = make_list({
                                                  make_atom("sub"),
                                                  make_var("A", l_var_alist),
@@ -2038,11 +2032,11 @@ static void test_infer_statement_equal()
                                              make_var("B", l_var_alist)),
                     },
                     infer_statement{
-                        .m_tag = make_var("Y", l_var_alist),
-                        .m_theorem = make_list({
-                                                   make_var("C", l_var_alist),
-                                               },
-                                               make_var("D", l_var_alist)),
+                        .m_tag = make_list({
+                                               make_var("Y", l_var_alist),
+                                               make_var("C", l_var_alist),
+                                           },
+                                           make_var("D", l_var_alist)),
                         .m_guide = make_list({
                                                  make_atom("sub"),
                                                  make_var("C", l_var_alist),
@@ -2055,11 +2049,11 @@ static void test_infer_statement_equal()
             {
                 {
                     infer_statement{
-                        .m_tag = make_var("X", l_var_alist),
-                        .m_theorem = make_list({
-                                                   make_atom("abc"),
-                                               },
-                                               make_var("B", l_var_alist)),
+                        .m_tag = make_list({
+                                               make_var("X", l_var_alist),
+                                               make_atom("abc"),
+                                           },
+                                           make_var("B", l_var_alist)),
                         .m_guide = make_list({
                                                  make_atom("sub"),
                                                  make_var("A", l_var_alist),
@@ -2067,11 +2061,11 @@ static void test_infer_statement_equal()
                                              make_var("B", l_var_alist)),
                     },
                     infer_statement{
-                        .m_tag = make_var("Y", l_var_alist),
-                        .m_theorem = make_list({
-                                                   make_atom("abc"),
-                                               },
-                                               make_var("D", l_var_alist)),
+                        .m_tag = make_list({
+                                               make_var("Y", l_var_alist),
+                                               make_atom("abc"),
+                                           },
+                                           make_var("D", l_var_alist)),
                         .m_guide = make_list({
                                                  make_atom("sub"),
                                                  make_var("C", l_var_alist),
@@ -2084,11 +2078,11 @@ static void test_infer_statement_equal()
             {
                 {
                     infer_statement{
-                        .m_tag = make_var("X", l_var_alist),
-                        .m_theorem = make_list({
-                                                   make_atom("abc"),
-                                               },
-                                               make_var("B", l_var_alist)),
+                        .m_tag = make_list({
+                                               make_var("X", l_var_alist),
+                                               make_atom("abc"),
+                                           },
+                                           make_var("B", l_var_alist)),
                         .m_guide = make_list({
                                                  make_atom("sub"),
                                                  make_var("A", l_var_alist),
@@ -2096,11 +2090,11 @@ static void test_infer_statement_equal()
                                              make_var("B", l_var_alist)),
                     },
                     infer_statement{
-                        .m_tag = make_var("Y", l_var_alist),
-                        .m_theorem = make_list({
-                                                   make_atom("abc1"),
-                                               },
-                                               make_var("D", l_var_alist)),
+                        .m_tag = make_list({
+                                               make_var("Y", l_var_alist),
+                                               make_atom("abc1"),
+                                           },
+                                           make_var("D", l_var_alist)),
                         .m_guide = make_list({
                                                  make_atom("sub"),
                                                  make_var("C", l_var_alist),
@@ -2864,7 +2858,7 @@ static void test_parser_extract_guide_statement()
     data_points<std::string, statement> l_test_cases =
         {
             {
-                "guide g_add_bc []\n"
+                "guide g_add_bc\n"
                 "[gor\n"
                 "    add_bc_0\n"
                 "    add_bc_1\n"
@@ -2875,7 +2869,6 @@ static void test_parser_extract_guide_statement()
                 "]\n;",
                 guide_statement{
                     .m_tag = make_atom("g_add_bc"),
-                    .m_args = make_list({}),
                     .m_guide = make_list({
                         make_atom("gor"),
                         make_atom("add_bc_0"),
@@ -2888,10 +2881,9 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "guide g0[][bind K [theorem a0]]\t;",
+                "guide g0[bind K [theorem a0]]\t;",
                 guide_statement{
                     .m_tag = make_atom("g0"),
-                    .m_args = make_list({}),
                     .m_guide = make_list({
                         make_atom("bind"),
                         make_var("K", l_var_alist),
@@ -2903,10 +2895,9 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "guide \"g\"[] [sub thm [theorem a0] [theorem a1]];",
+                "guide \"g\" [sub thm [theorem a0] [theorem a1]];",
                 guide_statement{
                     .m_tag = make_atom("g"),
-                    .m_args = make_list({}),
                     .m_guide = make_list({
                         make_atom("sub"),
                         make_atom("thm"),
@@ -2922,10 +2913,10 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "guide \"g\" [Subgoal Subguide][sub Subgoal Subguide [theorem a1]]\n;",
+                "guide [\"g\" Subgoal Subguide][sub Subgoal Subguide [theorem a1]]\n;",
                 guide_statement{
-                    .m_tag = make_atom("g"),
-                    .m_args = make_list({
+                    .m_tag = make_list({
+                        make_atom("g"),
                         make_var("Subgoal", l_var_alist),
                         make_var("Subguide", l_var_alist),
                     }),
@@ -2942,10 +2933,9 @@ static void test_parser_extract_guide_statement()
 
             },
             {
-                "guide gt [] [mp [theorem a0] [theorem a1]];",
+                "guide gt [mp [theorem a0] [theorem a1]];",
                 guide_statement{
                     .m_tag = make_atom("gt"),
-                    .m_args = make_list({}),
                     .m_guide = make_list({
                         make_atom("mp"),
                         make_list({
@@ -2960,10 +2950,10 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "guide gt [x z] [eval];",
+                "guide [gt x z] [eval];",
                 guide_statement{
-                    .m_tag = make_atom("gt"),
-                    .m_args = make_list({
+                    .m_tag = make_list({
+                        make_atom("gt"),
                         make_atom("x"),
                         make_atom("z"),
                     }),
@@ -2973,14 +2963,14 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "\'guide\' \"t a g\" [X Y| Rest] [\"theorem\" \'a0\'];",
+                "\'guide\' [\"t a g\" X Y| Rest] [\"theorem\" \'a0\'];",
                 guide_statement{
-                    .m_tag = make_atom("t a g"),
-                    .m_args = make_list({
-                                            make_var("X", l_var_alist),
-                                            make_var("Y", l_var_alist),
-                                        },
-                                        make_var("Rest", l_var_alist)),
+                    .m_tag = make_list({
+                                           make_atom("t a g"),
+                                           make_var("X", l_var_alist),
+                                           make_var("Y", l_var_alist),
+                                       },
+                                       make_var("Rest", l_var_alist)),
                     .m_guide = make_list({
                         make_atom("theorem"),
                         make_atom("a0"),
@@ -2988,10 +2978,12 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "\"guide\" \"X\" Args [guide g0 Args];",
+                "\"guide\" [\"X\" Args] [guide g0 Args];",
                 guide_statement{
-                    .m_tag = make_atom("X"),
-                    .m_args = make_var("Args", l_var_alist),
+                    .m_tag = make_list({
+                        make_atom("X"),
+                        make_var("Args", l_var_alist),
+                    }),
                     .m_guide = make_list({
                         make_atom("guide"),
                         make_atom("g0"),
@@ -3065,14 +3057,9 @@ static void test_parser_extract_infer_statement()
     data_points<std::string, statement> l_test_cases =
         {
             {
-                "infer i0 [claim daniel y] [bout daniel [mp [theorem a0] [theorem a1]]];",
+                "infer i0 [bout daniel [mp [theorem a0] [theorem a1]]];",
                 infer_statement{
                     .m_tag = make_atom("i0"),
-                    .m_theorem = make_list({
-                        make_atom("claim"),
-                        make_atom("daniel"),
-                        make_atom("y"),
-                    }),
                     .m_guide = make_list({
                         make_atom("bout"),
                         make_atom("daniel"),
@@ -3091,32 +3078,16 @@ static void test_parser_extract_infer_statement()
                 },
             },
             {
-                "infer 'i0' [] []\n;",
+                "infer 'i0' []\n;",
                 infer_statement{
                     .m_tag = make_atom("i0"),
-                    .m_theorem = make_list({}),
                     .m_guide = make_list({}),
                 },
             },
             {
-                "infer 'i0' [iff [add Y X Z] [add X Y Z]] [guide commute [guide g_add] [theorem not_add]]\n;",
+                "infer 'i0' [guide commute [guide g_add] [theorem not_add]]\n;",
                 infer_statement{
                     .m_tag = make_atom("i0"),
-                    .m_theorem = make_list({
-                        make_atom("iff"),
-                        make_list({
-                            make_atom("add"),
-                            make_var("Y", l_var_alist),
-                            make_var("X", l_var_alist),
-                            make_var("Z", l_var_alist),
-                        }),
-                        make_list({
-                            make_atom("add"),
-                            make_var("X", l_var_alist),
-                            make_var("Y", l_var_alist),
-                            make_var("Z", l_var_alist),
-                        }),
-                    }),
                     .m_guide = make_list({
                         make_atom("guide"),
                         make_atom("commute"),
@@ -3132,15 +3103,9 @@ static void test_parser_extract_infer_statement()
                 },
             },
             {
-                "infer X [add \'1\' \'2\' \'3\'] [guide g_add_ui];",
+                "infer X [guide g_add_ui];",
                 infer_statement{
                     .m_tag = make_var("X", l_var_alist),
-                    .m_theorem = make_list({
-                        make_atom("add"),
-                        make_atom("1"),
-                        make_atom("2"),
-                        make_atom("3"),
-                    }),
                     .m_guide = make_list({
                         make_atom("guide"),
                         make_atom("g_add_ui"),
@@ -3148,13 +3113,9 @@ static void test_parser_extract_infer_statement()
                 },
             },
             {
-                "\"infer\" [X|Y] [\'awesome\' leon] [\"theorem\" awes];",
+                "\"infer\" [X|Y] [\"theorem\" awes];",
                 infer_statement{
                     .m_tag = make_list({make_var("X", l_var_alist)}, make_var("Y", l_var_alist)),
-                    .m_theorem = make_list({
-                        make_atom("awesome"),
-                        make_atom("leon"),
-                    }),
                     .m_guide = make_list({
                         make_atom("theorem"),
                         make_atom("awes"),
@@ -3162,13 +3123,9 @@ static void test_parser_extract_infer_statement()
                 },
             },
             {
-                "\"infer\" [X] [awesome|Rest] [\"theorem\" awes1];",
+                "\"infer\" [X] [\"theorem\" awes1];",
                 infer_statement{
                     .m_tag = make_list({make_var("X", l_var_alist)}),
-                    .m_theorem = make_list({
-                                               make_atom("awesome"),
-                                           },
-                                           make_var("Rest", l_var_alist)),
                     .m_guide = make_list({
                         make_atom("theorem"),
                         make_atom("awes1"),
@@ -3424,11 +3381,6 @@ static void test_parse_file_examples()
                     },
                     infer_statement{
                         .m_tag = make_atom("i0"),
-                        .m_theorem = make_list({
-                            make_atom("claim"),
-                            make_atom("daniel"),
-                            make_atom("y"),
-                        }),
                         .m_guide = make_list({
                             make_atom("bout"),
                             make_atom("daniel"),
@@ -3490,7 +3442,6 @@ static void test_parse_file_examples()
                         .m_tag = make_list({
                             make_atom("g0"),
                         }),
-                        .m_args = make_var("_", l_var_alist),
                         .m_guide = make_list({
                             make_atom("bout"),
                             make_atom("daniel"),
@@ -3517,11 +3468,6 @@ static void test_parse_file_examples()
                     },
                     infer_statement{
                         .m_tag = make_atom("i0"),
-                        .m_theorem = make_list({
-                            make_atom("claim"),
-                            make_atom("daniel"),
-                            make_atom("y"),
-                        }),
                         .m_guide = make_list({
                             make_atom("guide"),
                             make_list({
@@ -3573,7 +3519,6 @@ static void test_parse_file_examples()
                     },
                     guide_statement{
                         .m_tag = make_atom("g0"),
-                        .m_args = make_list({}),
                         .m_guide = make_list({
                             make_atom("mp"),
                             make_list({
@@ -3588,7 +3533,6 @@ static void test_parse_file_examples()
                     },
                     infer_statement{
                         .m_tag = make_atom("i0"),
-                        .m_theorem = make_atom("y"),
                         .m_guide = make_list({
                             make_atom("guide"),
                             make_atom("g0"),

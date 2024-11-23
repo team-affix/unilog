@@ -20,13 +20,12 @@ decl_theorem(ModulePath, Tag, Theorem) :-
         theorem(ModulePath, Tag, Theorem)
     )).
 
-decl_guide(ModulePath, Tag, Args, Redirect) :-
+decl_guide(ModulePath, Tag, Redirect) :-
     is_list(ModulePath),
-    atomic(Tag),
     is_list(Args),
     \+ clause(guide(ModulePath, Tag, _, _), _),
     assertz((
-        guide(ModulePath, Tag, Args, Redirect)
+        guide(ModulePath, Tag, Redirect)
     )).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -93,7 +92,7 @@ query(DStack, BStack, [guide, GuideTag | GuideArgs], Theorem) :-
     query(DStack, BStack, Redirect, Theorem).
 
 :- dynamic theorem/3.
-:- dynamic guide/4.
+:- dynamic guide/3.
 
 %:-
 %    axiom([], a0, [awesome, jake]),

@@ -18,14 +18,12 @@ namespace unilog
     struct guide_statement
     {
         term_t m_tag;
-        term_t m_args;
         term_t m_guide;
     };
 
     struct infer_statement
     {
         term_t m_tag;
-        term_t m_theorem;
         term_t m_guide;
     };
 

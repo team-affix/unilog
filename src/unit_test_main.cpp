@@ -6,6 +6,7 @@
 
 extern void test_lexer_main();
 extern void test_parser_main();
+extern void test_executor_main();
 
 void unit_test_main()
 {
@@ -13,6 +14,7 @@ void unit_test_main()
 
     TEST(test_lexer_main);
     TEST(test_parser_main);
+    TEST(test_executor_main);
 }
 
 int main(int argc, char **argv)

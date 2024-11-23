@@ -6,7 +6,7 @@ axiom ['a0\n' X|X] [claim daniel [if y x]];
 
 axiom [a1 Y |Z] [claim daniel x];
 
-    guide [g0] _
+    guide [g0]
     
     [bout daniel
         [mp
@@ -19,7 +19,6 @@ axiom [a1 Y |Z] [claim daniel x];
     i0
     
     
-    [claim daniel y]
 
 
     [guide 
