@@ -71,49 +71,11 @@ namespace unilog
         fid_t l_frame = PL_open_foreign_frame();
 
         /////////////////////////////////////////
-        // construct new term refs for arguments
+        // construct new module path
         /////////////////////////////////////////
-        term_t l_args = PL_new_term_refs(3);
-        term_t l_list_0 = l_args;
-        term_t l_list_1 = l_args + 1;
-        term_t l_new_module_path = l_args + 2;
-
-        /////////////////////////////////////////
-        // set up arguments
-        /////////////////////////////////////////
-
-        // arg1
-        if (!PL_unify(l_list_0, a_module_path))
+        term_t l_new_module_path = PL_new_term_ref();
+        if (!PL_cons_list(l_new_module_path, a_refer_statement.m_tag, a_module_path))
             return false;
-
-        // arg2
-        if (!(PL_put_nil(l_list_1) &&
-              PL_cons_list(l_list_1, a_refer_statement.m_tag, l_list_1)))
-            return false;
-
-        /////////////////////////////////////////
-        // retrieve the append predicate
-        /////////////////////////////////////////
-        predicate_t l_predicate = PL_predicate("append", 3, NULL); // append/3
-
-        if (!l_predicate)
-            throw std::runtime_error("Error: failed to retrieve append/3 predicate.");
-
-        /////////////////////////////////////////
-        // open the query, supplying the args
-        /////////////////////////////////////////
-        qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, l_args);
-
-        /////////////////////////////////////////
-        // attempt to get a single match (executing the append function)
-        /////////////////////////////////////////
-        if (!PL_next_solution(l_query))
-            return false;
-
-        /////////////////////////////////////////
-        // close the prolog query
-        /////////////////////////////////////////
-        PL_close_query(l_query);
 
         /////////////////////////////////////////
         // extract file path string from atom
@@ -218,6 +180,49 @@ static void retract_all(term_t a_clause_head)
     PL_discard_foreign_frame(l_frame);
 }
 
+static void assertz(term_t a_clause)
+{
+    fid_t l_frame = PL_open_foreign_frame();
+
+    /////////////////////////////////////////
+    // constructs term refs for args
+    /////////////////////////////////////////
+    term_t l_args = PL_new_term_refs(1);
+    term_t l_clause = l_args;
+
+    /////////////////////////////////////////
+    // set up arguments for predicate
+    /////////////////////////////////////////
+    if (!PL_unify(l_clause, a_clause))
+        throw std::runtime_error("Error: failed to unify.");
+
+    /////////////////////////////////////////
+    // retrieve predicate
+    /////////////////////////////////////////
+    predicate_t l_predicate = PL_predicate("assertz", 1, NULL);
+
+    if (!l_predicate)
+        throw std::runtime_error("Error: failed to retrieve predicate.");
+
+    /////////////////////////////////////////
+    // open the query, supplying the args
+    /////////////////////////////////////////
+    qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, l_args);
+
+    /////////////////////////////////////////
+    // attempt to get a single match (executing function)
+    /////////////////////////////////////////
+    if (!PL_next_solution(l_query))
+        throw std::runtime_error("Error: failed to execute predicate.");
+
+    /////////////////////////////////////////
+    // close the prolog query
+    /////////////////////////////////////////
+    PL_close_query(l_query);
+
+    PL_discard_foreign_frame(l_frame);
+}
+
 static void wipe_database()
 {
     fid_t l_frame = PL_open_foreign_frame();
@@ -227,18 +232,20 @@ static void wipe_database()
     /////////////////////////////////////////
     term_t l_theorem_clause_head = PL_new_term_ref();
     functor_t l_theorem_functor = PL_new_functor(PL_new_atom("theorem"), 3);
-    PL_cons_functor(
-        l_theorem_clause_head, l_theorem_functor,
-        PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref());
+    if (!PL_cons_functor(
+            l_theorem_clause_head, l_theorem_functor,
+            PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref()))
+        throw std::runtime_error("Error: failed to construct functor.");
 
     /////////////////////////////////////////
     // creates the head of clause: guide(_, _, _)
     /////////////////////////////////////////
     term_t l_guide_clause_head = PL_new_term_ref();
-    functor_t l_guide_functor = PL_new_functor(PL_new_atom("theorem"), 3);
-    PL_cons_functor(
-        l_guide_clause_head, l_guide_functor,
-        PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref());
+    functor_t l_guide_functor = PL_new_functor(PL_new_atom("guide"), 3);
+    if (!PL_cons_functor(
+            l_guide_clause_head, l_guide_functor,
+            PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref()))
+        throw std::runtime_error("Error: failed to construct functor.");
 
     /////////////////////////////////////////
     // retract all dynamic statements
@@ -252,8 +259,176 @@ static void wipe_database()
 ////////////////////////////////
 ////////////////////////////////
 
+static void test_assertz_and_retract_all()
+{
+    fid_t l_frame = PL_open_foreign_frame();
+
+    functor_t l_functor_0 = PL_new_functor(PL_new_atom("pred0"), 1);
+    functor_t l_functor_1 = PL_new_functor(PL_new_atom("pred1"), 1);
+    functor_t l_functor_2 = PL_new_functor(PL_new_atom("pred2"), 1);
+
+    term_t l_atom_0 = PL_new_term_ref();
+    term_t l_atom_1 = PL_new_term_ref();
+    term_t l_atom_2 = PL_new_term_ref();
+
+    PL_put_atom_chars(l_atom_0, "abc0");
+    PL_put_atom_chars(l_atom_1, "abc1");
+    PL_put_atom_chars(l_atom_2, "abc2");
+
+    term_t l_clause_0 = PL_new_term_ref();
+    term_t l_clause_1 = PL_new_term_ref();
+    term_t l_clause_2 = PL_new_term_ref();
+
+    assert(PL_cons_functor(l_clause_0, l_functor_0, l_atom_0) &&
+           PL_cons_functor(l_clause_1, l_functor_1, l_atom_1) &&
+           PL_cons_functor(l_clause_2, l_functor_2, l_atom_2));
+
+    assertz(l_clause_0);
+    assertz(l_clause_1);
+    assertz(l_clause_2);
+
+    predicate_t l_predicate_0 = PL_predicate("pred0", 1, NULL);
+    predicate_t l_predicate_1 = PL_predicate("pred1", 1, NULL);
+    predicate_t l_predicate_2 = PL_predicate("pred2", 1, NULL);
+
+    /////////////////////////////////////////
+    // make sure the predicates can be retrieved
+    /////////////////////////////////////////
+    assert(l_predicate_0 && l_predicate_1 && l_predicate_2);
+
+    /////////////////////////////////////////
+    // ensure these statements unify
+    /////////////////////////////////////////
+    {
+        qid_t l_query_0 = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_0, l_atom_0);
+        assert(PL_next_solution(l_query_0));
+        PL_close_query(l_query_0);
+
+        qid_t l_query_1 = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_1, l_atom_1);
+        assert(PL_next_solution(l_query_1));
+        PL_close_query(l_query_1);
+
+        qid_t l_query_2 = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_2, l_atom_2);
+        assert(PL_next_solution(l_query_2));
+        PL_close_query(l_query_2);
+    };
+
+    /////////////////////////////////////////
+    // ensure these statements do NOT unify
+    /////////////////////////////////////////
+    {
+        qid_t l_query_0 = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_0, l_atom_1);
+        assert(!PL_next_solution(l_query_0));
+        PL_close_query(l_query_0);
+
+        qid_t l_query_1 = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_1, l_atom_2);
+        assert(!PL_next_solution(l_query_1));
+        PL_close_query(l_query_1);
+
+        qid_t l_query_2 = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_2, l_atom_0);
+        assert(!PL_next_solution(l_query_2));
+        PL_close_query(l_query_2);
+    };
+
+    /////////////////////////////////////////
+    // try to erase the entries from the DB.
+    /////////////////////////////////////////
+    retract_all(l_clause_0);
+    retract_all(l_clause_1);
+    retract_all(l_clause_2);
+
+    /////////////////////////////////////////
+    // ensure these statements do NOT unify
+    // (the ones that unified earlier)
+    /////////////////////////////////////////
+    {
+        qid_t l_query_0 = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_0, l_atom_0);
+        assert(!PL_next_solution(l_query_0));
+        PL_close_query(l_query_0);
+
+        qid_t l_query_1 = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_1, l_atom_1);
+        assert(!PL_next_solution(l_query_1));
+        PL_close_query(l_query_1);
+
+        qid_t l_query_2 = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_2, l_atom_2);
+        assert(!PL_next_solution(l_query_2));
+        PL_close_query(l_query_2);
+    };
+
+    PL_discard_foreign_frame(l_frame);
+}
+
 static void test_wipe_database()
 {
+    fid_t l_frame = PL_open_foreign_frame();
+
+    {
+        term_t l_args = PL_new_term_refs(3);
+        term_t l_atom_0 = l_args;
+        term_t l_atom_1 = l_args + 1;
+        term_t l_atom_2 = l_args + 2;
+
+        PL_put_atom_chars(l_atom_0, "abc0");
+        PL_put_atom_chars(l_atom_1, "abc1");
+        PL_put_atom_chars(l_atom_2, "abc2");
+
+        functor_t l_theorem_functor = PL_new_functor(PL_new_atom("theorem"), 3);
+        functor_t l_guide_functor = PL_new_functor(PL_new_atom("guide"), 3);
+
+        term_t l_theorem_clause = PL_new_term_ref();
+        term_t l_guide_clause = PL_new_term_ref();
+        assert(PL_cons_functor(l_theorem_clause, l_theorem_functor,
+                               l_atom_0, l_atom_1, l_atom_2) &&
+               PL_cons_functor(l_guide_clause, l_guide_functor,
+                               l_atom_0, l_atom_1, l_atom_2));
+
+        assertz(l_theorem_clause);
+        assertz(l_guide_clause);
+
+        predicate_t l_theorem_predicate = PL_predicate("theorem", 3, NULL);
+        predicate_t l_guide_predicate = PL_predicate("guide", 3, NULL);
+
+        /////////////////////////////////////////
+        // make sure the predicates can be retrieved
+        /////////////////////////////////////////
+        assert(l_theorem_predicate);
+        assert(l_guide_predicate);
+
+        /////////////////////////////////////////
+        // ensure these statements unify
+        /////////////////////////////////////////
+        {
+            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_theorem_predicate, l_args);
+            assert(PL_next_solution(l_query));
+            PL_close_query(l_query);
+        };
+        {
+            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_guide_predicate, l_args);
+            assert(PL_next_solution(l_query));
+            PL_close_query(l_query);
+        };
+
+        /////////////////////////////////////////
+        // wipe the database
+        /////////////////////////////////////////
+        wipe_database();
+
+        /////////////////////////////////////////
+        // ensure these statements do NOT unify
+        /////////////////////////////////////////
+        {
+            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_theorem_predicate, l_args);
+            assert(!PL_next_solution(l_query));
+            PL_close_query(l_query);
+        };
+        {
+            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_guide_predicate, l_args);
+            assert(!PL_next_solution(l_query));
+            PL_close_query(l_query);
+        };
+    };
+
+    PL_discard_foreign_frame(l_frame);
 }
 
 static void test_execute_axiom_statement()
@@ -264,6 +439,7 @@ void test_executor_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
+    TEST(test_assertz_and_retract_all);
     TEST(test_wipe_database);
     TEST(test_execute_axiom_statement);
 }
