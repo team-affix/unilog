@@ -3,11 +3,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Helper
 
-bscope([claims, S, Internal], [S|NextBScope], Descoped) :-
-    bscope(Internal, NextBScope, Descoped),
-    !.
-bscope(SExpr, [], SExpr) :-
-    !.
+%bscope([claims, S, Internal], [S|NextBScope], Descoped) :-
+%    bscope(Internal, NextBScope, Descoped),
+%    !.
+%bscope(SExpr, [], SExpr) :-
+%    !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle theorem/guide declarations
@@ -22,7 +22,6 @@ decl_theorem(ModulePath, Tag, Theorem) :-
 
 decl_guide(ModulePath, Tag, Redirect) :-
     is_list(ModulePath),
-    is_list(Args),
     \+ clause(guide(ModulePath, Tag, _, _), _),
     assertz((
         guide(ModulePath, Tag, Redirect)
@@ -36,23 +35,21 @@ query(Guide, Theorem) :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% scope handling
 
-query(DStack, BStack, [bout, S, NextGuide], ScopedSExpr) :-
-    append(BStack, [S], NewBStack),
-    bscope(ScopedSExpr, [S], Internal),
-    query(DStack, NewBStack, NextGuide, Internal).
+query(DStack, BStack, [bout, S, NextGuide], [claims, S, Internal]) :-
+    %bscope(ScopedSExpr, [S], Internal),
+    query(DStack, [S|BStack], NextGuide, Internal).
 
-query(DStack, BStack, [bin, S, NextGuide], Internal) :-
+query(DStack, [S|BStack], [bin, S, NextGuide], Internal) :-
+    %bscope(ScopedSExpr, [S], Internal),
+    query(DStack, BStack, NextGuide, [claims, S, Internal]).
+
+query(DStack, BStack, [dout, S, NextGuide], Theorem) :-
     append(NewBStack, [S], BStack),
-    bscope(ScopedSExpr, [S], Internal),
-    query(DStack, NewBStack, NextGuide, ScopedSExpr).
+    query([S|DStack], NewBStack, NextGuide, Theorem).
 
-query(DStack, [S|NewBStack], [dout, S, NextGuide], Theorem) :-
-    append(DStack, [S], NewDStack),
-    query(NewDStack, NewBStack, NextGuide, Theorem).
-
-query(DStack, BStack, [din, S, NextGuide], Theorem) :-
-    append(NewDStack, [S], DStack),
-    query(NewDStack, [S|BStack], NextGuide, Theorem).
+query([S|DStack], BStack, [din, S, NextGuide], Theorem) :-
+    append(BStack, [S], NewBStack),
+    query(DStack, NewBStack, NextGuide, Theorem).
 
 %%%%%%%%%%%%%%%%%%%%% less fundamental ROIs
 
