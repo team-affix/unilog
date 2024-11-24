@@ -1,0 +1,4 @@
+axiom a0 [if b a];
+guide g0 [mp [t a0] [t a1]];
+refer math './math/arith.u';
+axiom a1 a;

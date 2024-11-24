@@ -590,6 +590,7 @@ static void test_execute_refer_statement()
             assert(CALL_PRED("writeln", 1, l_content_module_stack));
             assert(CALL_PRED("writeln", 1, l_content_tag));
             assert(CALL_PRED("writeln", 1, l_content_sexpr));
+            assert(PL_compare(l_content_module_stack, l_referee_module_stack) == 0);
             assert(PL_compare(l_content_tag, l_cit->m_tag) == 0);
             assert(PL_compare(l_content_sexpr, l_cit->m_theorem) == 0);
         }
