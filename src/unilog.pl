@@ -27,6 +27,11 @@ decl_guide(ModulePath, Tag, Redirect) :-
         guide(ModulePath, Tag, Redirect)
     )).
 
+infer(ModulePath, Tag, Guide) :-
+    query([], ModulePath, Guide, Theorem),
+    decl_theorem(ModulePath, Tag, Theorem).
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
 
@@ -91,11 +96,27 @@ query(BStack, DStack, [guide, GuideTag], Theorem) :-
 :- dynamic theorem/3.
 :- dynamic guide/3.
 
-:-
+wipe_database :-
+    retractall(theorem(_, _, _)),
+    retractall(guide(_, _, _)),
+    !.
+
+test_case(Predicate) :-
+    write(">>>> TEST STARTING:     "),
+    write(Predicate),
+    nl,
+    wipe_database,
+    call(Predicate).
+
+test_case_0 :-
     decl_theorem([natalie, daniel], a0, [if, y, x]),
     decl_theorem([natalie, daniel], a1, x),
     query(
-        [bout, daniel, [bout, natalie,
-        [dout, daniel, [dout, natalie,
-            [mp, [theorem, a0], [theorem, a1]]
-        ]]]], _).
+            [bout, daniel, [bout, natalie,
+            [dout, daniel, [dout, natalie,
+                [mp, [theorem, a0], [theorem, a1]]
+            ]]]], _).
+
+:-
+    test_case(test_case_0),
+    wipe_database. % do a terminal db wipe
