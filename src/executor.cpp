@@ -533,6 +533,8 @@ static void test_execute_refer_statement()
         std::vector<std::array<term_t, 3>> m_guides;
     };
 
+    std::map<std::string, term_t> l_var_decl_alist;
+
     std::vector<file_test_case> l_file_test_cases =
         {
             file_test_case{
@@ -641,6 +643,23 @@ static void test_execute_refer_statement()
                                 make_atom("t"),
                                 make_atom("a1"),
                             }),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("math"),
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_list({
+                            make_atom("g0"),
+                            make_var("X", l_var_decl_alist),
+                            make_var("Y", l_var_decl_alist),
+                        }),
+                        make_list({
+                            make_atom("mp"),
+                            make_var("X", l_var_decl_alist),
+                            make_var("Y", l_var_decl_alist),
                         }),
                     },
                 }),
