@@ -135,7 +135,16 @@ namespace unilog
 //// HELPER FUNCTIONS
 ////////////////////////////////
 
-// static void call_predicate_once(const std::string &a_predicate_name, int a_arity, )
+static bool call_and_get_first_solution(term_t a_head)
+{
+    predicate_t l_predicate = PL_predicate("call", 1, NULL);
+
+    qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, a_head);
+    bool l_result = PL_next_solution(l_query);
+    PL_close_query(l_query);
+
+    return l_result;
+}
 
 static void retract_all(term_t a_clause_head)
 {
@@ -259,6 +268,36 @@ static void wipe_database()
 ////////////////////////////////
 ////////////////////////////////
 
+static void test_call_and_get_first_solution()
+{
+    fid_t l_frame = PL_open_foreign_frame();
+
+    term_t l_query_head = PL_new_term_ref();
+    functor_t l_is_atom_functor = PL_new_functor(PL_new_atom("atom"), 1);
+    term_t l_argument = PL_new_term_ref();
+
+    assert(PL_cons_functor(l_query_head, l_is_atom_functor, l_argument));
+
+    /////////////////////////////////////////
+    // right now, argument is a variable thus atom/1 will fail.
+    /////////////////////////////////////////
+    assert(!call_and_get_first_solution(l_query_head));
+
+    /////////////////////////////////////////
+    // set argument to an atom using PL_unify
+    /////////////////////////////////////////
+    term_t l_atom_term = PL_new_term_ref();
+    assert(PL_put_atom_chars(l_atom_term, "I am an atom"));
+    assert(PL_unify(l_atom_term, l_argument));
+
+    /////////////////////////////////////////
+    // now, argument is an atom, thus atom/1 will succeed
+    /////////////////////////////////////////
+    assert(call_and_get_first_solution(l_query_head));
+
+    PL_discard_foreign_frame(l_frame);
+}
+
 static void test_assertz_and_retract_all()
 {
     fid_t l_frame = PL_open_foreign_frame();
@@ -358,17 +397,6 @@ static void test_assertz_and_retract_all()
     PL_discard_foreign_frame(l_frame);
 }
 
-static bool call_and_get_first_solution(term_t a_head)
-{
-    predicate_t l_predicate_0 = PL_predicate("call", 1, NULL);
-
-    qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_0, a_head);
-    bool l_result = PL_next_solution(l_query);
-    PL_close_query(l_query);
-
-    return l_result;
-}
-
 static void test_wipe_database()
 {
     fid_t l_frame = PL_open_foreign_frame();
@@ -393,31 +421,17 @@ static void test_wipe_database()
                PL_cons_functor(l_guide_clause, l_guide_functor,
                                l_atom_0, l_atom_1, l_atom_2));
 
+        /////////////////////////////////////////
+        // add clauses to db
+        /////////////////////////////////////////
         assertz(l_theorem_clause);
         assertz(l_guide_clause);
 
-        predicate_t l_theorem_predicate = PL_predicate("theorem", 3, NULL);
-        predicate_t l_guide_predicate = PL_predicate("guide", 3, NULL);
-
         /////////////////////////////////////////
-        // make sure the predicates can be retrieved
+        // ensure these statements unify (since clauses are bodyless, clause IS head)
         /////////////////////////////////////////
-        assert(l_theorem_predicate);
-        assert(l_guide_predicate);
-
-        /////////////////////////////////////////
-        // ensure these statements unify
-        /////////////////////////////////////////
-        {
-            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_theorem_predicate, l_args);
-            assert(PL_next_solution(l_query));
-            PL_close_query(l_query);
-        };
-        {
-            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_guide_predicate, l_args);
-            assert(PL_next_solution(l_query));
-            PL_close_query(l_query);
-        };
+        assert(call_and_get_first_solution(l_theorem_clause));
+        assert(call_and_get_first_solution(l_guide_clause));
 
         /////////////////////////////////////////
         // wipe the database
@@ -427,16 +441,8 @@ static void test_wipe_database()
         /////////////////////////////////////////
         // ensure these statements do NOT unify
         /////////////////////////////////////////
-        {
-            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_theorem_predicate, l_args);
-            assert(!PL_next_solution(l_query));
-            PL_close_query(l_query);
-        };
-        {
-            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_guide_predicate, l_args);
-            assert(!PL_next_solution(l_query));
-            PL_close_query(l_query);
-        };
+        assert(!call_and_get_first_solution(l_theorem_clause));
+        assert(!call_and_get_first_solution(l_guide_clause));
     };
 
     PL_discard_foreign_frame(l_frame);
@@ -450,6 +456,7 @@ void test_executor_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
+    TEST(test_call_and_get_first_solution);
     TEST(test_assertz_and_retract_all);
     TEST(test_wipe_database);
     TEST(test_execute_axiom_statement);
