@@ -5,6 +5,9 @@
 #include <deque>
 #include "executor.hpp"
 
+#define CALL_PRED(name, arity, arg0) \
+    (PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate(name, arity, NULL), arg0))
+
 namespace unilog
 {
     bool execute(const axiom_statement &a_axiom_statement, term_t a_module_path)
@@ -30,7 +33,7 @@ namespace unilog
         /////////////////////////////////////////
         // execute decl_theorem
         /////////////////////////////////////////
-        if (!PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("decl_theorem", 3, NULL), l_args))
+        if (!CALL_PRED("decl_theorem", 3, l_args))
             return false;
 
         PL_discard_foreign_frame(l_frame);
@@ -145,12 +148,12 @@ static void wipe_database()
     // retract_all(l_guide_clause_head);
     {
         fid_t l_query_frame = PL_open_foreign_frame();
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("retractall", 1, NULL), l_theorem_clause_head));
+        assert(CALL_PRED("retractall", 1, l_theorem_clause_head));
         PL_discard_foreign_frame(l_query_frame);
     };
     {
         fid_t l_query_frame = PL_open_foreign_frame();
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("retractall", 1, NULL), l_guide_clause_head));
+        assert(CALL_PRED("retractall", 1, l_guide_clause_head));
         PL_discard_foreign_frame(l_query_frame);
     };
 }
@@ -167,7 +170,7 @@ static void test_query_first_solution()
     /////////////////////////////////////////
     // right now, argument is a variable thus atom/1 will fail.
     /////////////////////////////////////////
-    assert(!PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("atom", 1, NULL), l_argument));
+    assert(!CALL_PRED("atom", 1, l_argument));
 
     /////////////////////////////////////////
     // set argument to an atom using PL_unify
@@ -179,7 +182,7 @@ static void test_query_first_solution()
     /////////////////////////////////////////
     // now, argument is an atom, thus atom/1 will succeed
     /////////////////////////////////////////
-    assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("atom", 1, NULL), l_argument));
+    assert(CALL_PRED("atom", 1, l_argument));
 
     PL_discard_foreign_frame(l_frame);
 }
@@ -211,9 +214,9 @@ static void test_assertz_and_retract_all()
     // assertz(l_clause_0);
     // assertz(l_clause_1);
     // assertz(l_clause_2);
-    assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("assertz", 1, NULL), l_clause_0));
-    assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("assertz", 1, NULL), l_clause_1));
-    assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("assertz", 1, NULL), l_clause_2));
+    assert(CALL_PRED("assertz", 1, l_clause_0));
+    assert(CALL_PRED("assertz", 1, l_clause_1));
+    assert(CALL_PRED("assertz", 1, l_clause_2));
 
     predicate_t l_predicate_0 = PL_predicate("pred0", 1, NULL);
     predicate_t l_predicate_1 = PL_predicate("pred1", 1, NULL);
@@ -261,9 +264,9 @@ static void test_assertz_and_retract_all()
     /////////////////////////////////////////
     // try to erase the entries from the DB.
     /////////////////////////////////////////
-    assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("retractall", 1, NULL), l_clause_0));
-    assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("retractall", 1, NULL), l_clause_1));
-    assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("retractall", 1, NULL), l_clause_2));
+    assert(CALL_PRED("retractall", 1, l_clause_0));
+    assert(CALL_PRED("retractall", 1, l_clause_1));
+    assert(CALL_PRED("retractall", 1, l_clause_2));
 
     /////////////////////////////////////////
     // ensure these statements do NOT unify
@@ -313,14 +316,14 @@ static void test_wipe_database()
         // /////////////////////////////////////////
         // // add clauses to db
         // /////////////////////////////////////////
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("assertz", 1, NULL), l_theorem_clause));
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("assertz", 1, NULL), l_guide_clause));
+        assert(CALL_PRED("assertz", 1, l_theorem_clause));
+        assert(CALL_PRED("assertz", 1, l_guide_clause));
 
         /////////////////////////////////////////
         // ensure these statements unify (since clauses are bodyless, clause IS head)
         /////////////////////////////////////////
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("theorem", 3, NULL), l_args));
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("guide", 3, NULL), l_args));
+        assert(CALL_PRED("theorem", 3, l_args));
+        assert(CALL_PRED("guide", 3, l_args));
 
         /////////////////////////////////////////
         // wipe the database
@@ -330,8 +333,8 @@ static void test_wipe_database()
         /////////////////////////////////////////
         // ensure these statements do NOT unify
         /////////////////////////////////////////
-        assert(!PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("theorem", 3, NULL), l_args));
-        assert(!PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("guide", 3, NULL), l_args));
+        assert(!CALL_PRED("theorem", 3, l_args));
+        assert(!CALL_PRED("guide", 3, l_args));
     };
 
     PL_discard_foreign_frame(l_frame);
@@ -362,7 +365,7 @@ static void test_execute_axiom_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(!PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("theorem", 3, NULL), l_args));
+        assert(!CALL_PRED("theorem", 3, l_args));
         PL_discard_foreign_frame(l_unification_frame);
     };
 
@@ -392,10 +395,10 @@ static void test_execute_axiom_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("theorem", 3, NULL), l_args));
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("writeln", 1, NULL), l_module_stack));
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("writeln", 1, NULL), l_tag));
-        assert(PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate("writeln", 1, NULL), l_theorem));
+        assert(CALL_PRED("theorem", 3, l_args));
+        assert(CALL_PRED("writeln", 1, l_module_stack));
+        assert(CALL_PRED("writeln", 1, l_tag));
+        assert(CALL_PRED("writeln", 1, l_theorem));
         assert(PL_compare(l_theorem, l_declared_theorem) == 0);
         PL_discard_foreign_frame(l_unification_frame);
     };
