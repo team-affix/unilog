@@ -428,7 +428,7 @@ static void test_execute_axiom_statement()
         // assert(CALL_PRED("writeln", 1, l_module_stack));
         // assert(CALL_PRED("writeln", 1, l_tag));
         // assert(CALL_PRED("writeln", 1, l_theorem));
-        assert(PL_compare(l_theorem, l_declared_theorem) == 0);
+        assert(equal_forms(l_theorem, l_declared_theorem));
         PL_discard_foreign_frame(l_unification_frame);
     };
 
@@ -505,7 +505,7 @@ static void test_execute_guide_statement()
         // assert(CALL_PRED("writeln", 1, l_module_stack));
         // assert(CALL_PRED("writeln", 1, l_tag));
         // assert(CALL_PRED("writeln", 1, l_guide));
-        assert(PL_compare(l_guide, l_declared_guide) == 0);
+        assert(equal_forms(l_guide, l_declared_guide));
         PL_discard_foreign_frame(l_unification_frame);
     };
 
@@ -556,28 +556,27 @@ static void test_execute_refer_statement()
     // ensure we CAN find guide with this module stack + tag
     /////////////////////////////////////////
     {
-        fid_t l_unification_frame = PL_open_foreign_frame();
+        fid_t l_theorem_frame = PL_open_foreign_frame();
 
         constexpr int THEOREM_COUNT = 2;
 
-        term_t l_theorems = PL_new_term_refs(THEOREM_COUNT);
-
-        functor_t l_theorem_functor = PL_new_functor(PL_new_atom("theorem"), 3);
-
-        assert(
-            PL_cons_functor(l_theorems, l_theorem_functor,
-                            l_referee_module_stack,
-                            make_atom("a0"),
-                            make_list({
-                                make_atom("if"),
-                                make_atom("y"),
-                                make_atom("x"),
-                            })));
-        assert(
-            PL_cons_functor(l_theorems + 1, l_theorem_functor,
-                            l_referee_module_stack,
-                            make_atom("a1"),
-                            make_atom("x")));
+        term_t l_theorems[2][3] =
+            {
+                {
+                    l_referee_module_stack,
+                    make_atom("a0"),
+                    make_list({
+                        make_atom("if"),
+                        make_atom("y"),
+                        make_atom("x"),
+                    }),
+                },
+                {
+                    l_referee_module_stack,
+                    make_atom("a1"),
+                    make_atom("x"),
+                },
+            };
 
         /////////////////////////////////////////
         // create args for retrieving theorems
@@ -594,25 +593,22 @@ static void test_execute_refer_statement()
         // loop thru extracting theorems
         for (; PL_next_solution(l_query); ++i)
         {
+            fid_t l_it_frame = PL_open_foreign_frame();
+
             assert(i < THEOREM_COUNT); // make sure we do not go over expected #
             // assert(CALL_PRED("writeln", 1, l_content_module_stack));
             // assert(CALL_PRED("writeln", 1, l_content_tag));
             // assert(CALL_PRED("writeln", 1, l_content_sexpr));
 
-            term_t l_arg_0 = PL_new_term_ref();
-            term_t l_arg_1 = PL_new_term_ref();
-            term_t l_arg_2 = PL_new_term_ref();
+            assert(CALL_PRED("writeln", 1, l_theorems[i][0]));
+            assert(CALL_PRED("writeln", 1, l_theorems[i][1]));
+            assert(CALL_PRED("writeln", 1, l_theorems[i][2]));
 
-            PL_get_arg(1, l_theorems + i, l_arg_0);
-            PL_get_arg(2, l_theorems + i, l_arg_1);
-            PL_get_arg(3, l_theorems + i, l_arg_2);
-            // assert(CALL_PRED("writeln", 1, l_arg_0));
-            // assert(CALL_PRED("writeln", 1, l_arg_1));
-            // assert(CALL_PRED("writeln", 1, l_arg_2));
+            assert(equal_forms(l_content_module_stack, l_theorems[i][0]));
+            assert(equal_forms(l_content_tag, l_theorems[i][1]));
+            assert(equal_forms(l_content_sexpr, l_theorems[i][2]));
 
-            assert(PL_compare(l_content_module_stack, l_arg_0) == 0);
-            assert(PL_compare(l_content_tag, l_arg_1) == 0);
-            assert(PL_compare(l_content_sexpr, l_arg_2) == 0);
+            PL_discard_foreign_frame(l_it_frame);
         }
 
         // make sure we made it all the way thru the list
@@ -620,7 +616,7 @@ static void test_execute_refer_statement()
 
         PL_cut_query(l_query);
 
-        PL_discard_foreign_frame(l_unification_frame);
+        PL_discard_foreign_frame(l_theorem_frame);
     };
 
     /////////////////////////////////////////

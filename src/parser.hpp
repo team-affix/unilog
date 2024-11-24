@@ -51,6 +51,7 @@ namespace unilog
 
 }
 
+bool equal_forms(term_t a_lhs, term_t a_rhs);
 term_t make_nil();
 term_t make_atom(const std::string &a_text);
 term_t make_list(const std::list<term_t> &a_elements, term_t a_tail = make_nil());

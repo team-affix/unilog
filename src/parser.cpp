@@ -12,127 +12,6 @@
 #define CACHE(cache, key, value) \
     (cache.contains(key) ? cache[key] : cache[key] = value)
 
-////////////////////////////////
-//// HELPER FUNCTIONS
-////////////////////////////////
-
-static std::string random_string(size_t a_length)
-{
-    // Character set: alphanumeric (you can customize this)
-    static const std::string s_chars =
-        "abcdefghijklmnopqrstuvwxyz"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "0123456789";
-
-    // Random number generator
-    static std::random_device s_rd;          // Seed
-    static std::mt19937 s_generator(s_rd()); // Random-number engine
-    static std::uniform_int_distribution<> s_distribution(0, s_chars.size() - 1);
-
-    // Generate random string
-    std::string l_result;
-
-    for (size_t i = 0; i < a_length; ++i)
-    {
-        l_result += s_chars[s_distribution(s_generator)];
-    }
-
-    return l_result;
-}
-
-// determines if the two terms share the same form. consult function definition for more details.
-// this WILL MODIFY these terms, on the current prolog frame.
-static bool equal_forms(term_t a_lhs, term_t a_rhs)
-{
-    // Formal equivalence is different than ability to unify,
-    //     and is different than PL_compare() == 0.
-    //
-    // Examples of formal equivalence:
-    // 1.
-    //     [X X Y]
-    //     [A A B]
-    // 2.
-    //     [X [X a] b]
-    //     [A [A a] b]
-    //
-    // Examples of formal inequivalence:
-    // 1.
-    //     [X X Y]
-    //     [A A A]
-    // 2.
-    //     [a a a]
-    //     [A A A]
-    //
-
-    if (PL_get_nil(a_lhs) && PL_get_nil(a_rhs))
-    {
-        /////////////////////////////////////////
-        // nil is universal
-        /////////////////////////////////////////
-        return true;
-    }
-
-    if (PL_is_atom(a_lhs) && PL_is_atom(a_rhs))
-    {
-        /////////////////////////////////////////
-        // simply compare the atoms
-        /////////////////////////////////////////
-        return PL_compare(a_lhs, a_rhs) == 0;
-    }
-
-    if (PL_is_list(a_lhs) && PL_is_list(a_rhs))
-    {
-        term_t l_lhs_car = PL_new_term_ref();
-        term_t l_lhs_cdr = PL_new_term_ref();
-        if (!PL_get_list(a_lhs, l_lhs_car, l_lhs_cdr))
-            return false;
-
-        term_t l_rhs_car = PL_new_term_ref();
-        term_t l_rhs_cdr = PL_new_term_ref();
-        if (!PL_get_list(a_rhs, l_rhs_car, l_rhs_cdr))
-            return false;
-
-        /////////////////////////////////////////
-        // ensure both the cars and cdrs are formally equivalent
-        /////////////////////////////////////////
-        return equal_forms(l_lhs_car, l_rhs_car) &&
-               equal_forms(l_lhs_cdr, l_rhs_cdr);
-    }
-
-    if (PL_is_variable(a_lhs) && PL_is_variable(a_rhs))
-    {
-        constexpr int VAR_RANDOM_BIND_LEN = 50;
-
-        /////////////////////////////////////////
-        // generate a random binding string.
-        // the purpose of this is the ensure that
-        // all instances of this variable assume this new value,
-        // which will reveal the difference in distribution
-        // of the lhs variable and rhs variable.
-        /////////////////////////////////////////
-        std::string l_random_string = random_string(VAR_RANDOM_BIND_LEN);
-
-        /////////////////////////////////////////
-        // construct random atom
-        /////////////////////////////////////////
-        term_t l_random_atom = PL_new_term_ref();
-        if (!PL_put_atom_chars(l_random_atom, l_random_string.c_str()))
-            return false;
-
-        /////////////////////////////////////////
-        // unify random atom into both vars
-        /////////////////////////////////////////
-        if (!PL_unify(l_random_atom, a_lhs))
-            return false;
-        if (!PL_unify(l_random_atom, a_rhs))
-            return false;
-
-        return true;
-    }
-
-    return false;
-}
-
 namespace unilog
 {
 
@@ -532,6 +411,123 @@ term_t make_var(const std::string &a_identifier, std::map<std::string, term_t> &
         throw std::runtime_error("Error: failed to unify terms.");
 
     return l_result;
+}
+
+static std::string random_string(size_t a_length)
+{
+    // Character set: alphanumeric (you can customize this)
+    static const std::string s_chars =
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789";
+
+    // Random number generator
+    static std::random_device s_rd;          // Seed
+    static std::mt19937 s_generator(s_rd()); // Random-number engine
+    static std::uniform_int_distribution<> s_distribution(0, s_chars.size() - 1);
+
+    // Generate random string
+    std::string l_result;
+
+    for (size_t i = 0; i < a_length; ++i)
+    {
+        l_result += s_chars[s_distribution(s_generator)];
+    }
+
+    return l_result;
+}
+
+// determines if the two terms share the same form. consult function definition for more details.
+// this WILL MODIFY these terms, on the current prolog frame.
+bool equal_forms(term_t a_lhs, term_t a_rhs)
+{
+    // Formal equivalence is different than ability to unify,
+    //     and is different than PL_compare() == 0.
+    //
+    // Examples of formal equivalence:
+    // 1.
+    //     [X X Y]
+    //     [A A B]
+    // 2.
+    //     [X [X a] b]
+    //     [A [A a] b]
+    //
+    // Examples of formal inequivalence:
+    // 1.
+    //     [X X Y]
+    //     [A A A]
+    // 2.
+    //     [a a a]
+    //     [A A A]
+    //
+
+    if (PL_get_nil(a_lhs) && PL_get_nil(a_rhs))
+    {
+        /////////////////////////////////////////
+        // nil is universal
+        /////////////////////////////////////////
+        return true;
+    }
+
+    if (PL_is_atom(a_lhs) && PL_is_atom(a_rhs))
+    {
+        /////////////////////////////////////////
+        // simply compare the atoms
+        /////////////////////////////////////////
+        return PL_compare(a_lhs, a_rhs) == 0;
+    }
+
+    if (PL_is_list(a_lhs) && PL_is_list(a_rhs))
+    {
+        term_t l_lhs_car = PL_new_term_ref();
+        term_t l_lhs_cdr = PL_new_term_ref();
+        if (!PL_get_list(a_lhs, l_lhs_car, l_lhs_cdr))
+            return false;
+
+        term_t l_rhs_car = PL_new_term_ref();
+        term_t l_rhs_cdr = PL_new_term_ref();
+        if (!PL_get_list(a_rhs, l_rhs_car, l_rhs_cdr))
+            return false;
+
+        /////////////////////////////////////////
+        // ensure both the cars and cdrs are formally equivalent
+        /////////////////////////////////////////
+        return equal_forms(l_lhs_car, l_rhs_car) &&
+               equal_forms(l_lhs_cdr, l_rhs_cdr);
+    }
+
+    if (PL_is_variable(a_lhs) && PL_is_variable(a_rhs))
+    {
+        constexpr int VAR_RANDOM_BIND_LEN = 50;
+
+        /////////////////////////////////////////
+        // generate a random binding string.
+        // the purpose of this is the ensure that
+        // all instances of this variable assume this new value,
+        // which will reveal the difference in distribution
+        // of the lhs variable and rhs variable.
+        /////////////////////////////////////////
+        std::string l_random_string = random_string(VAR_RANDOM_BIND_LEN);
+
+        /////////////////////////////////////////
+        // construct random atom
+        /////////////////////////////////////////
+        term_t l_random_atom = PL_new_term_ref();
+        if (!PL_put_atom_chars(l_random_atom, l_random_string.c_str()))
+            return false;
+
+        /////////////////////////////////////////
+        // unify random atom into both vars
+        /////////////////////////////////////////
+        if (!PL_unify(l_random_atom, a_lhs))
+            return false;
+        if (!PL_unify(l_random_atom, a_rhs))
+            return false;
+
+        return true;
+    }
+
+    return false;
 }
 
 #ifdef UNIT_TEST
