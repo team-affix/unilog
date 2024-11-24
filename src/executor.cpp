@@ -572,6 +572,79 @@ static void test_execute_refer_statement()
 
                 }),
             },
+            file_test_case{
+                .m_module_stack = make_list({
+                    make_atom("root"),
+                }),
+                .m_refer_statement = refer_statement{
+                    .m_tag = make_atom("main"),
+                    .m_file_path = make_atom("./src/test_input_files/executor_example_1/main.u"),
+                },
+                .m_theorems = std::vector<std::array<term_t, 3>>({
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_atom("a0"),
+                        make_list({
+                            make_atom("if"),
+                            make_atom("b"),
+                            make_atom("a"),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("math"),
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_atom("a0"),
+                        make_list({
+                            make_atom("if"),
+                            make_atom("c"),
+                            make_atom("d"),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("math"),
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_atom("a1"),
+                        make_atom("d"),
+                    },
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_atom("a1"),
+                        make_atom("a"),
+                    },
+                }),
+                .m_guides = std::vector<std::array<term_t, 3>>({
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_atom("g0"),
+                        make_list({
+                            make_atom("mp"),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a0"),
+                            }),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a1"),
+                            }),
+                        }),
+                    },
+                }),
+            },
         };
 
     for (const file_test_case &l_file_test_case : l_file_test_cases)
@@ -622,6 +695,49 @@ static void test_execute_refer_statement()
 
             // make sure we made it all the way thru the list
             assert(i == l_file_test_case.m_theorems.size());
+
+            PL_cut_query(l_query);
+        };
+
+        /////////////////////////////////////////
+        // check database for guides
+        /////////////////////////////////////////
+        {
+            /////////////////////////////////////////
+            // create args for retrieving guides
+            /////////////////////////////////////////
+            term_t l_content_args = PL_new_term_refs(3);
+            term_t l_content_module_stack = l_content_args;
+            term_t l_content_tag = l_content_args + 1;
+            term_t l_content_sexpr = l_content_args + 2;
+
+            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, PL_predicate("guide", 3, NULL), l_content_args);
+
+            int i = 0;
+
+            // loop thru extracting guides
+            for (; PL_next_solution(l_query); ++i)
+            {
+                fid_t l_it_frame = PL_open_foreign_frame();
+
+                assert(i < l_file_test_case.m_guides.size()); // make sure we do not go over expected #
+                // assert(CALL_PRED("writeln", 1, l_content_module_stack));
+                // assert(CALL_PRED("writeln", 1, l_content_tag));
+                // assert(CALL_PRED("writeln", 1, l_content_sexpr));
+
+                assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][0]));
+                assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][1]));
+                assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][2]));
+
+                assert(equal_forms(l_content_module_stack, l_file_test_case.m_guides[i][0]));
+                assert(equal_forms(l_content_tag, l_file_test_case.m_guides[i][1]));
+                assert(equal_forms(l_content_sexpr, l_file_test_case.m_guides[i][2]));
+
+                PL_discard_foreign_frame(l_it_frame);
+            }
+
+            // make sure we made it all the way thru the list
+            assert(i == l_file_test_case.m_guides.size());
 
             PL_cut_query(l_query);
         };
