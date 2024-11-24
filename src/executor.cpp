@@ -697,13 +697,13 @@ static void test_execute_refer_statement()
                 fid_t l_it_frame = PL_open_foreign_frame();
 
                 assert(i < l_file_test_case.m_theorems.size()); // make sure we do not go over expected #
-                // assert(CALL_PRED("writeln", 1, l_content_module_stack));
-                // assert(CALL_PRED("writeln", 1, l_content_tag));
-                // assert(CALL_PRED("writeln", 1, l_content_sexpr));
+                assert(CALL_PRED("writeln", 1, l_content_module_stack));
+                assert(CALL_PRED("writeln", 1, l_content_tag));
+                assert(CALL_PRED("writeln", 1, l_content_sexpr));
 
-                assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][0]));
-                assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][1]));
-                assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][2]));
+                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][0]));
+                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][1]));
+                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][2]));
 
                 assert(equal_forms(l_content_module_stack, l_file_test_case.m_theorems[i][0]));
                 assert(equal_forms(l_content_tag, l_file_test_case.m_theorems[i][1]));
@@ -740,13 +740,13 @@ static void test_execute_refer_statement()
                 fid_t l_it_frame = PL_open_foreign_frame();
 
                 assert(i < l_file_test_case.m_guides.size()); // make sure we do not go over expected #
-                // assert(CALL_PRED("writeln", 1, l_content_module_stack));
-                // assert(CALL_PRED("writeln", 1, l_content_tag));
-                // assert(CALL_PRED("writeln", 1, l_content_sexpr));
+                assert(CALL_PRED("writeln", 1, l_content_module_stack));
+                assert(CALL_PRED("writeln", 1, l_content_tag));
+                assert(CALL_PRED("writeln", 1, l_content_sexpr));
 
-                assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][0]));
-                assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][1]));
-                assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][2]));
+                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][0]));
+                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][1]));
+                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][2]));
 
                 assert(equal_forms(l_content_module_stack, l_file_test_case.m_guides[i][0]));
                 assert(equal_forms(l_content_tag, l_file_test_case.m_guides[i][1]));

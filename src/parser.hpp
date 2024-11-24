@@ -51,6 +51,8 @@ namespace unilog
 
 }
 
+// determines if the two terms share the same form. consult function definition for more details.
+// this WILL MODIFY these terms, on the current prolog frame.
 bool equal_forms(term_t a_lhs, term_t a_rhs);
 term_t make_nil();
 term_t make_atom(const std::string &a_text);

@@ -437,8 +437,6 @@ static std::string random_string(size_t a_length)
     return l_result;
 }
 
-// determines if the two terms share the same form. consult function definition for more details.
-// this WILL MODIFY these terms, on the current prolog frame.
 bool equal_forms(term_t a_lhs, term_t a_rhs)
 {
     // Formal equivalence is different than ability to unify,
