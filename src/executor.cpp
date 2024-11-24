@@ -43,6 +43,32 @@ namespace unilog
 
     bool execute(const guide_statement &a_guide_statement, term_t a_module_path)
     {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        /////////////////////////////////////////
+        // create term refs for each argument
+        /////////////////////////////////////////
+        term_t l_args = PL_new_term_refs(3);
+        term_t l_module_path = l_args;
+        term_t l_tag = l_args + 1;
+        term_t l_guide = l_args + 2;
+
+        /////////////////////////////////////////
+        // set up arguments
+        /////////////////////////////////////////
+        if (!(PL_unify(l_module_path, a_module_path) &&
+              PL_unify(l_tag, a_guide_statement.m_tag) &&
+              PL_unify(l_guide, a_guide_statement.m_guide)))
+            return false;
+
+        /////////////////////////////////////////
+        // execute decl_guide
+        /////////////////////////////////////////
+        if (!CALL_PRED("decl_guide", 3, l_args))
+            return false;
+
+        PL_discard_foreign_frame(l_frame);
+
         return true;
     }
 
@@ -81,6 +107,9 @@ namespace unilog
         // open filestream
         /////////////////////////////////////////
         std::ifstream l_ifs(l_file_path);
+
+        if (!l_ifs.good())
+            return false;
 
         /////////////////////////////////////////
         // set cwd to parent path of the referee
@@ -396,10 +425,180 @@ static void test_execute_axiom_statement()
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
         assert(CALL_PRED("theorem", 3, l_args));
-        assert(CALL_PRED("writeln", 1, l_module_stack));
-        assert(CALL_PRED("writeln", 1, l_tag));
-        assert(CALL_PRED("writeln", 1, l_theorem));
+        // assert(CALL_PRED("writeln", 1, l_module_stack));
+        // assert(CALL_PRED("writeln", 1, l_tag));
+        // assert(CALL_PRED("writeln", 1, l_theorem));
         assert(PL_compare(l_theorem, l_declared_theorem) == 0);
+        PL_discard_foreign_frame(l_unification_frame);
+    };
+
+    /////////////////////////////////////////
+    // ensure we do NOT have to worry about info persisting to next test case
+    /////////////////////////////////////////
+    wipe_database();
+
+    PL_discard_foreign_frame(l_frame);
+}
+
+static void test_execute_guide_statement()
+{
+    using unilog::execute;
+    using unilog::guide_statement;
+
+    fid_t l_frame = PL_open_foreign_frame();
+
+    term_t l_args = PL_new_term_refs(3);
+    term_t l_module_stack = l_args;
+    term_t l_tag = l_args + 1;
+    term_t l_guide = l_args + 2;
+
+    assert(
+        PL_unify(l_module_stack,
+                 make_list({
+                     make_atom("daniel"),
+                     make_atom("jake"),
+                 })));
+    assert(PL_unify(l_tag, make_atom("g0")));
+
+    /////////////////////////////////////////
+    // ensure we CANNOT find guide with this module stack + tag
+    /////////////////////////////////////////
+    {
+        fid_t l_unification_frame = PL_open_foreign_frame();
+        assert(!CALL_PRED("guide", 3, l_args));
+        PL_discard_foreign_frame(l_unification_frame);
+    };
+
+    /////////////////////////////////////////
+    // create the guide s-expression which we will declare
+    /////////////////////////////////////////
+    term_t l_declared_guide =
+        make_list({
+            make_atom("mp"),
+            make_list({
+                make_atom("theorem"),
+                make_atom("a0"),
+            }),
+            make_list({
+                make_atom("theorem"),
+                make_atom("a1"),
+            }),
+        });
+
+    /////////////////////////////////////////
+    // execute the guide statement (in module path: l_module_stack)
+    /////////////////////////////////////////
+    assert(
+        execute(
+            guide_statement{
+                .m_tag = l_tag,
+                .m_guide = l_declared_guide,
+            },
+            l_module_stack));
+
+    /////////////////////////////////////////
+    // ensure we CAN find guide with this module stack + tag
+    /////////////////////////////////////////
+    {
+        fid_t l_unification_frame = PL_open_foreign_frame();
+        assert(CALL_PRED("guide", 3, l_args));
+        // assert(CALL_PRED("writeln", 1, l_module_stack));
+        // assert(CALL_PRED("writeln", 1, l_tag));
+        // assert(CALL_PRED("writeln", 1, l_guide));
+        assert(PL_compare(l_guide, l_declared_guide) == 0);
+        PL_discard_foreign_frame(l_unification_frame);
+    };
+
+    /////////////////////////////////////////
+    // ensure we do NOT have to worry about info persisting to next test case
+    /////////////////////////////////////////
+    wipe_database();
+
+    PL_discard_foreign_frame(l_frame);
+}
+
+static void test_execute_refer_statement()
+{
+    using unilog::axiom_statement;
+    using unilog::execute;
+    using unilog::refer_statement;
+
+    fid_t l_frame = PL_open_foreign_frame();
+
+    term_t l_module_stack =
+        make_list({
+            make_atom("daniel"),
+            make_atom("jake"),
+        });
+    term_t l_tag = make_atom("math");
+
+    /////////////////////////////////////////
+    // execute the guide statement (in module path: l_module_stack)
+    /////////////////////////////////////////
+    assert(
+        execute(
+            refer_statement{
+                .m_tag = l_tag,
+                .m_file_path = make_atom("./src/test_input_files/executor_example_0/test.u"),
+            },
+            l_module_stack));
+
+    /////////////////////////////////////////
+    // create desired outputs
+    /////////////////////////////////////////
+    term_t l_referee_module_stack = make_list({
+        make_atom("math"),
+        make_atom("daniel"),
+        make_atom("jake"),
+    });
+
+    /////////////////////////////////////////
+    // ensure we CAN find guide with this module stack + tag
+    /////////////////////////////////////////
+    {
+        fid_t l_unification_frame = PL_open_foreign_frame();
+
+        std::list<axiom_statement> l_desired_theorems =
+            {
+                axiom_statement{
+                    .m_tag = make_atom("a0"),
+                    .m_theorem = make_list({make_atom("if"), make_atom("y"), make_atom("x")}),
+                },
+                axiom_statement{
+                    .m_tag = make_atom("a1"),
+                    .m_theorem = make_atom("x"),
+                },
+            };
+
+        /////////////////////////////////////////
+        // create args for retrieving theorems
+        /////////////////////////////////////////
+        term_t l_content_args = PL_new_term_refs(3);
+        term_t l_content_module_stack = l_content_args;
+        term_t l_content_tag = l_content_args + 1;
+        term_t l_content_sexpr = l_content_args + 2;
+
+        qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, PL_predicate("theorem", 3, NULL), l_content_args);
+
+        auto l_cit = l_desired_theorems.begin();
+
+        // loop thru extracting theorems
+        for (;
+             PL_next_solution(l_query) && l_cit != l_desired_theorems.end();
+             ++l_cit)
+        {
+            assert(CALL_PRED("writeln", 1, l_content_module_stack));
+            assert(CALL_PRED("writeln", 1, l_content_tag));
+            assert(CALL_PRED("writeln", 1, l_content_sexpr));
+            assert(PL_compare(l_content_tag, l_cit->m_tag) == 0);
+            assert(PL_compare(l_content_sexpr, l_cit->m_theorem) == 0);
+        }
+
+        // make sure we made it all the way thru the list
+        assert(l_cit == l_desired_theorems.end());
+
+        PL_cut_query(l_query);
+
         PL_discard_foreign_frame(l_unification_frame);
     };
 
@@ -419,6 +618,8 @@ void test_executor_main()
     TEST(test_assertz_and_retract_all);
     TEST(test_wipe_database);
     TEST(test_execute_axiom_statement);
+    TEST(test_execute_guide_statement);
+    TEST(test_execute_refer_statement);
 }
 
 #endif
