@@ -696,7 +696,7 @@ static void test_execute_refer_statement()
             {
                 fid_t l_it_frame = PL_open_foreign_frame();
 
-                assert(i < l_file_test_case.m_theorems.size()); // make sure we do not go over expected #
+                assert((size_t)i < l_file_test_case.m_theorems.size()); // make sure we do not go over expected #
                 assert(CALL_PRED("writeln", 1, l_content_module_stack));
                 assert(CALL_PRED("writeln", 1, l_content_tag));
                 assert(CALL_PRED("writeln", 1, l_content_sexpr));
@@ -713,7 +713,7 @@ static void test_execute_refer_statement()
             }
 
             // make sure we made it all the way thru the list
-            assert(i == l_file_test_case.m_theorems.size());
+            assert((size_t)i == l_file_test_case.m_theorems.size());
 
             PL_cut_query(l_query);
         };
@@ -739,7 +739,7 @@ static void test_execute_refer_statement()
             {
                 fid_t l_it_frame = PL_open_foreign_frame();
 
-                assert(i < l_file_test_case.m_guides.size()); // make sure we do not go over expected #
+                assert((size_t)i < l_file_test_case.m_guides.size()); // make sure we do not go over expected #
                 assert(CALL_PRED("writeln", 1, l_content_module_stack));
                 assert(CALL_PRED("writeln", 1, l_content_tag));
                 assert(CALL_PRED("writeln", 1, l_content_sexpr));
@@ -756,7 +756,7 @@ static void test_execute_refer_statement()
             }
 
             // make sure we made it all the way thru the list
-            assert(i == l_file_test_case.m_guides.size());
+            assert((size_t)i == l_file_test_case.m_guides.size());
 
             PL_cut_query(l_query);
         };
