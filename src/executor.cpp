@@ -5,6 +5,17 @@
 #include <deque>
 #include "executor.hpp"
 
+static bool query_first_solution(const std::string &a_functor_name, int a_arity, term_t a_arg0, const char *a_module = nullptr)
+{
+    predicate_t l_predicate = PL_predicate(a_functor_name.c_str(), a_arity, a_module);
+
+    qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, a_arg0);
+    bool l_result = PL_next_solution(l_query);
+    PL_close_query(l_query);
+
+    return l_result;
+}
+
 namespace unilog
 {
     bool execute(const axiom_statement &a_axiom_statement, term_t a_module_path)
@@ -28,28 +39,10 @@ namespace unilog
             return false;
 
         /////////////////////////////////////////
-        // retrieve the associated predicate
+        // execute decl_theorem
         /////////////////////////////////////////
-        predicate_t l_predicate = PL_predicate("decl_theorem", 3, NULL);
-
-        if (!l_predicate)
-            throw std::runtime_error("Failed to get decl_theorem prolog predicate.");
-
-        /////////////////////////////////////////
-        // open the query, supplying the args
-        /////////////////////////////////////////
-        qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, l_args);
-
-        /////////////////////////////////////////
-        // attempt to get a single match
-        /////////////////////////////////////////
-        if (!PL_next_solution(l_query))
+        if (!query_first_solution("decl_theorem", 3, l_args, "user"))
             return false;
-
-        /////////////////////////////////////////
-        // close the prolog query
-        /////////////////////////////////////////
-        PL_close_query(l_query);
 
         PL_discard_foreign_frame(l_frame);
 
@@ -87,7 +80,6 @@ namespace unilog
         /////////////////////////////////////////
         // construct fs path objects
         /////////////////////////////////////////
-
         namespace fs = std::filesystem;
         fs::path l_file_path = l_file_path_c_str;
         fs::path l_file_parent_path = l_file_path.parent_path();
@@ -135,28 +127,6 @@ namespace unilog
 //// HELPER FUNCTIONS
 ////////////////////////////////
 
-// static bool call_and_get_first_solution(term_t a_head)
-// {
-//     predicate_t l_predicate = PL_predicate("call", 1, NULL);
-
-//     qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, a_head);
-//     bool l_result = PL_next_solution(l_query);
-//     PL_close_query(l_query);
-
-//     return l_result;
-// }
-
-static bool query_first_solution(const std::string &a_functor_name, int a_arity, term_t a_arg0)
-{
-    predicate_t l_predicate = PL_predicate(a_functor_name.c_str(), a_arity, NULL);
-
-    qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, a_arg0);
-    bool l_result = PL_next_solution(l_query);
-    PL_close_query(l_query);
-
-    return l_result;
-}
-
 static void wipe_database()
 {
     /////////////////////////////////////////
@@ -199,7 +169,7 @@ static void wipe_database()
 ////////////////////////////////
 ////////////////////////////////
 
-static void test_call_and_get_first_solution()
+static void test_query_first_solution()
 {
     fid_t l_frame = PL_open_foreign_frame();
 
@@ -380,13 +350,72 @@ static void test_wipe_database()
 
 static void test_execute_axiom_statement()
 {
+    using unilog::axiom_statement;
+    using unilog::execute;
+
+    fid_t l_frame = PL_open_foreign_frame();
+
+    term_t l_args = PL_new_term_refs(3);
+    term_t l_module_stack = l_args;
+    term_t l_tag = l_args + 1;
+    term_t l_theorem = l_args + 2;
+
+    assert(
+        PL_unify(l_module_stack,
+                 make_list({
+                     make_atom("daniel"),
+                     make_atom("jake"),
+                 })));
+    assert(PL_unify(l_tag, make_atom("a0")));
+
+    /////////////////////////////////////////
+    // ensure we CANNOT find theorem with this module stack + tag
+    /////////////////////////////////////////
+    {
+        fid_t l_unification_frame = PL_open_foreign_frame();
+        assert(!query_first_solution("theorem", 3, l_args));
+        PL_discard_foreign_frame(l_unification_frame);
+    };
+
+    /////////////////////////////////////////
+    // create the theorem s-expression which we will declare
+    /////////////////////////////////////////
+    term_t l_declared_theorem =
+        make_list({
+            make_atom("claims"),
+            make_atom("leon"),
+            make_atom("x"),
+        });
+
+    /////////////////////////////////////////
+    // execute the axiom statement (in module path: l_module_stack)
+    /////////////////////////////////////////
+    assert(
+        execute(
+            axiom_statement{
+                .m_tag = l_tag,
+                .m_theorem = l_declared_theorem,
+            },
+            l_module_stack));
+
+    /////////////////////////////////////////
+    // ensure we CAN find theorem with this module stack + tag
+    /////////////////////////////////////////
+    {
+        fid_t l_unification_frame = PL_open_foreign_frame();
+        assert(query_first_solution("theorem", 3, l_args));
+        assert(PL_compare(l_theorem, l_declared_theorem) == 0);
+        PL_discard_foreign_frame(l_unification_frame);
+    };
+
+    PL_discard_foreign_frame(l_frame);
 }
 
 void test_executor_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
-    TEST(test_call_and_get_first_solution);
+    TEST(test_query_first_solution);
     TEST(test_assertz_and_retract_all);
     TEST(test_wipe_database);
     TEST(test_execute_axiom_statement);

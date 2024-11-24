@@ -22,7 +22,7 @@ $(LIBUNI_TEST): $(LIBSWIPL) $(wildcard src/*.cpp) $(wildcard src/*.hpp) $(wildca
 	##############################
 
 	# Build our library
-	swipl-ld -c++ g++ -cc-options,"-std=c++20 -g -DUNIT_TEST" -shared -goal true src/*.cpp src/*.pl -o $(LIBUNI_TEST)
+	swipl-ld -c++ g++ -cc-options,"-std=c++20 -g -DUNIT_TEST" -shared -goal true src/*.cpp ./src/unilog.pl -o $(LIBUNI_TEST)
 
 	##############################
 	##############################

@@ -4,6 +4,9 @@
 #include <memory>
 #include <variant>
 #include <istream>
+#include <string>
+#include <map>
+#include <list>
 #include <SWI-Prolog.h>
 
 namespace unilog
@@ -47,5 +50,10 @@ namespace unilog
     std::istream &operator>>(std::istream &a_istream, statement &a_statement);
 
 }
+
+term_t make_nil();
+term_t make_atom(const std::string &a_text);
+term_t make_list(const std::list<term_t> &a_elements, term_t a_tail = make_nil());
+term_t make_var(const std::string &a_identifier, std::map<std::string, term_t> &a_var_alist);
 
 #endif

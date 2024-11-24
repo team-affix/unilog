@@ -1,6 +1,5 @@
 #include <iterator>
 #include <algorithm>
-#include <map>
 #include <iostream>
 #include <random>
 
@@ -12,6 +11,10 @@
 ///     otherwise, computing value and caching it.
 #define CACHE(cache, key, value) \
     (cache.contains(key) ? cache[key] : cache[key] = value)
+
+////////////////////////////////
+//// HELPER FUNCTIONS
+////////////////////////////////
 
 static std::string random_string(size_t a_length)
 {
@@ -468,47 +471,42 @@ namespace unilog
 
 }
 
-#ifdef UNIT_TEST
-
-#include <fstream>
-#include <iterator>
-#include "test_utils.hpp"
-
 ////////////////////////////////
-//// HELPER FUNCTIONS
+//// HELPERS
 ////////////////////////////////
 
-static term_t make_nil()
+term_t make_nil()
 {
     term_t l_result = PL_new_term_ref();
-    assert(PL_put_nil(l_result));
+    PL_put_nil(l_result);
     return l_result;
 }
 
-static term_t make_atom(const std::string &a_text)
+term_t make_atom(const std::string &a_text)
 {
     term_t l_result = PL_new_term_ref();
-    assert(PL_put_atom_chars(l_result, a_text.c_str()));
+    PL_put_atom_chars(l_result, a_text.c_str());
     return l_result;
 }
 
-static term_t make_list(const std::list<term_t> &a_elements, term_t a_tail = make_nil())
+term_t make_list(const std::list<term_t> &a_elements, term_t a_tail)
 {
     term_t l_result = PL_new_term_ref();
 
-    assert(PL_unify(l_result, a_tail));
+    if (!PL_unify(l_result, a_tail))
+        throw std::runtime_error("Error: failed to unify terms.");
 
     for (auto l_it = a_elements.rbegin(); l_it != a_elements.rend(); l_it++)
     {
         // just toss it into an assertion, since we want it to always succeed.
-        assert(PL_cons_list(l_result, *l_it, l_result));
+        if (!PL_cons_list(l_result, *l_it, l_result))
+            throw std::runtime_error("Error: failed to unify terms.");
     }
 
     return l_result;
 }
 
-// warning: this function ALWAYS creates a new term ref...
-static term_t make_var(const std::string &a_identifier, std::map<std::string, term_t> &a_var_alist)
+term_t make_var(const std::string &a_identifier, std::map<std::string, term_t> &a_var_alist)
 {
     term_t l_result = PL_new_term_ref();
 
@@ -530,10 +528,17 @@ static term_t make_var(const std::string &a_identifier, std::map<std::string, te
     /////////////////////////////////////////
     // entry already exists;
     /////////////////////////////////////////
-    assert(PL_unify(l_result, l_entry->second));
+    if (!PL_unify(l_result, l_entry->second))
+        throw std::runtime_error("Error: failed to unify terms.");
 
     return l_result;
 }
+
+#ifdef UNIT_TEST
+
+#include <fstream>
+#include <iterator>
+#include "test_utils.hpp"
 
 ////////////////////////////////
 //// TESTS
