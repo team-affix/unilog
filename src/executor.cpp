@@ -11,7 +11,7 @@ static bool query_first_solution(const std::string &a_functor_name, int a_arity,
 
     qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, a_arg0);
     bool l_result = PL_next_solution(l_query);
-    PL_close_query(l_query);
+    PL_cut_query(l_query); // PL_cut_query allows new bindings to persist
 
     return l_result;
 }
@@ -41,7 +41,7 @@ namespace unilog
         /////////////////////////////////////////
         // execute decl_theorem
         /////////////////////////////////////////
-        if (!query_first_solution("decl_theorem", 3, l_args, "user"))
+        if (!query_first_solution("decl_theorem", 3, l_args))
             return false;
 
         PL_discard_foreign_frame(l_frame);
@@ -404,9 +404,17 @@ static void test_execute_axiom_statement()
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
         assert(query_first_solution("theorem", 3, l_args));
+        assert(query_first_solution("writeln", 1, l_module_stack));
+        assert(query_first_solution("writeln", 1, l_tag));
+        assert(query_first_solution("writeln", 1, l_theorem));
         assert(PL_compare(l_theorem, l_declared_theorem) == 0);
         PL_discard_foreign_frame(l_unification_frame);
     };
+
+    /////////////////////////////////////////
+    // ensure we do NOT have to worry about info persisting to next test case
+    /////////////////////////////////////////
+    wipe_database();
 
     PL_discard_foreign_frame(l_frame);
 }

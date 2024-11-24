@@ -33,7 +33,11 @@ $(TESTBIN): $(wildcard src/*.cpp) $(wildcard src/*.hpp) $(LIBUNI_TEST) $(LIBSWIP
 	##############################
 
 	# Build our test application
-	g++ -std=c++20 -Wall -g -DUNIT_TEST -o $(TESTBIN) src/*.cpp $(LIBUNI_TEST) $(LIBSWIPL) -I$(SWIPL_INCLUDE_PATH)
+	#g++ 
+	swipl-ld \
+		-c++ g++ \
+		-cc-options,"-std=c++20 -Wall -g -DUNIT_TEST -I$(SWIPL_INCLUDE_PATH)" \
+		-goal true src/*.cpp $(LIBUNI_TEST) $(LIBSWIPL) ./src/unilog.pl -o $(TESTBIN)
 
 	# Link manually to the library which will be expected to sit alongside the executable.
 	patchelf --set-rpath '$$ORIGIN' $(TESTBIN)
