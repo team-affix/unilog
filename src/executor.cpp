@@ -358,6 +358,17 @@ static void test_assertz_and_retract_all()
     PL_discard_foreign_frame(l_frame);
 }
 
+static bool call_and_get_first_solution(term_t a_head)
+{
+    predicate_t l_predicate_0 = PL_predicate("call", 1, NULL);
+
+    qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate_0, a_head);
+    bool l_result = PL_next_solution(l_query);
+    PL_close_query(l_query);
+
+    return l_result;
+}
+
 static void test_wipe_database()
 {
     fid_t l_frame = PL_open_foreign_frame();
