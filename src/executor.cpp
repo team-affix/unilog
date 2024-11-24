@@ -174,28 +174,10 @@ static void retract_all(term_t a_clause_head)
         throw std::runtime_error("Error: failed to unify.");
 
     /////////////////////////////////////////
-    // get predicate 'retractall'
-    /////////////////////////////////////////
-    predicate_t l_predicate = PL_predicate("retractall", 1, NULL);
-
-    if (!l_predicate)
-        throw std::runtime_error("Error: failed to retrieve retractall/1 predicate.");
-
-    /////////////////////////////////////////
-    // open the query, supplying the args
-    /////////////////////////////////////////
-    qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, l_args);
-
-    /////////////////////////////////////////
     // attempt to get a single match (executing the retractall function)
     /////////////////////////////////////////
-    if (!PL_next_solution(l_query))
+    if (!query_first_solution("retractall", 1, l_args))
         throw std::runtime_error("Error: failed to execute retractall/1 predicate.");
-
-    /////////////////////////////////////////
-    // close the prolog query
-    /////////////////////////////////////////
-    PL_close_query(l_query);
 
     PL_discard_foreign_frame(l_frame);
 }
@@ -217,28 +199,10 @@ static void assertz(term_t a_clause)
         throw std::runtime_error("Error: failed to unify.");
 
     /////////////////////////////////////////
-    // retrieve predicate
-    /////////////////////////////////////////
-    predicate_t l_predicate = PL_predicate("assertz", 1, NULL);
-
-    if (!l_predicate)
-        throw std::runtime_error("Error: failed to retrieve predicate.");
-
-    /////////////////////////////////////////
-    // open the query, supplying the args
-    /////////////////////////////////////////
-    qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, l_predicate, l_args);
-
-    /////////////////////////////////////////
     // attempt to get a single match (executing function)
     /////////////////////////////////////////
-    if (!PL_next_solution(l_query))
+    if (!query_first_solution("assertz", 1, l_args))
         throw std::runtime_error("Error: failed to execute predicate.");
-
-    /////////////////////////////////////////
-    // close the prolog query
-    /////////////////////////////////////////
-    PL_close_query(l_query);
 
     PL_discard_foreign_frame(l_frame);
 }
