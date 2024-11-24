@@ -157,60 +157,8 @@ static bool query_first_solution(const std::string &a_functor_name, int a_arity,
     return l_result;
 }
 
-static void retract_all(term_t a_clause_head)
-{
-    fid_t l_frame = PL_open_foreign_frame();
-
-    /////////////////////////////////////////
-    // constructs term refs for args
-    /////////////////////////////////////////
-    term_t l_args = PL_new_term_refs(1);
-    term_t l_clause_head = l_args;
-
-    /////////////////////////////////////////
-    // set up arguments for retractall
-    /////////////////////////////////////////
-    if (!PL_unify(l_clause_head, a_clause_head))
-        throw std::runtime_error("Error: failed to unify.");
-
-    /////////////////////////////////////////
-    // attempt to get a single match (executing the retractall function)
-    /////////////////////////////////////////
-    if (!query_first_solution("retractall", 1, l_args))
-        throw std::runtime_error("Error: failed to execute retractall/1 predicate.");
-
-    PL_discard_foreign_frame(l_frame);
-}
-
-static void assertz(term_t a_clause)
-{
-    fid_t l_frame = PL_open_foreign_frame();
-
-    /////////////////////////////////////////
-    // constructs term refs for args
-    /////////////////////////////////////////
-    term_t l_args = PL_new_term_refs(1);
-    term_t l_clause = l_args;
-
-    /////////////////////////////////////////
-    // set up arguments for predicate
-    /////////////////////////////////////////
-    if (!PL_unify(l_clause, a_clause))
-        throw std::runtime_error("Error: failed to unify.");
-
-    /////////////////////////////////////////
-    // attempt to get a single match (executing function)
-    /////////////////////////////////////////
-    if (!query_first_solution("assertz", 1, l_args))
-        throw std::runtime_error("Error: failed to execute predicate.");
-
-    PL_discard_foreign_frame(l_frame);
-}
-
 static void wipe_database()
 {
-    fid_t l_frame = PL_open_foreign_frame();
-
     /////////////////////////////////////////
     // creates the head of clause: theorem(_, _, _)
     /////////////////////////////////////////
@@ -234,10 +182,18 @@ static void wipe_database()
     /////////////////////////////////////////
     // retract all dynamic statements
     /////////////////////////////////////////
-    retract_all(l_theorem_clause_head);
-    retract_all(l_guide_clause_head);
-
-    PL_discard_foreign_frame(l_frame);
+    // retract_all(l_theorem_clause_head);
+    // retract_all(l_guide_clause_head);
+    {
+        fid_t l_query_frame = PL_open_foreign_frame();
+        assert(query_first_solution("retractall", 1, l_theorem_clause_head));
+        PL_discard_foreign_frame(l_query_frame);
+    };
+    {
+        fid_t l_query_frame = PL_open_foreign_frame();
+        assert(query_first_solution("retractall", 1, l_guide_clause_head));
+        PL_discard_foreign_frame(l_query_frame);
+    };
 }
 
 ////////////////////////////////
@@ -293,9 +249,12 @@ static void test_assertz_and_retract_all()
            PL_cons_functor(l_clause_1, l_functor_1, l_atom_1) &&
            PL_cons_functor(l_clause_2, l_functor_2, l_atom_2));
 
-    assertz(l_clause_0);
-    assertz(l_clause_1);
-    assertz(l_clause_2);
+    // assertz(l_clause_0);
+    // assertz(l_clause_1);
+    // assertz(l_clause_2);
+    assert(query_first_solution("assertz", 1, l_clause_0));
+    assert(query_first_solution("assertz", 1, l_clause_1));
+    assert(query_first_solution("assertz", 1, l_clause_2));
 
     predicate_t l_predicate_0 = PL_predicate("pred0", 1, NULL);
     predicate_t l_predicate_1 = PL_predicate("pred1", 1, NULL);
@@ -343,9 +302,9 @@ static void test_assertz_and_retract_all()
     /////////////////////////////////////////
     // try to erase the entries from the DB.
     /////////////////////////////////////////
-    retract_all(l_clause_0);
-    retract_all(l_clause_1);
-    retract_all(l_clause_2);
+    assert(query_first_solution("retractall", 1, l_clause_0));
+    assert(query_first_solution("retractall", 1, l_clause_1));
+    assert(query_first_solution("retractall", 1, l_clause_2));
 
     /////////////////////////////////////////
     // ensure these statements do NOT unify
@@ -395,8 +354,8 @@ static void test_wipe_database()
         // /////////////////////////////////////////
         // // add clauses to db
         // /////////////////////////////////////////
-        assertz(l_theorem_clause);
-        assertz(l_guide_clause);
+        assert(query_first_solution("assertz", 1, l_theorem_clause));
+        assert(query_first_solution("assertz", 1, l_guide_clause));
 
         /////////////////////////////////////////
         // ensure these statements unify (since clauses are bodyless, clause IS head)
