@@ -519,110 +519,120 @@ static void test_execute_guide_statement()
 
 static void test_execute_refer_statement()
 {
+    fid_t l_frame = PL_open_foreign_frame();
+
     using unilog::axiom_statement;
     using unilog::execute;
     using unilog::refer_statement;
 
-    fid_t l_frame = PL_open_foreign_frame();
-
-    term_t l_module_stack =
-        make_list({
-            make_atom("daniel"),
-            make_atom("jake"),
-        });
-    term_t l_tag = make_atom("math");
-
-    /////////////////////////////////////////
-    // execute the guide statement (in module path: l_module_stack)
-    /////////////////////////////////////////
-    assert(
-        execute(
-            refer_statement{
-                .m_tag = l_tag,
-                .m_file_path = make_atom("./src/test_input_files/executor_example_0/test.u"),
-            },
-            l_module_stack));
-
-    /////////////////////////////////////////
-    // create desired outputs
-    /////////////////////////////////////////
-    term_t l_referee_module_stack = make_list({
-        make_atom("math"),
-        make_atom("daniel"),
-        make_atom("jake"),
-    });
-
-    /////////////////////////////////////////
-    // ensure we CAN find guide with this module stack + tag
-    /////////////////////////////////////////
+    struct file_test_case
     {
-        fid_t l_theorem_frame = PL_open_foreign_frame();
-
-        constexpr int THEOREM_COUNT = 2;
-
-        term_t l_theorems[2][3] =
-            {
-                {
-                    l_referee_module_stack,
-                    make_atom("a0"),
-                    make_list({
-                        make_atom("if"),
-                        make_atom("y"),
-                        make_atom("x"),
-                    }),
-                },
-                {
-                    l_referee_module_stack,
-                    make_atom("a1"),
-                    make_atom("x"),
-                },
-            };
-
-        /////////////////////////////////////////
-        // create args for retrieving theorems
-        /////////////////////////////////////////
-        term_t l_content_args = PL_new_term_refs(3);
-        term_t l_content_module_stack = l_content_args;
-        term_t l_content_tag = l_content_args + 1;
-        term_t l_content_sexpr = l_content_args + 2;
-
-        qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, PL_predicate("theorem", 3, NULL), l_content_args);
-
-        int i = 0;
-
-        // loop thru extracting theorems
-        for (; PL_next_solution(l_query); ++i)
-        {
-            fid_t l_it_frame = PL_open_foreign_frame();
-
-            assert(i < THEOREM_COUNT); // make sure we do not go over expected #
-            // assert(CALL_PRED("writeln", 1, l_content_module_stack));
-            // assert(CALL_PRED("writeln", 1, l_content_tag));
-            // assert(CALL_PRED("writeln", 1, l_content_sexpr));
-
-            assert(CALL_PRED("writeln", 1, l_theorems[i][0]));
-            assert(CALL_PRED("writeln", 1, l_theorems[i][1]));
-            assert(CALL_PRED("writeln", 1, l_theorems[i][2]));
-
-            assert(equal_forms(l_content_module_stack, l_theorems[i][0]));
-            assert(equal_forms(l_content_tag, l_theorems[i][1]));
-            assert(equal_forms(l_content_sexpr, l_theorems[i][2]));
-
-            PL_discard_foreign_frame(l_it_frame);
-        }
-
-        // make sure we made it all the way thru the list
-        assert(i == THEOREM_COUNT);
-
-        PL_cut_query(l_query);
-
-        PL_discard_foreign_frame(l_theorem_frame);
+        term_t m_module_stack;
+        refer_statement m_refer_statement;
+        std::vector<std::array<term_t, 3>> m_theorems;
+        std::vector<std::array<term_t, 3>> m_guides;
     };
 
-    /////////////////////////////////////////
-    // ensure we do NOT have to worry about info persisting to next test case
-    /////////////////////////////////////////
-    wipe_database();
+    std::vector<file_test_case> l_file_test_cases =
+        {
+            file_test_case{
+                .m_module_stack = make_list({
+                    make_atom("daniel"),
+                    make_atom("jake"),
+                }),
+                .m_refer_statement = refer_statement{
+                    .m_tag = make_atom("math"),
+                    .m_file_path = make_atom("./src/test_input_files/executor_example_0/test.u"),
+                },
+                .m_theorems = std::vector<std::array<term_t, 3>>({
+                    {
+                        make_list({
+                            make_atom("math"),
+                            make_atom("daniel"),
+                            make_atom("jake"),
+                        }),
+                        make_atom("a0"),
+                        make_list({
+                            make_atom("if"),
+                            make_atom("y"),
+                            make_atom("x"),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("math"),
+                            make_atom("daniel"),
+                            make_atom("jake"),
+                        }),
+                        make_atom("a1"),
+                        make_atom("x"),
+                    },
+                }),
+                .m_guides = std::vector<std::array<term_t, 3>>({
+
+                }),
+            },
+        };
+
+    for (const file_test_case &l_file_test_case : l_file_test_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        /////////////////////////////////////////
+        // execute the guide statement (in module path: l_module_stack)
+        /////////////////////////////////////////
+        assert(execute(l_file_test_case.m_refer_statement, l_file_test_case.m_module_stack));
+
+        /////////////////////////////////////////
+        // check database for theorems
+        /////////////////////////////////////////
+        {
+            /////////////////////////////////////////
+            // create args for retrieving theorems
+            /////////////////////////////////////////
+            term_t l_content_args = PL_new_term_refs(3);
+            term_t l_content_module_stack = l_content_args;
+            term_t l_content_tag = l_content_args + 1;
+            term_t l_content_sexpr = l_content_args + 2;
+
+            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, PL_predicate("theorem", 3, NULL), l_content_args);
+
+            int i = 0;
+
+            // loop thru extracting theorems
+            for (; PL_next_solution(l_query); ++i)
+            {
+                fid_t l_it_frame = PL_open_foreign_frame();
+
+                assert(i < l_file_test_case.m_theorems.size()); // make sure we do not go over expected #
+                // assert(CALL_PRED("writeln", 1, l_content_module_stack));
+                // assert(CALL_PRED("writeln", 1, l_content_tag));
+                // assert(CALL_PRED("writeln", 1, l_content_sexpr));
+
+                assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][0]));
+                assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][1]));
+                assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][2]));
+
+                assert(equal_forms(l_content_module_stack, l_file_test_case.m_theorems[i][0]));
+                assert(equal_forms(l_content_tag, l_file_test_case.m_theorems[i][1]));
+                assert(equal_forms(l_content_sexpr, l_file_test_case.m_theorems[i][2]));
+
+                PL_discard_foreign_frame(l_it_frame);
+            }
+
+            // make sure we made it all the way thru the list
+            assert(i == l_file_test_case.m_theorems.size());
+
+            PL_cut_query(l_query);
+        };
+
+        /////////////////////////////////////////
+        // ensure we do NOT have to worry about info persisting to next test case
+        /////////////////////////////////////////
+        wipe_database();
+
+        PL_discard_foreign_frame(l_case_frame);
+    }
 
     PL_discard_foreign_frame(l_frame);
 }
