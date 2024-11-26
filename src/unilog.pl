@@ -3,7 +3,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Helper
 
-%bscope([claims, S, Internal], [S|NextBScope], Descoped) :-
+%bscope([claim, S, Internal], [S|NextBScope], Descoped) :-
 %    bscope(Internal, NextBScope, Descoped),
 %    !.
 %bscope(SExpr, [], SExpr) :-
@@ -28,25 +28,24 @@ decl_guide(ModulePath, Tag, Redirect) :-
     )).
 
 infer(ModulePath, Tag, Guide) :-
-    query([], ModulePath, Guide, Theorem),
+    query(ModulePath, Guide, Theorem),
     decl_theorem(ModulePath, Tag, Theorem).
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Handle querying
 
-query(Guide, Theorem) :-
-    query([], [], Guide, Theorem).
+query(ModulePath, Guide, Theorem) :-
+    query([], ModulePath, Guide, Theorem).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%% scope handling
 
-query(BStack, DStack, [bout, S, NextGuide], [claims, S, Internal]) :-
+query(BStack, DStack, [bout, S, NextGuide], [claim, S, Internal]) :-
     %bscope(ScopedSExpr, [S], Internal),
     query([S|BStack], DStack,  NextGuide, Internal).
 
 query([S|BStack], DStack, [bin, S, NextGuide], Internal) :-
     %bscope(ScopedSExpr, [S], Internal),
-    query(BStack, DStack, NextGuide, [claims, S, Internal]).
+    query(BStack, DStack, NextGuide, [claim, S, Internal]).
 
 query(BStack, DStack, [dout, S, NextGuide], Theorem) :-
     append(NewBStack, [S], BStack),
@@ -112,6 +111,7 @@ test_case_0 :-
     decl_theorem([natalie, daniel], a0, [if, y, x]),
     decl_theorem([natalie, daniel], a1, x),
     query(
+            [],
             [bout, daniel, [bout, natalie,
             [dout, daniel, [dout, natalie,
                 [mp, [theorem, a0], [theorem, a1]]

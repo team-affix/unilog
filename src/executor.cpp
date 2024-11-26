@@ -74,6 +74,32 @@ namespace unilog
 
     bool execute(const infer_statement &a_infer_statement, term_t a_module_path)
     {
+        fid_t l_frame = PL_open_foreign_frame();
+
+        /////////////////////////////////////////
+        // create term refs for each argument
+        /////////////////////////////////////////
+        term_t l_args = PL_new_term_refs(3);
+        term_t l_module_path = l_args;
+        term_t l_tag = l_args + 1;
+        term_t l_guide = l_args + 2;
+
+        /////////////////////////////////////////
+        // set up arguments
+        /////////////////////////////////////////
+        if (!(PL_unify(l_module_path, a_module_path) &&
+              PL_unify(l_tag, a_infer_statement.m_tag) &&
+              PL_unify(l_guide, a_infer_statement.m_guide)))
+            return false;
+
+        /////////////////////////////////////////
+        // execute decl_guide
+        /////////////////////////////////////////
+        if (!CALL_PRED("infer", 3, l_args))
+            return false;
+
+        PL_discard_foreign_frame(l_frame);
+
         return true;
     }
 
@@ -521,16 +547,21 @@ static void test_execute_refer_statement()
 {
     fid_t l_frame = PL_open_foreign_frame();
 
+    constexpr bool ENABLE_DEBUG_LOGS = true;
+
     using unilog::axiom_statement;
     using unilog::execute;
     using unilog::refer_statement;
+
+    using theorem = std::array<term_t, 3>;
+    using guide = std::array<term_t, 3>;
 
     struct file_test_case
     {
         term_t m_module_stack;
         refer_statement m_refer_statement;
-        std::vector<std::array<term_t, 3>> m_theorems;
-        std::vector<std::array<term_t, 3>> m_guides;
+        std::vector<theorem> m_theorems;
+        std::vector<guide> m_guides;
     };
 
     std::map<std::string, term_t> l_var_decl_alist;
@@ -546,7 +577,7 @@ static void test_execute_refer_statement()
                     .m_tag = make_atom("math"),
                     .m_file_path = make_atom("./src/test_input_files/executor_example_0/test.u"),
                 },
-                .m_theorems = std::vector<std::array<term_t, 3>>({
+                .m_theorems = std::vector<theorem>({
                     {
                         make_list({
                             make_atom("math"),
@@ -570,7 +601,7 @@ static void test_execute_refer_statement()
                         make_atom("x"),
                     },
                 }),
-                .m_guides = std::vector<std::array<term_t, 3>>({
+                .m_guides = std::vector<guide>({
 
                 }),
             },
@@ -582,7 +613,7 @@ static void test_execute_refer_statement()
                     .m_tag = make_atom("main"),
                     .m_file_path = make_atom("./src/test_input_files/executor_example_1/main.u"),
                 },
-                .m_theorems = std::vector<std::array<term_t, 3>>({
+                .m_theorems = std::vector<theorem>({
                     {
                         make_list({
                             make_atom("main"),
@@ -626,7 +657,7 @@ static void test_execute_refer_statement()
                         make_atom("a"),
                     },
                 }),
-                .m_guides = std::vector<std::array<term_t, 3>>({
+                .m_guides = std::vector<guide>({
                     {
                         make_list({
                             make_atom("main"),
@@ -664,6 +695,281 @@ static void test_execute_refer_statement()
                     },
                 }),
             },
+            file_test_case{
+                .m_module_stack = make_list({}),
+                .m_refer_statement = refer_statement{
+                    .m_tag = make_atom("main"),
+                    .m_file_path = make_atom("./src/test_input_files/executor_example_2/main.u"),
+                },
+                .m_theorems = std::vector<theorem>({
+                    {
+                        make_list({
+                            make_atom("r1"),
+                            make_atom("main"),
+                        }),
+                        make_atom("a0"),
+                        make_list({
+                                      make_atom("a0"),
+                                      make_var("X", l_var_decl_alist),
+                                  },
+                                  make_var("X", l_var_decl_alist)),
+                    },
+                    {
+                        make_list({
+                            make_atom("r1"),
+                            make_atom("main"),
+                        }),
+                        make_atom("a1"),
+                        make_list({
+                                      make_atom("a1"),
+                                      make_var("Y", l_var_decl_alist),
+                                  },
+                                  make_var("Y", l_var_decl_alist)),
+                    },
+                    {
+                        make_list({
+                            make_atom("r1"),
+                            make_atom("main"),
+                        }),
+                        make_atom("a2"),
+                        make_list({
+                                      make_atom("a2"),
+                                      make_var("Z", l_var_decl_alist),
+                                      make_var("Z", l_var_decl_alist),
+                                      make_var("X", l_var_decl_alist),
+                                  },
+                                  make_var("X", l_var_decl_alist)),
+                    },
+                    {
+                        make_list({
+                            make_atom("r2"),
+                            make_atom("main"),
+                        }),
+                        make_atom("a0"),
+                        make_list({
+                            make_atom("+"),
+                            make_atom("0"),
+                            make_atom("0"),
+                            make_atom("0"),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("r2"),
+                            make_atom("main"),
+                        }),
+                        make_atom("a1"),
+                        make_list({
+                            make_atom("+"),
+                            make_atom("1"),
+                            make_atom("0"),
+                            make_atom("1"),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("r2"),
+                            make_atom("main"),
+                        }),
+                        make_atom("a2"),
+                        make_list({
+                            make_atom("+"),
+                            make_atom("0"),
+                            make_atom("1"),
+                            make_atom("1"),
+                        }),
+                    },
+                }),
+                .m_guides = std::vector<guide>({
+                    {
+                        make_list({
+                            make_atom("r1"),
+                            make_atom("main"),
+                        }),
+                        make_atom("g0"),
+                        make_list({
+                            make_atom("mp"),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a0"),
+                            }),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a1"),
+                            }),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("r1"),
+                            make_atom("main"),
+                        }),
+                        make_atom("g1"),
+                        make_list({
+                            make_atom("mp"),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a0"),
+                            }),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a1"),
+                            }),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("r2"),
+                            make_atom("main"),
+                        }),
+                        make_atom("g0"),
+                        make_list({
+                            make_atom("mp"),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a0"),
+                            }),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a1"),
+                            }),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("r2"),
+                            make_atom("main"),
+                        }),
+                        make_atom("g1"),
+                        make_list({
+                            make_atom("mp"),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a0"),
+                            }),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a1"),
+                            }),
+                        }),
+                    },
+                }),
+            },
+            file_test_case{
+                .m_module_stack = make_list({}),
+                .m_refer_statement = refer_statement{
+                    .m_tag = make_atom("main"),
+                    .m_file_path = make_atom("./src/test_input_files/executor_example_3/main/main.u"),
+                },
+                .m_theorems = std::vector<theorem>({
+                    {
+                        make_list({
+                            make_atom("r"),
+                            make_atom("main"),
+                        }),
+                        make_atom("a0"),
+                        make_list({
+                            make_atom("a0"),
+                            make_atom("a0"),
+                            make_atom("a0"),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("main"),
+                        }),
+                        make_atom("tag"),
+                        make_list({
+                            make_atom("test"),
+                        }),
+                    },
+                }),
+                .m_guides = std::vector<guide>({
+
+                }),
+            },
+            file_test_case{
+                .m_module_stack = make_list({
+                    make_atom("start"),
+                }),
+                .m_refer_statement = refer_statement{
+                    .m_tag = make_atom("main"),
+                    .m_file_path = make_atom("./src/test_input_files/executor_example_4/main.u"),
+                },
+                .m_theorems = std::vector<theorem>({
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("start"),
+                        }),
+                        make_atom("a0"),
+                        make_list({
+                            make_atom("if"),
+                            make_atom("y"),
+                            make_atom("x"),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("start"),
+                        }),
+                        make_atom("a1"),
+                        make_atom("x"),
+                    },
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("start"),
+                        }),
+                        make_atom("a2"),
+                        make_atom("y"),
+                    },
+                }),
+                .m_guides = std::vector<guide>({
+
+                }),
+            },
+            file_test_case{
+                .m_module_stack = make_list({}),
+                .m_refer_statement = refer_statement{
+                    .m_tag = make_atom("main"),
+                    .m_file_path = make_atom("./src/test_input_files/executor_example_5/main.u"),
+                },
+                .m_theorems = std::vector<theorem>({
+                    {
+                        make_list({
+                            make_atom("referee"),
+                            make_atom("main"),
+                        }),
+                        make_atom("a0"),
+                        make_atom("x"),
+                    },
+                    {
+                        make_list({
+                            make_atom("referee"),
+                            make_atom("main"),
+                        }),
+                        make_atom("a1"),
+                        make_list({
+                            make_atom("if"),
+                            make_atom("y"),
+                            make_atom("x"),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("referee"),
+                            make_atom("main"),
+                        }),
+                        make_atom("i0"),
+                        make_atom("y"),
+                    },
+                }),
+                .m_guides = std::vector<guide>({
+
+                }),
+            },
         };
 
     for (const file_test_case &l_file_test_case : l_file_test_cases)
@@ -697,9 +1003,9 @@ static void test_execute_refer_statement()
                 fid_t l_it_frame = PL_open_foreign_frame();
 
                 assert((size_t)i < l_file_test_case.m_theorems.size()); // make sure we do not go over expected #
-                assert(CALL_PRED("writeln", 1, l_content_module_stack));
-                assert(CALL_PRED("writeln", 1, l_content_tag));
-                assert(CALL_PRED("writeln", 1, l_content_sexpr));
+                // assert(CALL_PRED("writeln", 1, l_content_module_stack));
+                // assert(CALL_PRED("writeln", 1, l_content_tag));
+                // assert(CALL_PRED("writeln", 1, l_content_sexpr));
 
                 // assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][0]));
                 // assert(CALL_PRED("writeln", 1, l_file_test_case.m_theorems[i][1]));
@@ -740,9 +1046,9 @@ static void test_execute_refer_statement()
                 fid_t l_it_frame = PL_open_foreign_frame();
 
                 assert((size_t)i < l_file_test_case.m_guides.size()); // make sure we do not go over expected #
-                assert(CALL_PRED("writeln", 1, l_content_module_stack));
-                assert(CALL_PRED("writeln", 1, l_content_tag));
-                assert(CALL_PRED("writeln", 1, l_content_sexpr));
+                // assert(CALL_PRED("writeln", 1, l_content_module_stack));
+                // assert(CALL_PRED("writeln", 1, l_content_tag));
+                // assert(CALL_PRED("writeln", 1, l_content_sexpr));
 
                 // assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][0]));
                 // assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][1]));
@@ -765,6 +1071,11 @@ static void test_execute_refer_statement()
         // ensure we do NOT have to worry about info persisting to next test case
         /////////////////////////////////////////
         wipe_database();
+
+        char *l_file_path_str;
+        assert(PL_get_atom_chars(l_file_test_case.m_refer_statement.m_file_path, &l_file_path_str));
+
+        LOG("success, referred file: " << l_file_path_str << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
