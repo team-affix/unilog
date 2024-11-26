@@ -543,6 +543,111 @@ static void test_execute_guide_statement()
     PL_discard_foreign_frame(l_frame);
 }
 
+static void test_execute_infer_statement()
+{
+    using unilog::axiom_statement;
+    using unilog::execute;
+    using unilog::guide_statement;
+    using unilog::infer_statement;
+
+    fid_t l_frame = PL_open_foreign_frame();
+
+    term_t l_args = PL_new_term_refs(3);
+    term_t l_module_stack = l_args;
+    term_t l_tag = l_args + 1;
+    term_t l_theorem = l_args + 2;
+
+    assert(
+        PL_unify(l_module_stack,
+                 make_list({
+                     make_atom("daniel"),
+                     make_atom("jake"),
+                 })));
+    assert(PL_unify(l_tag, make_atom("i0")));
+
+    /////////////////////////////////////////
+    // ensure we CANNOT find theorem with this module stack + tag
+    /////////////////////////////////////////
+    {
+        fid_t l_unification_frame = PL_open_foreign_frame();
+        assert(!CALL_PRED("theorem", 3, l_args));
+        PL_discard_foreign_frame(l_unification_frame);
+    };
+
+    /////////////////////////////////////////
+    // execute the setup statements (in module path: l_module_stack)
+    /////////////////////////////////////////
+    assert(
+        execute(
+            guide_statement{
+                .m_tag = make_atom("g0"),
+                .m_guide = make_list({
+                    make_atom("mp"),
+                    make_list({
+                        make_atom("theorem"),
+                        make_atom("a0"),
+                    }),
+                    make_list({
+                        make_atom("theorem"),
+                        make_atom("a1"),
+                    }),
+                }),
+            },
+            l_module_stack));
+    assert(
+        execute(
+            axiom_statement{
+                .m_tag = make_atom("a0"),
+                .m_theorem = make_list({
+                    make_atom("if"),
+                    make_atom("y"),
+                    make_atom("x"),
+                }),
+            },
+            l_module_stack));
+    assert(
+        execute(
+            axiom_statement{
+                .m_tag = make_atom("a1"),
+                .m_theorem = make_atom("x"),
+            },
+            l_module_stack));
+
+    /////////////////////////////////////////
+    // execute the infer_statement
+    /////////////////////////////////////////
+    assert(
+        execute(
+            infer_statement{
+                .m_tag = l_tag,
+                .m_guide = make_list({
+                    make_atom("guide"),
+                    make_atom("g0"),
+                }),
+            },
+            l_module_stack));
+
+    /////////////////////////////////////////
+    // ensure we CAN find theorem with this module stack + tag
+    /////////////////////////////////////////
+    {
+        fid_t l_unification_frame = PL_open_foreign_frame();
+        assert(CALL_PRED("theorem", 3, l_args));
+        // assert(CALL_PRED("writeln", 1, l_module_stack));
+        // assert(CALL_PRED("writeln", 1, l_tag));
+        // assert(CALL_PRED("writeln", 1, l_theorem));
+        assert(equal_forms(l_theorem, make_atom("y")));
+        PL_discard_foreign_frame(l_unification_frame);
+    };
+
+    /////////////////////////////////////////
+    // ensure we do NOT have to worry about info persisting to next test case
+    /////////////////////////////////////////
+    wipe_database();
+
+    PL_discard_foreign_frame(l_frame);
+}
+
 static void test_execute_refer_statement()
 {
     fid_t l_frame = PL_open_foreign_frame();
@@ -1092,6 +1197,7 @@ void test_executor_main()
     TEST(test_wipe_database);
     TEST(test_execute_axiom_statement);
     TEST(test_execute_guide_statement);
+    TEST(test_execute_infer_statement);
     TEST(test_execute_refer_statement);
 }
 
