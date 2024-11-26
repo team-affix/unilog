@@ -95,10 +95,24 @@ query(BStack, DStack, [guide, GuideTag], Theorem) :-
 :- dynamic theorem/3.
 :- dynamic guide/3.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% BEGIN UNIT TEST REGION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%
+% Test helpers listed here
+%%%%%%%
+
 wipe_database :-
     retractall(theorem(_, _, _)),
     retractall(guide(_, _, _)),
     !.
+
+test(Predicate) :-
+    write(">>>> TEST STARTING: "),
+    write(Predicate),
+    nl,
+    call(Predicate).
 
 test_case(Predicate) :-
     write(">>>> TEST STARTING:     "),
@@ -106,6 +120,30 @@ test_case(Predicate) :-
     nl,
     wipe_database,
     call(Predicate).
+
+query_unifies(Guide, Theorem) :-
+    query(Guide, QueryResult),
+    unify(QueryResult, Theorem).
+
+%%%%%%%
+% Test cases listed here
+%%%%%%%
+
+    tc_wipe_database_0 :-
+        decl_theorem([], a0, thm),
+        theorem([], a0, _),
+        wipe_database,
+        \+ theorem([], a0, _).
+
+    tc_wipe_database_1 :-
+        decl_guide([], g0, guide),
+        guide([], g0, _),
+        wipe_database,
+        \+ guide([], g0, _).
+
+test_wipe_database :-
+    test_case(tc_wipe_database_0),
+    test_case(tc_wipe_database_1).
 
 test_case_0 :-
     decl_theorem([natalie, daniel], a0, [if, y, x]),
@@ -117,6 +155,10 @@ test_case_0 :-
                 [mp, [theorem, a0], [theorem, a1]]
             ]]]], _).
 
+test_mp :-
+    test_case(test_case_0).
+
 :-
-    test_case(test_case_0),
+    test(test_wipe_database),
+    test(test_mp),
     wipe_database. % do a terminal db wipe
