@@ -62,9 +62,9 @@ namespace unilog
             return false;
 
         /////////////////////////////////////////
-        // execute decl_guide
+        // execute decl_redir
         /////////////////////////////////////////
-        if (!CALL_PRED("decl_guide", 3, l_args))
+        if (!CALL_PRED("decl_redir", 3, l_args))
             return false;
 
         PL_discard_foreign_frame(l_frame);
@@ -93,7 +93,7 @@ namespace unilog
             return false;
 
         /////////////////////////////////////////
-        // execute decl_guide
+        // execute infer
         /////////////////////////////////////////
         if (!CALL_PRED("infer", 3, l_args))
             return false;
@@ -190,7 +190,7 @@ static void wipe_database()
     // creates the head of clause: guide(_, _, _)
     /////////////////////////////////////////
     term_t l_guide_clause_head = PL_new_term_ref();
-    functor_t l_guide_functor = PL_new_functor(PL_new_atom("guide"), 3);
+    functor_t l_guide_functor = PL_new_functor(PL_new_atom("redir"), 3);
     if (!PL_cons_functor(
             l_guide_clause_head, l_guide_functor,
             PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref()))
@@ -359,7 +359,7 @@ static void test_wipe_database()
         PL_put_atom_chars(l_atom_2, "abc2");
 
         functor_t l_theorem_functor = PL_new_functor(PL_new_atom("theorem"), 3);
-        functor_t l_guide_functor = PL_new_functor(PL_new_atom("guide"), 3);
+        functor_t l_guide_functor = PL_new_functor(PL_new_atom("redir"), 3);
 
         term_t l_theorem_clause = PL_new_term_ref();
         term_t l_guide_clause = PL_new_term_ref();
@@ -378,7 +378,7 @@ static void test_wipe_database()
         // ensure these statements unify (since clauses are bodyless, clause IS head)
         /////////////////////////////////////////
         assert(CALL_PRED("theorem", 3, l_args));
-        assert(CALL_PRED("guide", 3, l_args));
+        assert(CALL_PRED("redir", 3, l_args));
 
         /////////////////////////////////////////
         // wipe the database
@@ -389,7 +389,7 @@ static void test_wipe_database()
         // ensure these statements do NOT unify
         /////////////////////////////////////////
         assert(!CALL_PRED("theorem", 3, l_args));
-        assert(!CALL_PRED("guide", 3, l_args));
+        assert(!CALL_PRED("redir", 3, l_args));
     };
 
     PL_discard_foreign_frame(l_frame);
@@ -491,7 +491,7 @@ static void test_execute_redir_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(!CALL_PRED("guide", 3, l_args));
+        assert(!CALL_PRED("redir", 3, l_args));
         PL_discard_foreign_frame(l_unification_frame);
     };
 
@@ -527,7 +527,7 @@ static void test_execute_redir_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(CALL_PRED("guide", 3, l_args));
+        assert(CALL_PRED("redir", 3, l_args));
         // assert(CALL_PRED("writeln", 1, l_module_stack));
         // assert(CALL_PRED("writeln", 1, l_tag));
         // assert(CALL_PRED("writeln", 1, l_guide));
@@ -1200,7 +1200,7 @@ static void test_execute_refer_statement()
             term_t l_content_tag = l_content_args + 1;
             term_t l_content_sexpr = l_content_args + 2;
 
-            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, PL_predicate("guide", 3, NULL), l_content_args);
+            qid_t l_query = PL_open_query(NULL, PL_Q_NORMAL, PL_predicate("redir", 3, NULL), l_content_args);
 
             int i = 0;
 

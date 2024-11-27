@@ -20,11 +20,11 @@ decl_theorem(ModulePath, Tag, Theorem) :-
         theorem(ModulePath, Tag, Theorem)
     )).
 
-decl_guide(ModulePath, Tag, Redirect) :-
+decl_redir(ModulePath, Tag, Redirect) :-
     is_list(ModulePath),
-    \+ clause(guide(ModulePath, Tag, _, _), _),
+    \+ clause(redir(ModulePath, Tag, _, _), _),
     assertz((
-        guide(ModulePath, Tag, Redirect)
+        redir(ModulePath, Tag, Redirect)
     )).
 
 infer(ModulePath, Tag, Guide) :-
@@ -44,7 +44,7 @@ query([], DStack, [t, Tag], Theorem) :-
     theorem(DStack, Tag, Theorem).
 
 query(BStack, DStack, [r, Tag], Theorem) :-
-    guide(DStack, Tag, Redirect),
+    redir(DStack, Tag, Redirect),
     query(BStack, DStack, Redirect, Theorem).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -100,7 +100,7 @@ query(BStack, [S|DStack], [din, S, NextGuide], Theorem) :-
     query(NewBStack, DStack, NextGuide, Theorem).
 
 :- dynamic theorem/3.
-:- dynamic guide/3.
+:- dynamic redir/3.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% BEGIN UNIT TEST REGION
@@ -112,7 +112,7 @@ query(BStack, [S|DStack], [din, S, NextGuide], Theorem) :-
 
 wipe_database :-
     retractall(theorem(_, _, _)),
-    retractall(guide(_, _, _)),
+    retractall(redir(_, _, _)),
     !.
 
 test(Predicate) :-
@@ -139,10 +139,10 @@ test_case(Predicate) :-
         \+ theorem([], a0, _).
 
     tc_wipe_database_1 :-
-        decl_guide([], g0, guide),
-        guide([], g0, _),
+        decl_redir([], g0, guide),
+        redir([], g0, _),
         wipe_database,
-        \+ guide([], g0, _).
+        \+ redir([], g0, _).
 
 test_wipe_database :-
     test_case(tc_wipe_database_0),
