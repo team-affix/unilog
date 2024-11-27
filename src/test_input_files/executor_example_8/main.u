@@ -1,0 +1,9 @@
+refer r './r.u';
+
+infer i0
+    [bout r [dout r
+        [mp
+            [t a0]
+            [t a1]
+        ]
+    ]];

@@ -434,6 +434,81 @@ test_fail :-
     test_case(tc_fail_0),
     test_case(tc_fail_1).
 
+    tc_scope_0 :-
+        scope(R, [], x),
+        R == x.
+
+    tc_scope_1 :-
+        scope(R, [m1], x),
+        R == [claim, m1, x].
+
+    tc_scope_2 :-
+        scope(x, [], R),
+        R == x.
+
+    tc_scope_3 :-
+        scope([claim, m1, x], [m1], R),
+        R == x.
+
+    tc_scope_4 :-
+        scope([claim, m1, x], S, R),
+        S == [m1],
+        R == x.
+
+    tc_scope_5 :-
+        scope(R, [m1, m2], a),
+        R == [claim, m1, [claim, m2, a]].
+
+test_scope :-
+    test_case(tc_scope_0),
+    test_case(tc_scope_1),
+    test_case(tc_scope_2),
+    test_case(tc_scope_3),
+    test_case(tc_scope_4),
+    test_case(tc_scope_5).
+
+    tc_scope_all_0 :-
+        scope_all(R, [], []),
+        R == [].
+
+    tc_scope_all_1 :-
+        scope_all(R, [m1], []),
+        R == [].
+
+    tc_scope_all_2 :-
+        scope_all(R, [], [a, b]),
+        R == [a, b].
+
+    tc_scope_all_3 :-
+        scope_all(R, [m1], [a, b]),
+        R == [[claim, m1, a], [claim, m1, b]].
+
+    tc_scope_all_4 :-
+        scope_all([a, b], [], R),
+        R == [a, b].
+
+    tc_scope_all_5 :-
+        scope_all([[claim, m1, a], [claim, m1, b]], [], R),
+        R == [[claim, m1, a], [claim, m1, b]].
+
+    tc_scope_all_6 :-
+        scope_all([[claim, m1, a], [claim, m1, b]], [m1], R),
+        R == [a, b].
+
+    tc_scope_all_7 :-
+        scope_all(R, [m1, m2], [a, b]),
+        R == [[claim, m1, [claim, m2, a]], [claim, m1, [claim, m2, b]]].
+
+test_scope_all :-
+    test_case(tc_scope_all_0),
+    test_case(tc_scope_all_1),
+    test_case(tc_scope_all_2),
+    test_case(tc_scope_all_3),
+    test_case(tc_scope_all_4),
+    test_case(tc_scope_all_5),
+    test_case(tc_scope_all_6),
+    test_case(tc_scope_all_7).
+
     % bout fails by not reaching subgoal
     tc_bout_0 :-
         \+ query([], [bout, m1, [bin, m1, [t, a0]]], _).
@@ -737,6 +812,8 @@ test_discharge_assume :-
     test(test_cond),
     test(test_eval),
     test(test_fail),
+    test(test_scope),
+    test(test_scope_all),
     test(test_bout),
     test(test_dout),
     test(test_discharge_assume),

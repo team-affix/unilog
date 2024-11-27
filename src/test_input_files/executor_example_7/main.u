@@ -1,0 +1,10 @@
+axiom a0 [claim m1 [if y x]];
+axiom a1 [claim m1 x];
+
+infer i0
+    [bout m1
+        [mp
+            [bin m1 [t a0]]
+            [bin m1 [t a1]]
+        ]
+    ];
