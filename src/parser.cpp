@@ -205,7 +205,7 @@ namespace unilog
         return l_result;
     }
 
-    bool operator==(const guide_statement &a_lhs, const guide_statement &a_rhs)
+    bool operator==(const redir_statement &a_lhs, const redir_statement &a_rhs)
     {
         fid_t l_frame = PL_open_foreign_frame();
 
@@ -279,9 +279,9 @@ namespace unilog
 
             a_statement = l_result;
         }
-        else if (l_command_text == "guide")
+        else if (l_command_text == "redir")
         {
-            guide_statement l_result;
+            redir_statement l_result;
 
             /////////////////////////////////////////
             // creates new term refs
@@ -1618,22 +1618,22 @@ static void test_axiom_statement_equal()
     PL_discard_foreign_frame(l_frame);
 }
 
-static void test_guide_statement_equal()
+static void test_redir_statement_equal()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
     fid_t l_frame = PL_open_foreign_frame();
 
-    using unilog::guide_statement;
+    using unilog::redir_statement;
     using unilog::statement;
 
     std::map<std::string, term_t> l_var_alist;
 
-    data_points<std::pair<guide_statement, guide_statement>, bool> l_data_points =
+    data_points<std::pair<redir_statement, redir_statement>, bool> l_data_points =
         {
             {
                 {
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_atom("a0"),
                             make_var("A", l_var_alist),
@@ -1647,7 +1647,7 @@ static void test_guide_statement_equal()
                             make_var("C", l_var_alist),
                         }),
                     },
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_atom("a0"),
                             make_var("D", l_var_alist),
@@ -1666,7 +1666,7 @@ static void test_guide_statement_equal()
             },
             {
                 {
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_atom("a0"),
                             make_var("B", l_var_alist),
@@ -1680,7 +1680,7 @@ static void test_guide_statement_equal()
                             make_var("C", l_var_alist),
                         }),
                     },
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_atom("a0"),
                             make_var("D", l_var_alist),
@@ -1699,7 +1699,7 @@ static void test_guide_statement_equal()
             },
             {
                 {
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_atom("a0"),
                             make_var("A", l_var_alist),
@@ -1713,7 +1713,7 @@ static void test_guide_statement_equal()
                             make_var("C", l_var_alist),
                         }),
                     },
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_atom("a0"),
                             make_var("E", l_var_alist),
@@ -1732,7 +1732,7 @@ static void test_guide_statement_equal()
             },
             {
                 {
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_var("X", l_var_alist),
                             make_var("A", l_var_alist),
@@ -1746,7 +1746,7 @@ static void test_guide_statement_equal()
                             make_var("C", l_var_alist),
                         }),
                     },
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_var("Y", l_var_alist),
                             make_var("E", l_var_alist),
@@ -1765,7 +1765,7 @@ static void test_guide_statement_equal()
             },
             {
                 {
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_var("X", l_var_alist),
                             make_var("A", l_var_alist),
@@ -1779,7 +1779,7 @@ static void test_guide_statement_equal()
                             make_var("C", l_var_alist),
                         }),
                     },
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_var("Y", l_var_alist),
                             make_var("E", l_var_alist),
@@ -1798,7 +1798,7 @@ static void test_guide_statement_equal()
             },
             {
                 {
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                                                make_var("X", l_var_alist),
                                                make_var("A", l_var_alist),
@@ -1810,7 +1810,7 @@ static void test_guide_statement_equal()
                                              },
                                              make_var("B", l_var_alist)),
                     },
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                                                make_var("Y", l_var_alist),
                                                make_var("C", l_var_alist),
@@ -1832,7 +1832,7 @@ static void test_guide_statement_equal()
         // do the equality comparison
         assert((l_pair.first == l_pair.second) == l_value);
 
-        LOG("success, guide_statement op== test" << std::endl);
+        LOG("success, redir_statement op== test" << std::endl);
     }
 
     PL_discard_foreign_frame(l_frame);
@@ -2110,7 +2110,7 @@ static void test_infer_statement_equal()
         // do the equality comparison
         assert((l_pair.first == l_pair.second) == l_value);
 
-        LOG("success, guide_statement op== test" << std::endl);
+        LOG("success, redir_statement op== test" << std::endl);
     }
 
     PL_discard_foreign_frame(l_frame);
@@ -2843,13 +2843,13 @@ static void test_parser_extract_axiom_statement()
     PL_discard_foreign_frame(l_frame_id);
 }
 
-static void test_parser_extract_guide_statement()
+static void test_parser_extract_redir_statement()
 {
     fid_t l_frame = PL_open_foreign_frame();
 
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
-    using unilog::guide_statement;
+    using unilog::redir_statement;
     using unilog::statement;
 
     std::map<std::string, term_t> l_var_alist;
@@ -2857,7 +2857,7 @@ static void test_parser_extract_guide_statement()
     data_points<std::string, statement> l_test_cases =
         {
             {
-                "guide g_add_bc\n"
+                "redir g_add_bc\n"
                 "[gor\n"
                 "    add_bc_0\n"
                 "    add_bc_1\n"
@@ -2866,7 +2866,7 @@ static void test_parser_extract_guide_statement()
                 "    add_bc_4\n"
                 "    add_bc_5\n"
                 "]\n;",
-                guide_statement{
+                redir_statement{
                     .m_tag = make_atom("g_add_bc"),
                     .m_guide = make_list({
                         make_atom("gor"),
@@ -2880,8 +2880,8 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "guide g0[bind K [theorem a0]]\t;",
-                guide_statement{
+                "redir g0[bind K [theorem a0]]\t;",
+                redir_statement{
                     .m_tag = make_atom("g0"),
                     .m_guide = make_list({
                         make_atom("bind"),
@@ -2894,8 +2894,8 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "guide \"g\" [sub thm [theorem a0] [theorem a1]];",
-                guide_statement{
+                "redir \"g\" [sub thm [theorem a0] [theorem a1]];",
+                redir_statement{
                     .m_tag = make_atom("g"),
                     .m_guide = make_list({
                         make_atom("sub"),
@@ -2912,8 +2912,8 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "guide [\"g\" Subgoal Subguide][sub Subgoal Subguide [theorem a1]]\n;",
-                guide_statement{
+                "redir [\"g\" Subgoal Subguide][sub Subgoal Subguide [theorem a1]]\n;",
+                redir_statement{
                     .m_tag = make_list({
                         make_atom("g"),
                         make_var("Subgoal", l_var_alist),
@@ -2932,8 +2932,8 @@ static void test_parser_extract_guide_statement()
 
             },
             {
-                "guide gt [mp [theorem a0] [theorem a1]];",
-                guide_statement{
+                "redir gt [mp [theorem a0] [theorem a1]];",
+                redir_statement{
                     .m_tag = make_atom("gt"),
                     .m_guide = make_list({
                         make_atom("mp"),
@@ -2949,8 +2949,8 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "guide [gt x z] [eval];",
-                guide_statement{
+                "redir [gt x z] [eval];",
+                redir_statement{
                     .m_tag = make_list({
                         make_atom("gt"),
                         make_atom("x"),
@@ -2962,8 +2962,8 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "\'guide\' [\"t a g\" X Y| Rest] [\"theorem\" \'a0\'];",
-                guide_statement{
+                "\'redir\' [\"t a g\" X Y| Rest] [\"theorem\" \'a0\'];",
+                redir_statement{
                     .m_tag = make_list({
                                            make_atom("t a g"),
                                            make_var("X", l_var_alist),
@@ -2977,8 +2977,8 @@ static void test_parser_extract_guide_statement()
                 },
             },
             {
-                "\"guide\" [\"X\" Args] [guide g0 Args];",
-                guide_statement{
+                "\"redir\" [\"X\" Args] [guide g0 Args];",
+                redir_statement{
                     .m_tag = make_list({
                         make_atom("X"),
                         make_var("Args", l_var_alist),
@@ -3003,7 +3003,7 @@ static void test_parser_extract_guide_statement()
 
         // make sure the stringstream is not in failstate
         assert(!l_ss.fail());
-        assert(std::holds_alternative<guide_statement>(l_statement));
+        assert(std::holds_alternative<redir_statement>(l_statement));
         assert(l_statement == l_value);
 
         LOG("success, case: \"" << l_key << "\"" << std::endl);
@@ -3015,10 +3015,10 @@ static void test_parser_extract_guide_statement()
         {
             "",
             "abc",
-            "guide",
-            "guide g0",
-            "guide g0 []",
-            "guide g0 [] [theorem a0]",
+            "redir",
+            "redir g0",
+            "redir g0 []",
+            "redir g0 [] [theorem a0]",
         };
 
     for (const auto &l_input : l_fail_cases)
@@ -3034,7 +3034,7 @@ static void test_parser_extract_guide_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
+        LOG("success, case: expected failure extracting redir_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
@@ -3179,7 +3179,7 @@ static void test_parser_extract_infer_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
+        LOG("success, case: expected failure extracting redir_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
@@ -3286,7 +3286,7 @@ static void test_parser_extract_refer_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting guide_statement: " << l_input << std::endl);
+        LOG("success, case: expected failure extracting redir_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
@@ -3300,8 +3300,8 @@ static void test_parse_file_examples()
 
     using unilog::atom;
     using unilog::axiom_statement;
-    using unilog::guide_statement;
     using unilog::infer_statement;
+    using unilog::redir_statement;
     using unilog::refer_statement;
     using unilog::statement;
 
@@ -3437,7 +3437,7 @@ static void test_parse_file_examples()
                             make_atom("x"),
                         }),
                     },
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_list({
                             make_atom("g0"),
                         }),
@@ -3516,7 +3516,7 @@ static void test_parse_file_examples()
                         .m_tag = make_atom("a1"),
                         .m_theorem = make_atom("x"),
                     },
-                    guide_statement{
+                    redir_statement{
                         .m_tag = make_atom("g0"),
                         .m_guide = make_list({
                             make_atom("mp"),
@@ -3569,12 +3569,12 @@ void test_parser_main()
     TEST(test_random_string);
     TEST(test_equal_forms);
     TEST(test_axiom_statement_equal);
-    TEST(test_guide_statement_equal);
+    TEST(test_redir_statement_equal);
     TEST(test_infer_statement_equal);
     TEST(test_refer_statement_equal);
     TEST(test_parser_extract_prolog_expression);
     TEST(test_parser_extract_axiom_statement);
-    TEST(test_parser_extract_guide_statement);
+    TEST(test_parser_extract_redir_statement);
     TEST(test_parser_extract_infer_statement);
     TEST(test_parser_extract_refer_statement);
     TEST(test_parse_file_examples);

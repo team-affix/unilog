@@ -1,7 +1,7 @@
 axiom a0 [if y x];
 axiom a1 x;
 
-guide g0 [mp [theorem a0] [theorem a1]];
+redir g0 [mp [theorem a0] [theorem a1]];
 
 infer i0 [guide g0];
 

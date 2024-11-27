@@ -1,5 +1,5 @@
 axiom a0 [a0 X|X];
-guide g0 [mp [t a0] [t a1]];
+redir g0 [mp [t a0] [t a1]];
 axiom a1 [a1 Y|Y];
-guide g1 [mp [t a0] [t a1]];
+redir g1 [mp [t a0] [t a1]];
 axiom a2 [a2 Z Z X | X];

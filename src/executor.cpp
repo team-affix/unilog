@@ -41,7 +41,7 @@ namespace unilog
         return true;
     }
 
-    bool execute(const guide_statement &a_guide_statement, term_t a_module_path)
+    bool execute(const redir_statement &a_redir_statement, term_t a_module_path)
     {
         fid_t l_frame = PL_open_foreign_frame();
 
@@ -57,8 +57,8 @@ namespace unilog
         // set up arguments
         /////////////////////////////////////////
         if (!(PL_unify(l_module_path, a_module_path) &&
-              PL_unify(l_tag, a_guide_statement.m_tag) &&
-              PL_unify(l_guide, a_guide_statement.m_guide)))
+              PL_unify(l_tag, a_redir_statement.m_tag) &&
+              PL_unify(l_guide, a_redir_statement.m_guide)))
             return false;
 
         /////////////////////////////////////////
@@ -466,10 +466,10 @@ static void test_execute_axiom_statement()
     PL_discard_foreign_frame(l_frame);
 }
 
-static void test_execute_guide_statement()
+static void test_execute_redir_statement()
 {
     using unilog::execute;
-    using unilog::guide_statement;
+    using unilog::redir_statement;
 
     fid_t l_frame = PL_open_foreign_frame();
 
@@ -516,7 +516,7 @@ static void test_execute_guide_statement()
     /////////////////////////////////////////
     assert(
         execute(
-            guide_statement{
+            redir_statement{
                 .m_tag = l_tag,
                 .m_guide = l_declared_guide,
             },
@@ -547,8 +547,8 @@ static void test_execute_infer_statement()
 {
     using unilog::axiom_statement;
     using unilog::execute;
-    using unilog::guide_statement;
     using unilog::infer_statement;
+    using unilog::redir_statement;
 
     fid_t l_frame = PL_open_foreign_frame();
 
@@ -579,7 +579,7 @@ static void test_execute_infer_statement()
     /////////////////////////////////////////
     assert(
         execute(
-            guide_statement{
+            redir_statement{
                 .m_tag = make_atom("g0"),
                 .m_guide = make_list({
                     make_atom("mp"),
@@ -1196,7 +1196,7 @@ void test_executor_main()
     TEST(test_assertz_and_retract_all);
     TEST(test_wipe_database);
     TEST(test_execute_axiom_statement);
-    TEST(test_execute_guide_statement);
+    TEST(test_execute_redir_statement);
     TEST(test_execute_infer_statement);
     TEST(test_execute_refer_statement);
 }

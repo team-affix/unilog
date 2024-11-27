@@ -18,7 +18,7 @@ namespace unilog
         term_t m_theorem;
     };
 
-    struct guide_statement
+    struct redir_statement
     {
         term_t m_tag;
         term_t m_guide;
@@ -37,13 +37,13 @@ namespace unilog
     };
 
     bool operator==(const axiom_statement &a_lhs, const axiom_statement &a_rhs);
-    bool operator==(const guide_statement &a_lhs, const guide_statement &a_rhs);
+    bool operator==(const redir_statement &a_lhs, const redir_statement &a_rhs);
     bool operator==(const infer_statement &a_lhs, const infer_statement &a_rhs);
     bool operator==(const refer_statement &a_lhs, const refer_statement &a_rhs);
 
     using statement = std::variant<
         axiom_statement,
-        guide_statement,
+        redir_statement,
         infer_statement,
         refer_statement>;
 

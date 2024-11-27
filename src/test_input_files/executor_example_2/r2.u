@@ -6,13 +6,13 @@ axiom a1
 
 
 ;
-guide 
+redir 
 g0 [
     mp [t a0] [t a1]];
 
 axiom a2 ['+' '0' '1' '1'];
 
-guide g1 [
+redir g1 [
     mp [
         t
         a0
