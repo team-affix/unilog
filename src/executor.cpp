@@ -666,7 +666,7 @@ static void test_execute_refer_statement()
         term_t m_module_stack;
         refer_statement m_refer_statement;
         std::vector<theorem> m_theorems;
-        std::vector<guide> m_guides;
+        std::vector<guide> m_redirs;
     };
 
     std::map<std::string, term_t> l_var_decl_alist;
@@ -706,7 +706,7 @@ static void test_execute_refer_statement()
                         make_atom("x"),
                     },
                 }),
-                .m_guides = std::vector<guide>({
+                .m_redirs = std::vector<guide>({
 
                 }),
             },
@@ -762,7 +762,7 @@ static void test_execute_refer_statement()
                         make_atom("a"),
                     },
                 }),
-                .m_guides = std::vector<guide>({
+                .m_redirs = std::vector<guide>({
                     {
                         make_list({
                             make_atom("main"),
@@ -885,7 +885,7 @@ static void test_execute_refer_statement()
                         }),
                     },
                 }),
-                .m_guides = std::vector<guide>({
+                .m_redirs = std::vector<guide>({
                     {
                         make_list({
                             make_atom("r1"),
@@ -989,7 +989,7 @@ static void test_execute_refer_statement()
                         }),
                     },
                 }),
-                .m_guides = std::vector<guide>({
+                .m_redirs = std::vector<guide>({
 
                 }),
             },
@@ -1031,7 +1031,7 @@ static void test_execute_refer_statement()
                         make_atom("y"),
                     },
                 }),
-                .m_guides = std::vector<guide>({
+                .m_redirs = std::vector<guide>({
 
                 }),
             },
@@ -1071,7 +1071,7 @@ static void test_execute_refer_statement()
                         make_atom("y"),
                     },
                 }),
-                .m_guides = std::vector<guide>({
+                .m_redirs = std::vector<guide>({
 
                 }),
             },
@@ -1113,7 +1113,7 @@ static void test_execute_refer_statement()
                         make_atom("y"),
                     },
                 },
-                .m_guides = {
+                .m_redirs = {
                     {
                         make_list({
                             make_atom("main"),
@@ -1209,24 +1209,24 @@ static void test_execute_refer_statement()
             {
                 fid_t l_it_frame = PL_open_foreign_frame();
 
-                assert((size_t)i < l_file_test_case.m_guides.size()); // make sure we do not go over expected #
+                assert((size_t)i < l_file_test_case.m_redirs.size()); // make sure we do not go over expected #
                 // assert(CALL_PRED("writeln", 1, l_content_module_stack));
                 // assert(CALL_PRED("writeln", 1, l_content_tag));
                 // assert(CALL_PRED("writeln", 1, l_content_sexpr));
 
-                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][0]));
-                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][1]));
-                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_guides[i][2]));
+                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_redirs[i][0]));
+                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_redirs[i][1]));
+                // assert(CALL_PRED("writeln", 1, l_file_test_case.m_redirs[i][2]));
 
-                assert(equal_forms(l_content_module_stack, l_file_test_case.m_guides[i][0]));
-                assert(equal_forms(l_content_tag, l_file_test_case.m_guides[i][1]));
-                assert(equal_forms(l_content_sexpr, l_file_test_case.m_guides[i][2]));
+                assert(equal_forms(l_content_module_stack, l_file_test_case.m_redirs[i][0]));
+                assert(equal_forms(l_content_tag, l_file_test_case.m_redirs[i][1]));
+                assert(equal_forms(l_content_sexpr, l_file_test_case.m_redirs[i][2]));
 
                 PL_discard_foreign_frame(l_it_frame);
             }
 
             // make sure we made it all the way thru the list
-            assert((size_t)i == l_file_test_case.m_guides.size());
+            assert((size_t)i == l_file_test_case.m_redirs.size());
 
             PL_cut_query(l_query);
         };
