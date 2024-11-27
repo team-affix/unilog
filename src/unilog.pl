@@ -3,11 +3,18 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Helper
 
-%bscope([claim, S, Internal], [S|NextBScope], Descoped) :-
-%    bscope(Internal, NextBScope, Descoped),
-%    !.
-%bscope(SExpr, [], SExpr) :-
-%    !.
+scope([claim, S, Internal], [S|NextBScope], Descoped) :-
+    scope(Internal, NextBScope, Descoped),
+    !.
+scope(SExpr, [], SExpr) :-
+    !.
+
+scope_all([], _, []) :-
+    !.
+scope_all([SX|SRest], S, [X|Rest]) :-
+    scope(SX, S, X),
+    scope_all(SRest, S, Rest),
+    !.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Handle theorem/guide declarations
@@ -40,79 +47,87 @@ infer(ModulePath, Tag, Guide) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 query(ModulePath, Guide, Theorem) :-
-    query([], ModulePath, Guide, Theorem).
+    query([], ModulePath, [], Guide, Theorem).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% terminal ROI
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-query([], DStack, [t, Tag], Theorem) :-
+query([], DStack, [], [t, Tag], Theorem) :-
     theorem(DStack, Tag, Theorem).
 
-query(BStack, DStack, [r, Tag], Theorem) :-
+query(BStack, DStack, Conds, [r, Tag], Theorem) :-
     redir(DStack, Tag, Redirect),
-    query(BStack, DStack, Redirect, Theorem).
+    query(BStack, DStack, Conds, Redirect, Theorem).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% logic ROI
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-query(BStack, DStack, [mp, ImpGuide, JusGuide], Y) :-
-    query(BStack, DStack, ImpGuide, [if, Y, X]),
-    query(BStack, DStack, JusGuide, X).
+query(BStack, DStack, Conds, [mp, ImpGuide, JusGuide], Y) :-
+    query(BStack, DStack, ImpConds, ImpGuide, [if, Y, X]),
+    query(BStack, DStack, JusConds, JusGuide, X),
+    append(ImpConds, JusConds, Conds).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% more fundamental ROIs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-query(BStack, DStack, [bind, Target, NextGuide], Target) :-
-    query(BStack, DStack, NextGuide, Target).
+query(BStack, DStack, Conds, [bind, Target, NextGuide], Target) :-
+    query(BStack, DStack, Conds, NextGuide, Target).
 
-query(BStack, DStack, [sub, SubGuide, NextGuide], Target) :-
-    query(BStack, DStack, SubGuide, _),
-    query(BStack, DStack, NextGuide, Target).
+query(BStack, DStack, Conds, [sub, SubGuide, NextGuide], Target) :-
+    query(BStack, DStack, [], SubGuide, _),
+    query(BStack, DStack, Conds, NextGuide, Target).
 
-query(BStack, DStack, [gor, NextGuide | Rest], Target) :-
-    query(BStack, DStack, NextGuide, Target)
+query(BStack, DStack, Conds, [gor, NextGuide | Rest], Target) :-
+    query(BStack, DStack, Conds, NextGuide, Target)
     ;
-    query(BStack, DStack, [gor | Rest], Target).
+    query(BStack, DStack, Conds, [gor | Rest], Target).
 
-query(BStack, DStack, [cond, [CondGuide|NextGuide] | CondsRest], Target) :-
-    query(BStack, DStack, CondGuide, _),
+query(BStack, DStack, Conds, [cond, [CondGuide|NextGuide] | CondsRest], Target) :-
+    query(BStack, DStack, Conds, CondGuide, _),
     !, % if condition goal succeeds, do NOT try any other branches
-    query(BStack, DStack, NextGuide, Target)
+    query(BStack, DStack, Conds, NextGuide, Target)
     ;
-    query(BStack, DStack, [cond | CondsRest], Target).
+    query(BStack, DStack, Conds, [cond | CondsRest], Target).
 
-query(BStack, DStack, eval, [eval, Guide]) :-
-    query(BStack, DStack, Guide, _).
+query(BStack, DStack, [], eval, [eval, Guide]) :-
+    query(BStack, DStack, [], Guide, _).
 
-query(BStack, DStack, fail, [fail, Guide]) :-
-    \+ query(BStack, DStack, Guide, _).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%% conditional proofs
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+query(BStack, DStack, [], fail, [fail, Guide]) :-
+    \+ query(BStack, DStack, [], Guide, _).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% scope handling
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-query(BStack, DStack, [bout, S, NextGuide], [claim, S, Internal]) :-
-    %bscope(ScopedSExpr, [S], Internal),
-    query([S|BStack], DStack,  NextGuide, Internal).
+query(BStack, DStack, Conds, [bout, S, NextGuide], Scoped) :-
+    scope(Scoped, [S], Internal),
+    query([S|BStack], DStack, InternalConds,  NextGuide, Internal),
+    scope_all(Conds, [S], InternalConds).
 
-query([S|BStack], DStack, [bin, S, NextGuide], Internal) :-
-    %bscope(ScopedSExpr, [S], Internal),
-    query(BStack, DStack, NextGuide, [claim, S, Internal]).
+query([S|BStack], DStack, Conds, [bin, S, NextGuide], Internal) :-
+    scope(Scoped, [S], Internal),
+    query(BStack, DStack, ScopedConds, NextGuide, Scoped),
+    scope_all(ScopedConds, [S], Conds).
 
-query(BStack, DStack, [dout, S, NextGuide], Theorem) :-
+query(BStack, DStack, Conds, [dout, S, NextGuide], Theorem) :-
     append(NewBStack, [S], BStack),
-    query(NewBStack, [S|DStack], NextGuide, Theorem).
+    query(NewBStack, [S|DStack], Conds, NextGuide, Theorem).
 
-query(BStack, [S|DStack], [din, S, NextGuide], Theorem) :-
+query(BStack, [S|DStack], Conds, [din, S, NextGuide], Theorem) :-
     append(BStack, [S], NewBStack),
-    query(NewBStack, DStack, NextGuide, Theorem).
+    query(NewBStack, DStack, Conds, NextGuide, Theorem).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% conditional proofs
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+query(BStack, DStack, [], [discharge, NextGuide], [if, Target, [and | Conds]]) :-
+    query(BStack, DStack, Conds, NextGuide, Target).
+
+query(_, _, [Target], assume, Target).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%% BEGIN UNIT TEST REGION
@@ -366,12 +381,25 @@ test_gor :-
             ], R),
         R == b.
 
+    % first branch taken yet NextGuide fails. Second branch is NOT TAKEN AFTER due to cut (!) (both indicators reachable)
+    tc_cond_5 :-
+        %decl_theorem([], a0, a),
+        decl_theorem([], a1, b),
+        decl_theorem([], indic0, x),
+        decl_theorem([], indic1, x),
+        \+ query([],
+            [cond,
+                [[t, indic0]  | [t, a0]],
+                [[t, indic1]  | [t, a1]]
+            ], _).
+
 test_cond :-
     test_case(tc_cond_0),
     test_case(tc_cond_1),
     test_case(tc_cond_2),
     test_case(tc_cond_3),
-    test_case(tc_cond_4).
+    test_case(tc_cond_4),
+    test_case(tc_cond_5).
 
     % test failure of eval when subguide fails
     tc_eval_0 :-
@@ -406,6 +434,123 @@ test_fail :-
     test_case(tc_fail_0),
     test_case(tc_fail_1).
 
+    % bout fails by not reaching subgoal
+    tc_bout_0 :-
+        \+ query([], [bout, m1, [bin, m1, [t, a0]]], _).
+
+    % bout & bin, reaching theorem
+    tc_bout_1 :-
+        decl_theorem([], a0, [claim, m1, x]),
+        query([], [bout, m1, [bin, m1, [t, a0]]], R),
+        R == [claim, m1, x].
+
+    % execute mp within m1 scope
+    tc_bout_2 :-
+        decl_theorem([], a0, [claim, m1, [if, y, x]]),
+        decl_theorem([], a1, [claim, m1, x]),
+        query([], [bout, m1, [mp,
+            [bin, m1, [t, a0]],
+            [bin, m1, [t, a1]]
+        ]], R),
+        R == [claim, m1, y].
+
+    % execute mp within m1 scope, fail since scopes are different
+    tc_bout_3 :-
+        decl_theorem([], a0, [claim, m1, [if, y, x]]),
+        decl_theorem([], a1, [claim, m2, x]),
+        \+ query([], [bout, m1, [mp,
+            [bin, m1, [t, a0]],
+            [bin, m1, [t, a1]]
+        ]], _).
+
+    % nested scope test, retrieving theorem
+    tc_bout_4 :-
+        decl_theorem([], a0, [claim, m1, [claim, m2, x]]),
+        query([], [bout, m1, [bout, m2, [bin, m2, [bin, m1, [t, a0]]]]], R),
+        R == [claim, m1, [claim, m2, x]].
+
+    % nested scope test, conducting mp
+    tc_bout_5 :-
+        decl_theorem([], a0, [claim, m1, [claim, m2, [if, y, x]]]),
+        decl_theorem([], a1, [claim, m1, [claim, m2, x]]),
+        query([],
+            [bout, m1,
+            [bout, m2,
+                [mp,
+                    [bin, m2, [bin, m1, [t, a0]]],
+                    [bin, m2, [bin, m1, [t, a1]]]
+                ]
+            ]], R),
+        R == [claim, m1, [claim, m2, y]].
+
+test_bout :-
+    test_case(tc_bout_0),
+    test_case(tc_bout_1),
+    test_case(tc_bout_2),
+    test_case(tc_bout_3),
+    test_case(tc_bout_4),
+    test_case(tc_bout_5).
+
+    % dout fails, no theorem present
+    tc_dout_0 :-
+        \+ query([], [bout, m1, [dout, m1, [t, a0]]], _).
+
+    % dout fails, theorem present, no preceeding bout call
+    tc_dout_1 :-
+        decl_theorem([m1], a0, x),
+        \+ query([], [dout, m1, [t, a0]], _).
+
+    % bout then dout succeeds, theorem present
+    tc_dout_2 :-
+        decl_theorem([m1], a0, x),
+        query([], [bout, m1, [dout, m1, [t, a0]]], R),
+        R == [claim, m1, x].
+
+    % mp conducted with imp and jus in same dscope
+    tc_dout_3 :-
+        decl_theorem([m1], a0, [if, y, x]),
+        decl_theorem([m1], a1, x),
+        query([], [bout, m1, [dout, m1, [mp, [t, a0], [t, a1]]]], R),
+        R == [claim, m1, y].
+
+    % mp conducted with imp and jus in different dscopes (1)
+    tc_dout_4 :-
+        decl_theorem([], a0, [claim, m1, [if, y, x]]),
+        decl_theorem([m1], a1, x),
+        query([], [bout, m1, [mp, [bin, m1, [t, a0]], [dout, m1, [t, a1]]]], R),
+        R == [claim, m1, y].
+
+    % mp conducted with imp and jus in different dscopes (2)
+    tc_dout_5 :-
+        decl_theorem([], a0, [claim, m1, [if, y, x]]),
+        decl_theorem([m1], a1, x),
+        query([], [bout, m1, [dout, m1, [mp, [din, m1, [bin, m1, [t, a0]]], [t, a1]]]], R),
+        R == [claim, m1, y].
+
+    % mp conducted with imp and jus in different dscopes (3)
+    tc_dout_6 :-
+        decl_theorem([m1], a0, [if, y, x]),
+        decl_theorem([], a1, [claim, m1, x]),
+        query([], [bout, m1, [mp, [dout, m1, [t, a0]], [bin, m1, [t, a1]]]], R),
+        R == [claim, m1, y].
+
+    % mp conducted with imp and jus in different dscopes (4)
+    tc_dout_7 :-
+        decl_theorem([m1], a0, [if, y, x]),
+        decl_theorem([], a1, [claim, m1, x]),
+        query([], [bout, m1, [dout, m1, [mp, [t, a0], [din, m1, [bin, m1, [t, a1]]]]]], R),
+        R == [claim, m1, y].
+
+test_dout :-
+    test_case(tc_dout_0),
+    test_case(tc_dout_1),
+    test_case(tc_dout_2),
+    test_case(tc_dout_3),
+    test_case(tc_dout_4),
+    test_case(tc_dout_5),
+    test_case(tc_dout_6),
+    test_case(tc_dout_7).
+
 :-
     test(test_wipe_database),
     test(test_decl_theorem),
@@ -419,4 +564,6 @@ test_fail :-
     test(test_cond),
     test(test_eval),
     test(test_fail),
+    test(test_bout),
+    test(test_dout),
     wipe_database. % do a terminal db wipe
