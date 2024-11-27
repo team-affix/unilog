@@ -628,6 +628,37 @@ test_dout :-
         ], R),
         R =@= [if, [claim, m1, Y], [and, [claim, m1, [if, Y, X]], [claim, m1, X]]].
 
+    % discharge/assume under bind
+    tc_discharge_assume_8 :-
+        query([], [discharge, [bind, B, [mp, assume, assume]]], R),
+        B =@= _,
+        R =@= [if, Y, [and, [if, Y, X], X]].
+
+    % discharge/assume under sub (no assumptions in subguide)
+    tc_discharge_assume_9 :-
+        decl_theorem([], a0, x),
+        query([], [discharge, [sub, [t, a0], [mp, assume, assume]]], R),
+        R =@= [if, Y, [and, [if, Y, X], X]].
+
+    % discharge/assume under sub (undischarged assumptions in subguide) (subguide is different query, thus should be discharged)
+    tc_discharge_assume_10 :-
+        decl_theorem([], a0, x),
+        \+ query([], [discharge, [sub, assume, [mp, assume, assume]]], _).
+
+    % discharge/assume under gor (first branch succeeds)
+    tc_discharge_assume_11 :-
+        decl_theorem([], a0, a),
+        %decl_theorem([], a1, b),
+        query([], [discharge, [gor, [mp, assume, [t, a0]], [mp, assume, [t, a1]]]], R),
+        R =@= [if, Y, [and, [if, Y, a]]].
+
+    % discharge/assume under gor (second branch succeeds)
+    tc_discharge_assume_12 :-
+        %decl_theorem([], a0, a),
+        decl_theorem([], a1, b),
+        query([], [discharge, [gor, [mp, assume, [t, a0]], [mp, assume, [t, a1]]]], R),
+        R =@= [if, Y, [and, [if, Y, b]]].
+
 test_discharge_assume :-
     test_case(tc_discharge_assume_0),
     test_case(tc_discharge_assume_1),
@@ -636,7 +667,12 @@ test_discharge_assume :-
     test_case(tc_discharge_assume_4),
     test_case(tc_discharge_assume_5),
     test_case(tc_discharge_assume_6),
-    test_case(tc_discharge_assume_7).
+    test_case(tc_discharge_assume_7),
+    test_case(tc_discharge_assume_8),
+    test_case(tc_discharge_assume_9),
+    test_case(tc_discharge_assume_10),
+    test_case(tc_discharge_assume_11),
+    test_case(tc_discharge_assume_12).
 
 :-
     test(test_wipe_database),
