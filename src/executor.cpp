@@ -584,11 +584,11 @@ static void test_execute_infer_statement()
                 .m_guide = make_list({
                     make_atom("mp"),
                     make_list({
-                        make_atom("theorem"),
+                        make_atom("t"),
                         make_atom("a0"),
                     }),
                     make_list({
-                        make_atom("theorem"),
+                        make_atom("t"),
                         make_atom("a1"),
                     }),
                 }),
@@ -621,7 +621,7 @@ static void test_execute_infer_statement()
             infer_statement{
                 .m_tag = l_tag,
                 .m_guide = make_list({
-                    make_atom("guide"),
+                    make_atom("r"),
                     make_atom("g0"),
                 }),
             },

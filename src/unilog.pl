@@ -31,13 +31,57 @@ infer(ModulePath, Tag, Guide) :-
     query(ModulePath, Guide, Theorem),
     decl_theorem(ModulePath, Tag, Theorem).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Handle querying
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Handle querying
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 query(ModulePath, Guide, Theorem) :-
     query([], ModulePath, Guide, Theorem).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%% scope handling
+% terminal ROI
+
+query([], DStack, [t, Tag], Theorem) :-
+    theorem(DStack, Tag, Theorem).
+
+query(BStack, DStack, [r, Tag], Theorem) :-
+    guide(DStack, Tag, Redirect),
+    query(BStack, DStack, Redirect, Theorem).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% logic ROI
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+query(BStack, DStack, [mp, ImpGuide, JusGuide], Y) :-
+    query(BStack, DStack, ImpGuide, [if, Y, X]),
+    query(BStack, DStack, JusGuide, X).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% less fundamental ROIs 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+query(BStack, DStack, [bind, Target, NextGuide], Target) :-
+    query(BStack, DStack, NextGuide, Target).
+
+query(BStack, DStack, [sub, SubTarget, SubGuide, NextGuide], Target) :-
+    query(BStack, DStack, SubGuide, SubTarget),
+    query(BStack, DStack, NextGuide, Target).
+
+query(BStack, DStack, [cond, [[CondTheorem|CondGuide]|NextGuide] | CondsRest], Target) :-
+    query(BStack, DStack, CondGuide, CondTheorem),
+    !, % if condition goal succeeds, do NOT try any other branches
+    query(BStack, DStack, NextGuide, Target)
+    ;
+    query(BStack, DStack, [cond | CondsRest], Target).
+
+query(BStack, DStack, eval, [eval, Guide]) :-
+    query(BStack, DStack, Guide, _).
+
+query(BStack, DStack, fail, [fail, Guide]) :-
+    \+ query(BStack, DStack, Guide, _).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% scope handling
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 query(BStack, DStack, [bout, S, NextGuide], [claim, S, Internal]) :-
     %bscope(ScopedSExpr, [S], Internal),
@@ -54,43 +98,6 @@ query(BStack, DStack, [dout, S, NextGuide], Theorem) :-
 query(BStack, [S|DStack], [din, S, NextGuide], Theorem) :-
     append(BStack, [S], NewBStack),
     query(NewBStack, DStack, NextGuide, Theorem).
-
-%%%%%%%%%%%%%%%%%%%%% less fundamental ROIs
-
-query(BStack, DStack, [bind, Target, NextGuide], Target) :-
-    query(BStack, DStack, NextGuide, Target).
-
-query(BStack, DStack, [sub, SubTarget, SubGuide, NextGuide], Target) :-
-    query(BStack, DStack, SubGuide, SubTarget),
-    query(BStack, DStack, NextGuide, Target).
-
-query(BStack, DStack, [cond, [[CondTheorem|CondGuide]|NextGuide] | CondsRest], Target) :-
-    query(BStack, DStack, CondGuide, CondTheorem),
-    !, % if condition goal succeeds, do NOT try any other branches
-    query(BStack, DStack, NextGuide, Target)
-    ;
-    query(BStack, DStack, [cond | CondsRest], Target).
-
-query(BStack, DStack, [eval], [eval, Guide]) :-
-    query(BStack, DStack, Guide, _).
-
-query(BStack, DStack, [fail], [fail, Guide]) :-
-    \+ query(BStack, DStack, Guide, _).
-
-% logic ROI
-
-query(BStack, DStack, [mp, ImpGuide, JusGuide], Y) :-
-    query(BStack, DStack, ImpGuide, [if, Y, X]),
-    query(BStack, DStack, JusGuide, X).
-
-% terminal ROI
-
-query([], DStack, [theorem, AxiomTag], Theorem) :-
-    theorem(DStack, AxiomTag, Theorem).
-
-query(BStack, DStack, [guide, GuideTag], Theorem) :-
-    guide(DStack, GuideTag, Redirect),
-    query(BStack, DStack, Redirect, Theorem).
 
 :- dynamic theorem/3.
 :- dynamic guide/3.
@@ -121,10 +128,6 @@ test_case(Predicate) :-
     wipe_database,
     call(Predicate).
 
-query_unifies(Guide, Theorem) :-
-    query(Guide, QueryResult),
-    unify(QueryResult, Theorem).
-
 %%%%%%%
 % Test cases listed here
 %%%%%%%
@@ -145,20 +148,36 @@ test_wipe_database :-
     test_case(tc_wipe_database_0),
     test_case(tc_wipe_database_1).
 
-test_case_0 :-
-    decl_theorem([natalie, daniel], a0, [if, y, x]),
-    decl_theorem([natalie, daniel], a1, x),
-    query(
-            [],
-            [bout, daniel, [bout, natalie,
-            [dout, daniel, [dout, natalie,
-                [mp, [theorem, a0], [theorem, a1]]
-            ]]]], _).
+    tc_theorem_0 :-
+        \+ query([], [t, a0], _).
+
+    tc_theorem_1 :-
+        decl_theorem([], a0, x),
+        query([], [t, a0], R),
+        R == x.
+
+test_theorem :-
+    test_case(tc_theorem_0),
+    test_case(tc_theorem_1).
+
+    tc_mp_0 :-
+        decl_theorem([], a0, [if, y, x]),
+        decl_theorem([], a1, x),
+        query([], [mp, [t, a0], [t, a1]], R),
+        R == y.
+
+    tc_mp_1 :-
+        decl_theorem([], a0, [if, [y], x]),
+        decl_theorem([], a1, x),
+        query([], [mp, [t, a0], [t, a1]], R),
+        R == [y].
 
 test_mp :-
-    test_case(test_case_0).
+    test_case(tc_mp_0),
+    test_case(tc_mp_1).
 
 :-
     test(test_wipe_database),
+    test(test_theorem),
     test(test_mp),
     wipe_database. % do a terminal db wipe
