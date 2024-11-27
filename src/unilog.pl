@@ -86,7 +86,7 @@ query(BStack, DStack, Conds, [gor, NextGuide | Rest], Target) :-
     query(BStack, DStack, Conds, [gor | Rest], Target).
 
 query(BStack, DStack, Conds, [cond, [CondGuide|NextGuide] | CondsRest], Target) :-
-    query(BStack, DStack, Conds, CondGuide, _),
+    query(BStack, DStack, [], CondGuide, _),
     !, % if condition goal succeeds, do NOT try any other branches
     query(BStack, DStack, Conds, NextGuide, Target)
     ;
@@ -659,6 +659,37 @@ test_dout :-
         query([], [discharge, [gor, [mp, assume, [t, a0]], [mp, assume, [t, a1]]]], R),
         R =@= [if, Y, [and, [if, Y, b]]].
 
+    % discharge/assume under cond (first branch taken)
+    tc_discharge_assume_13 :-
+        decl_theorem([], a0, a),
+        %decl_theorem([], a1, b),
+        decl_theorem([], indic0, x),
+        %decl_theorem([], indic1, x),
+        query([], 
+        [discharge, 
+            [cond,
+                [[t, indic0] | [mp, assume, [t, a0]]],
+                [[t, indic1] | [mp, assume, [t, a1]]]
+            ]
+        ], R),
+        R =@= [if, Y, [and, [if, Y, a]]].
+
+    % discharge/assume under cond (second branch taken)
+    tc_discharge_assume_14 :-
+        %decl_theorem([], a0, a),
+        decl_theorem([], a1, b),
+        %decl_theorem([], indic0, x),
+        decl_theorem([], indic1, x),
+        query([], 
+        [discharge, 
+            [cond,
+                [[t, indic0] | [mp, assume, [t, a0]]],
+                [[t, indic1] | [mp, assume, [t, a1]]]
+            ]
+        ], R),
+        R =@= [if, Y, [and, [if, Y, b]]].
+
+
 test_discharge_assume :-
     test_case(tc_discharge_assume_0),
     test_case(tc_discharge_assume_1),
@@ -672,7 +703,9 @@ test_discharge_assume :-
     test_case(tc_discharge_assume_9),
     test_case(tc_discharge_assume_10),
     test_case(tc_discharge_assume_11),
-    test_case(tc_discharge_assume_12).
+    test_case(tc_discharge_assume_12),
+    test_case(tc_discharge_assume_13),
+    test_case(tc_discharge_assume_14).
 
 :-
     test(test_wipe_database),
