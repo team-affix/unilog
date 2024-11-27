@@ -689,6 +689,21 @@ test_dout :-
         ], R),
         R =@= [if, Y, [and, [if, Y, b]]].
 
+    % eval test, ensure that assumption list is NOT SHARED between caller and callee
+    tc_discharge_assume_15 :-
+        decl_theorem([], a0, a),
+        \+ query([],
+        [discharge, eval], [if, [eval, assume], [and|_]]),
+        query([],
+        [discharge, eval], [if, [eval, [t, a0]], [and|X]]),
+        X == [].
+
+    % fail test, ensure that assumption list is NOT SHARED between caller and callee
+    tc_discharge_assume_16 :-
+        decl_theorem([], a0, a),
+        query([],
+        [discharge, fail], [if, [fail, assume], [and|X]]),
+        X == []. % ensure no conditions transfer
 
 test_discharge_assume :-
     test_case(tc_discharge_assume_0),
@@ -705,7 +720,9 @@ test_discharge_assume :-
     test_case(tc_discharge_assume_11),
     test_case(tc_discharge_assume_12),
     test_case(tc_discharge_assume_13),
-    test_case(tc_discharge_assume_14).
+    test_case(tc_discharge_assume_14),
+    test_case(tc_discharge_assume_15),
+    test_case(tc_discharge_assume_16).
 
 :-
     test(test_wipe_database),
