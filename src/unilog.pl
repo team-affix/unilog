@@ -551,6 +551,93 @@ test_dout :-
     test_case(tc_dout_6),
     test_case(tc_dout_7).
 
+    % failed to discharge assumptions
+    tc_discharge_assume_0 :-
+        decl_theorem([], a0, [if, y, x]),
+        \+ query([], [mp, [t, a0], assume], _).
+
+    % discharge single assumption (justification of mp)
+    tc_discharge_assume_1 :-
+        decl_theorem([], a0, [if, y, x]),
+        query([], [discharge, [mp, [t, a0], assume]], R),
+        R == [if, y, [and, x]].
+
+    % discharge single assumption (implication of mp)
+    tc_discharge_assume_2 :-
+        decl_theorem([], a0, x),
+        query([], [discharge, [mp, assume, [t, a0]]], R),
+        R =@= [if, X, [and, [if, X, x]]].
+
+    % test discharge/assume with changing scopes (discharge outermost op)
+    tc_discharge_assume_3 :-
+        decl_theorem([], a0, [claim, m1, [if, b, a]]),
+        query([], 
+        [discharge,
+            [bout, m1,
+                [mp,
+                    [bin, m1, [t, a0]],
+                    assume
+                ]
+            ]
+        ], R),
+        R == [if, [claim, m1, b], [and, [claim, m1, a]]].
+
+    % test discharge/assume with changing scopes (bout outermost op)
+    tc_discharge_assume_4 :-
+        decl_theorem([], a0, [claim, m1, [if, b, a]]),
+        query([], 
+        [bout, m1,
+            [discharge,
+                [mp,
+                    [bin, m1, [t, a0]],
+                    assume
+                ]
+            ]
+        ], R),
+        R == [claim, m1, [if, b, [and, a]]].
+
+    % test discharge/assume with changing scopes, multiple scopes (discharge outermost op)
+    tc_discharge_assume_5 :-
+        decl_theorem([], a0, [claim, m1, [claim, m2, [if, b, a]]]),
+        query([],
+        [discharge,
+            [bout, m1,
+                [bout, m2,
+                    [mp,
+                        [bin, m2, [bin, m1, [t, a0]]],
+                        assume
+                    ]
+                ]
+            ]
+        ], R),
+        R == [if, [claim, m1, [claim, m2, b]], [and, [claim, m1, [claim, m2, a]]]].
+
+    % test discharge/assume with multiple conditions
+    tc_discharge_assume_6 :-
+        query([],
+        [discharge,
+            [mp, assume, assume]
+        ], R),
+        R =@= [if, Y, [and, [if, Y, X], X]].
+
+    % test discharge/assume with multiple conditions, and a scope (no bin calls necessary)
+    tc_discharge_assume_7 :-
+        query([],
+        [discharge,
+            [bout, m1, [mp, assume, assume]]
+        ], R),
+        R =@= [if, [claim, m1, Y], [and, [claim, m1, [if, Y, X]], [claim, m1, X]]].
+
+test_discharge_assume :-
+    test_case(tc_discharge_assume_0),
+    test_case(tc_discharge_assume_1),
+    test_case(tc_discharge_assume_2),
+    test_case(tc_discharge_assume_3),
+    test_case(tc_discharge_assume_4),
+    test_case(tc_discharge_assume_5),
+    test_case(tc_discharge_assume_6),
+    test_case(tc_discharge_assume_7).
+
 :-
     test(test_wipe_database),
     test(test_decl_theorem),
@@ -566,4 +653,5 @@ test_dout :-
     test(test_fail),
     test(test_bout),
     test(test_dout),
+    test(test_discharge_assume),
     wipe_database. % do a terminal db wipe
