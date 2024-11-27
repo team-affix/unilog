@@ -1075,6 +1075,65 @@ static void test_execute_refer_statement()
 
                 }),
             },
+            file_test_case{
+                .m_module_stack = make_list({
+                    make_atom("root"),
+                }),
+                .m_refer_statement = refer_statement{
+                    .m_tag = make_atom("main"),
+                    .m_file_path = make_atom("./src/test_input_files/executor_example_6/main.u"),
+                },
+                .m_theorems = {
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_atom("a0"),
+                        make_list({
+                            make_atom("if"),
+                            make_atom("y"),
+                            make_atom("x"),
+                        }),
+                    },
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_atom("a1"),
+                        make_atom("x"),
+                    },
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_atom("i0"),
+                        make_atom("y"),
+                    },
+                },
+                .m_guides = {
+                    {
+                        make_list({
+                            make_atom("main"),
+                            make_atom("root"),
+                        }),
+                        make_atom("r0"),
+                        make_list({
+                            make_atom("mp"),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a0"),
+                            }),
+                            make_list({
+                                make_atom("t"),
+                                make_atom("a1"),
+                            }),
+                        }),
+                    },
+                },
+            },
         };
 
     for (const file_test_case &l_file_test_case : l_file_test_cases)
