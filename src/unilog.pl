@@ -49,6 +49,14 @@ infer(ModulePath, Tag, Guide) :-
 query(ModulePath, Guide, Theorem) :-
     query([], ModulePath, [], Guide, Theorem).
 
+%query_all(_, [], []) :-
+%    !.
+%
+%query_all(ModulePath, [FirstGuide|RestGuides], [FirstTheorem|RestTheorems]) :-
+%    query(ModulePath, FirstGuide, FirstTheorem),
+%    query_all(ModulePath, RestGuides, RestTheorems),
+%    !.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% terminal ROI
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -68,6 +76,13 @@ query(BStack, DStack, Conds, [mp, ImpGuide, JusGuide], Y) :-
     query(BStack, DStack, ImpConds, ImpGuide, [if, Y, X]),
     query(BStack, DStack, JusConds, JusGuide, X),
     append(ImpConds, JusConds, Conds).
+
+query(_, _, [], [conj], [and]).
+
+query(BStack, DStack, Conds, [conj, FirstGuide | RestGuides], [and, FirstTheorem | RestTheorems]) :-
+    query(BStack, DStack, FirstConds, FirstGuide, FirstTheorem),
+    query(BStack, DStack, RestConds, [conj | RestGuides], [and | RestTheorems]),
+    append(FirstConds, RestConds, Conds).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% more fundamental ROIs
@@ -205,6 +220,76 @@ test_decl_redir :-
     test_case(tc_decl_redir_0),
     test_case(tc_decl_redir_1).
 
+    % inference fails if guide fails
+    tc_infer_0 :-
+        \+ infer([], i0, [mp, [t, a0], [t, a1]]),
+        \+ theorem([], i0, _).
+
+    % inference fails if guide succeeds but tag not unique
+    tc_infer_1 :-
+        decl_theorem([], a0, [if, y, x]),
+        decl_theorem([], a1, x),
+        decl_theorem([], i0, obstruction),
+        \+ infer([], i0, [mp, [t, a0], [t, a1]]),
+        theorem([], i0, R),
+        R == obstruction.
+
+    % inference succeeds if guide succeeds AND tag unique
+    tc_infer_2 :-
+        decl_theorem([], a0, [if, y, x]),
+        decl_theorem([], a1, x),
+        %decl_theorem([], i0, obstruction),
+        infer([], i0, [mp, [t, a0], [t, a1]]),
+        theorem([], i0, R),
+        R == y.
+
+    % inference succeeds requires same module stack
+    tc_infer_3 :-
+        decl_theorem([], a0, [if, y, x]),
+        decl_theorem([], a1, x),
+        \+ infer([m1], i0, [mp, [t, a0], [t, a1]]),
+        \+ theorem([m1], i0, _).
+
+    % inference succeeds requires same module stack
+    tc_infer_4 :-
+        decl_theorem([m1], a0, [if, y, x]),
+        decl_theorem([m1], a1, x),
+        \+ infer([], i0, [mp, [t, a0], [t, a1]]),
+        \+ theorem([], i0, _).
+
+test_infer :-
+    test_case(tc_infer_0),
+    test_case(tc_infer_1),
+    test_case(tc_infer_2),
+    test_case(tc_infer_3),
+    test_case(tc_infer_4).
+
+    % ensure query of nonexistent theorem fails
+    tc_query_0 :-
+        \+ query([], [t, a0], _).
+
+    % ensure query of existing theorem succeeds
+    tc_query_1 :-
+        decl_theorem([], a0, x),
+        query([], [t, a0], R),
+        R == x.
+
+    % module stacks need to be same
+    tc_query_2 :-
+        decl_theorem([], a0, x),
+        \+ query([m1], [t, a0], _).
+
+    % module stacks need to be same
+    tc_query_3 :-
+        decl_theorem([m1], a0, x),
+        \+ query([], [t, a0], _).
+
+test_query :-
+    test_case(tc_query_0),
+    test_case(tc_query_1),
+    test_case(tc_query_2),
+    test_case(tc_query_3).
+
     tc_t_0 :-
         \+ query([], [t, a0], _).
 
@@ -246,6 +331,40 @@ test_r :-
 test_mp :-
     test_case(tc_mp_0),
     test_case(tc_mp_1).
+
+    % conj base case succeeds
+    tc_conj_0 :-
+        query([], [conj], R),
+        R == [and].
+
+    % conj base case succeeds in other module scope
+    tc_conj_1 :-
+        query([m1], [conj], R),
+        R == [and].
+        
+    % conj fails when first subguide fails
+    tc_conj_2 :-
+        \+ query([], [conj, [t, a0]], R).
+        
+    % conj fails when second subguide fails
+    tc_conj_3 :-
+        decl_theorem([], a0, a),
+        %decl_theorem([], a1, b),
+        \+ query([], [conj, [t, a0], [t, a1]], _).
+        
+    % conj succeeds only when all subguides succeed
+    tc_conj_4 :-
+        decl_theorem([], a0, a),
+        decl_theorem([], a1, b),
+        query([], [conj, [t, a0], [t, a1]], R),
+        R == [and, a, b].
+
+test_conj :-
+    test_case(tc_conj_0),
+    test_case(tc_conj_1),
+    test_case(tc_conj_2),
+    test_case(tc_conj_3),
+    test_case(tc_conj_4).
 
     % demonstrate bind ability to extract info from theorem
     tc_bind_0 :-
@@ -803,9 +922,12 @@ test_discharge_assume :-
     test(test_wipe_database),
     test(test_decl_theorem),
     test(test_decl_redir),
+    test(test_infer),
+    test(test_query),
     test(test_t),
     test(test_r),
     test(test_mp),
+    test(test_conj),
     test(test_bind),
     test(test_sub),
     test(test_gor),

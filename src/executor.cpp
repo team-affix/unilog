@@ -11,6 +11,7 @@
 #define ERR_MSG_UNIFY "Error: failed to unify terms"
 #define ERR_MSG_CONS_LIST "Error: failed to cons list"
 #define ERR_MSG_GET_ATOM_CHARS "Error: failed to get atom chars"
+#define ERR_MSG_NOT_A_FILE "Error: not a file"
 #define ERR_MSG_FILE_OPEN "Error: file failed to open"
 #define ERR_MSG_DECL_THEOREM "Error: failed to declare theorem"
 #define ERR_MSG_DECL_REDIR "Error: failed to declare redirect"
@@ -130,6 +131,12 @@ namespace unilog
         fs::path l_file_path = l_file_path_c_str;
         fs::path l_file_parent_path = l_file_path.parent_path();
         fs::path l_cwd = fs::current_path();
+
+        /////////////////////////////////////////
+        // ensure file_path is to a file
+        /////////////////////////////////////////
+        if (fs::is_directory(l_file_path))
+            throw std::runtime_error(ERR_MSG_NOT_A_FILE);
 
         /////////////////////////////////////////
         // open filestream
