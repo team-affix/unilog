@@ -87,6 +87,9 @@ int main(int argc, char **argv)
             catch (const std::runtime_error &l_err)
             {
                 std::cout << l_err.what() << std::endl;
+                exit(EXIT_FAILURE);
+                // we must exit after first failure, since
+                // cwd could be set to strange path, after exception is thrown
             }
 
             // clear the database before next file begins execution
