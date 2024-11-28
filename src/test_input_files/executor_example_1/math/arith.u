@@ -1,0 +1,3 @@
+axiom a0 [if c d];
+axiom a1 d;
+redir [g0 X Y] [mp X Y];

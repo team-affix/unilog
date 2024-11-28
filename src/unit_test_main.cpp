@@ -1,10 +1,12 @@
+#ifdef UNIT_TEST
+
 #include <iostream>
 #include <SWI-Prolog.h>
-
 #include "test_utils.hpp"
 
 extern void test_lexer_main();
 extern void test_parser_main();
+extern void test_executor_main();
 
 void unit_test_main()
 {
@@ -12,6 +14,7 @@ void unit_test_main()
 
     TEST(test_lexer_main);
     TEST(test_parser_main);
+    TEST(test_executor_main);
 }
 
 int main(int argc, char **argv)
@@ -29,3 +32,5 @@ int main(int argc, char **argv)
     PL_halt(0); // Properly halt the Prolog engine
     return 0;
 }
+
+#endif

@@ -1,0 +1,3 @@
+axiom a0 x;
+axiom a1 [if y x];
+infer i0 [mp [t a1] [t a0]];

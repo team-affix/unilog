@@ -1,0 +1,9 @@
+axiom "a0"
+    [awesome 
+    _];
+
+infer 'i0' 
+    [awesome
+    leon]
+    [theorem 
+    a0];

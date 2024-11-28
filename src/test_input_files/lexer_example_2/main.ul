@@ -1,0 +1,10 @@
+infer i0
+    [if
+        Y
+        [and
+            [if Y X]
+            X
+        ]
+    ]
+axiom a0 [if b a]
+axiom a1 a

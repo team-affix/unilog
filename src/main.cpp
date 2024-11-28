@@ -1,8 +1,11 @@
+#ifndef UNIT_TEST
+
 #include <stdio.h>
 #include <iostream>
 #include <string.h>
 #include <SWI-Prolog.h>
 #include "../CLI11/include/CLI/CLI.hpp"
+#include "executor.hpp"
 
 #define MAXLINE 1024
 
@@ -32,8 +35,17 @@ int main(int argc, char **argv)
 
 #if 0
 
-    std::string l_input_string = "arm aes transform --help";
-    std::vector<std::string> l_input = affix_base::data::string_split(l_input_string, ' ');
+    // std::vector<std::string> l_input =
+    //     {
+    //         "uni",
+    //         "--help",
+    //     };
+    std::vector<std::string> l_input =
+        {
+            "uni",
+            "./src/test_input_files/executor_example_0/test.u",
+            "./src/test_input_files/executor_example_1/main.u",
+        };
     argc = l_input.size();
     std::vector<char *> l_input_converted;
     for (int i = 0; i < l_input.size(); i++)
@@ -49,16 +61,40 @@ int main(int argc, char **argv)
     // l_app.require_subcommand(1);
 
     std::vector<std::string> l_files;
-
     l_app.add_option("files", l_files, "List of input files");
 
-    // CLI::App *l_aes_app = l_app.add_subcommand("aes", "AES (Advanced Encryption Standard) symmetric cryptographic algorithms.");
-    // CLI::App *l_rsa_app = l_app.add_subcommand("rsa", "RSA (Rivest Shamir Adleman) asymmetric cryptographic algorithms.");
+    using unilog::execute;
+    using unilog::refer_statement;
 
     // PARSE ACTUAL DATA
     try
     {
         l_app.parse(argc, argv);
+
+        // execute all unilog files
+        for (const std::string &l_file : l_files)
+        {
+            std::cout << l_file << std::endl;
+
+            try
+            {
+                execute(refer_statement{
+                            .m_tag = make_atom("root"),
+                            .m_file_path = make_atom(l_file),
+                        },
+                        make_nil());
+            }
+            catch (const std::runtime_error &l_err)
+            {
+                std::cout << l_err.what() << std::endl;
+                exit(EXIT_FAILURE);
+                // we must exit after first failure, since
+                // cwd could be set to strange path, after exception is thrown
+            }
+
+            // clear the database before next file begins execution
+            wipe_database();
+        }
     }
     catch (const CLI::ParseError &e)
     {
@@ -74,3 +110,5 @@ int main(int argc, char **argv)
 
     return 0;
 }
+
+#endif

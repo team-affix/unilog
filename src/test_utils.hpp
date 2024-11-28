@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <utility>
+#include <iostream>
 #include <vector>
 
 #define LOG(x)             \
@@ -12,7 +13,7 @@
 #define TEST(void_fn)                                     \
     LOG(">>>> TEST STARTING: " << #void_fn << std::endl); \
     void_fn();                                            \
-    LOG("<<<< TEST FINISHED: " << #void_fn << std::endl);
+    LOG("    <<<< TEST FINISHED: " << #void_fn << std::endl);
 
 #define assert_throws(void_fxn) \
     {                           \
