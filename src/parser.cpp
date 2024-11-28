@@ -6,6 +6,18 @@
 #include "parser.hpp"
 #include "lexer.hpp"
 
+#define ERR_MSG_UNIFY "Error: failed to unify terms"
+#define ERR_MSG_CONS_LIST "Error: failed to cons list"
+#define ERR_MSG_GET_ATOM_CHARS "Error: failed to get atom chars"
+#define ERR_MSG_PUT_ATOM_CHARS "Error: failed to put atom chars"
+#define ERR_MSG_PUT_NIL "Error: failed to put nil"
+
+#define ERR_MSG_NO_LIST_CLOSE "Error: no list close"
+#define ERR_MSG_MALFORMED_TERM "Error: malformed term"
+#define ERR_MSG_INVALID_COMMAND "Error: invalid command"
+#define ERR_MSG_MALFORMED_STMT "Error: malformed statement"
+#define ERR_MSG_NO_EOL "Error: expected end-of-line (;)"
+
 /// This macro function defines
 ///     getting a value from cache if key contained,
 ///     otherwise, computing value and caching it.
@@ -38,10 +50,7 @@ namespace unilog
             // try to bind the term to an atom with specific text
             /////////////////////////////////////////
             if (!PL_put_atom_chars(a_term_t, l_atom.m_text.c_str()))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_PUT_ATOM_CHARS);
         }
         else if (std::holds_alternative<variable>(l_lexeme))
         {
@@ -66,10 +75,7 @@ namespace unilog
             // unify current term with entry
             /////////////////////////////////////////
             if (!PL_unify(a_term_t, l_alist_entry->second))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_UNIFY);
         }
         else if (std::holds_alternative<list_open>(l_lexeme))
         {
@@ -92,29 +98,16 @@ namespace unilog
                 extract_term_t(a_istream, a_var_alist, l_sub_term, &l_list_terminated);
 
                 if (a_istream.fail())
-                {
-                    a_istream.setstate(std::ios::failbit);
-                    return a_istream;
-                }
+                    throw std::runtime_error(ERR_MSG_NO_LIST_CLOSE);
 
                 l_list.push_back(l_sub_term);
-            }
-
-            // ensure the list was terminated
-            if (a_istream.fail() || !l_list_terminated)
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
             }
 
             /////////////////////////////////////////
             // extract the tail of the list
             /////////////////////////////////////////
             if (!PL_unify(a_term_t, l_list.back()))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_UNIFY);
             l_list.pop_back();
 
             /////////////////////////////////////////
@@ -123,29 +116,20 @@ namespace unilog
             for (auto l_it = l_list.rbegin(); l_it != l_list.rend(); l_it++)
             {
                 if (!PL_cons_list(a_term_t, *l_it, a_term_t))
-                {
-                    a_istream.setstate(std::ios::failbit);
-                    return a_istream;
-                }
+                    throw std::runtime_error(ERR_MSG_CONS_LIST);
             }
         }
         else if (std::holds_alternative<list_close>(l_lexeme))
         {
             // this basically checks if the list termination was expected
             if (a_list_terminated == nullptr)
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_MALFORMED_TERM);
 
             /////////////////////////////////////////
             // default tail is always nil
             /////////////////////////////////////////
             if (!PL_put_nil(a_term_t))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_PUT_NIL);
 
             /////////////////////////////////////////
             // notify the caller the list terminated
@@ -156,10 +140,7 @@ namespace unilog
         {
             // this basically checks if the list termination was expected
             if (a_list_terminated == nullptr)
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_MALFORMED_TERM);
 
             /////////////////////////////////////////
             // extract the tail of the list.
@@ -174,10 +155,7 @@ namespace unilog
             a_istream >> l_list_close;
 
             if (a_istream.fail() || !std::holds_alternative<list_close>(l_list_close))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_NO_LIST_CLOSE);
 
             /////////////////////////////////////////
             // notify the caller the list terminated
@@ -187,7 +165,7 @@ namespace unilog
         else
         {
             // failed to extract prolog expression
-            a_istream.setstate(std::ios::failbit);
+            throw std::runtime_error(ERR_MSG_MALFORMED_TERM);
         }
 
         return a_istream;
@@ -251,10 +229,7 @@ namespace unilog
 
         // atom is expected for the command
         if (a_istream.fail() || !std::holds_alternative<atom>(l_command))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
+            throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
         std::string l_command_text = std::get<atom>(l_command).m_text;
 
@@ -275,7 +250,7 @@ namespace unilog
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_theorem)))
-                return a_istream;
+                throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
             a_statement = l_result;
         }
@@ -291,7 +266,7 @@ namespace unilog
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_guide)))
-                return a_istream;
+                throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
             a_statement = l_result;
         }
@@ -307,7 +282,7 @@ namespace unilog
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_guide)))
-                return a_istream;
+                throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
             a_statement = l_result;
         }
@@ -323,14 +298,13 @@ namespace unilog
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_file_path)))
-                return a_istream;
+                throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
             a_statement = l_result;
         }
         else
         {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
+            throw std::runtime_error(ERR_MSG_INVALID_COMMAND);
         }
 
         /////////////////////////////////////////
@@ -340,10 +314,7 @@ namespace unilog
         a_istream >> l_eol;
 
         if (a_istream.fail() || !std::holds_alternative<eol>(l_eol))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
+            throw std::runtime_error(ERR_MSG_NO_EOL);
 
         return a_istream;
     }

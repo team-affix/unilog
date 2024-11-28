@@ -5,6 +5,9 @@
 
 #include "lexer.hpp"
 
+#define ERR_MSG_CLOSING_QUOTE "Error: no closing quote"
+#define ERR_MSG_INVALID_LEXEME "Error: invalid lexeme"
+
 std::istream &escape(std::istream &a_istream, char &a_char)
 {
     char l_char;
@@ -166,6 +169,10 @@ static std::istream &extract_quoted_text(std::istream &a_istream, std::string &a
         a_text.push_back(l_char);
     }
 
+    // if we fail to extract character, then throw exception
+    if (a_istream.fail())
+        throw std::runtime_error(ERR_MSG_CLOSING_QUOTE);
+
     return a_istream;
 }
 
@@ -253,7 +260,7 @@ namespace unilog
         }
         else
         {
-            a_istream.setstate(std::ios::failbit);
+            throw std::runtime_error(ERR_MSG_INVALID_LEXEME);
         }
 
         return a_istream;
@@ -1547,16 +1554,12 @@ static void test_lexer_extract_lexeme()
         LOG("success, case: \"" << l_key << "\"" << std::endl);
     }
 
-    std::vector<std::string> l_expect_failure_inputs =
+    std::vector<std::string> l_expect_throw_inputs =
         {
             "\'hello, this is an unclosed quote",
             "\"hello, this is an unclosed quote",
-            "    ",
-            "",
             "!test1!test2",
             "!test1\\!test2",
-
-            "#Test",
 
             "!Test",
             "!test1[abc]",
@@ -1572,7 +1575,6 @@ static void test_lexer_extract_lexeme()
             // special symbols
             "!",
             "@",
-            "#",
             "$",
             "%",
             "^",
@@ -1585,7 +1587,30 @@ static void test_lexer_extract_lexeme()
 
         };
 
-    for (const auto &l_input : l_expect_failure_inputs)
+    for (const auto &l_input : l_expect_throw_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        lexeme l_lexeme;
+
+        // Make sure the case throws an exception.
+        assert_throws(([&l_ss, &l_lexeme]
+                       { l_ss >> l_lexeme; }));
+
+        LOG("success, expected throw, case: " << l_input << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failbit_inputs =
+        {
+            "    ",
+            "",
+
+            "#Test",
+
+            "#",
+        };
+
+    for (const auto &l_input : l_expect_failbit_inputs)
     {
         std::stringstream l_ss(l_input);
 
