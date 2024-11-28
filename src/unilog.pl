@@ -84,6 +84,11 @@ query(BStack, DStack, Conds, [conj, FirstGuide | RestGuides], [and, FirstTheorem
     query(BStack, DStack, RestConds, [conj | RestGuides], [and | RestTheorems]),
     append(FirstConds, RestConds, Conds).
 
+query(BStack, DStack, Conds, [disj, FirstGuide | RestGuides], [or, FirstTheorem | RestTheorems]) :-
+    query(BStack, DStack, Conds, FirstGuide, FirstTheorem)
+    ;
+    query(BStack, DStack, Conds, [disj | RestGuides], [or | RestTheorems]).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% more fundamental ROIs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -365,6 +370,32 @@ test_conj :-
     test_case(tc_conj_2),
     test_case(tc_conj_3),
     test_case(tc_conj_4).
+
+    % ensure base case of disj fails (identity is zero)
+    tc_disj_0 :-
+        \+ query([], [disj], _).
+
+    % fails if ALL subguides fail
+    tc_disj_1 :-
+        \+ query([], [disj, [t, a0], [t, a1]], _).
+
+    % succeeds if first subguide succeeds
+    tc_disj_2 :-
+        decl_theorem([], a0, a),
+        query([], [disj, [t, a0], [t, a1]], R),
+        R =@= [or, a | _].
+
+    % succeeds if second subguide succeeds
+    tc_disj_3 :-
+        decl_theorem([], a1, b),
+        query([], [disj, [t, a0], [t, a1]], R),
+        R =@= [or, _, b | _].
+
+test_disj :-
+    test_case(tc_disj_0),
+    test_case(tc_disj_1),
+    test_case(tc_disj_2),
+    test_case(tc_disj_3).
 
     % demonstrate bind ability to extract info from theorem
     tc_bind_0 :-
@@ -928,6 +959,7 @@ test_discharge_assume :-
     test(test_r),
     test(test_mp),
     test(test_conj),
+    test(test_disj),
     test(test_bind),
     test(test_sub),
     test(test_gor),
