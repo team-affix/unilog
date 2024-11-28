@@ -8,9 +8,17 @@
 #define CALL_PRED(name, arity, arg0) \
     (PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate(name, arity, NULL), arg0))
 
+#define ERR_MSG_UNIFY "Error: failed to unify terms"
+#define ERR_MSG_CONS_LIST "Error: failed to cons list"
+#define ERR_MSG_GET_ATOM_CHARS "Error: failed to get atom chars"
+#define ERR_MSG_FILE_OPEN "Error: file failed to open"
+#define ERR_MSG_DECL_THEOREM "Error: failed to declare theorem"
+#define ERR_MSG_DECL_REDIR "Error: failed to declare redirect"
+#define ERR_MSG_INFER "Error: inference failed"
+
 namespace unilog
 {
-    bool execute(const axiom_statement &a_axiom_statement, term_t a_module_path)
+    void execute(const axiom_statement &a_axiom_statement, term_t a_module_path)
     {
         fid_t l_frame = PL_open_foreign_frame();
 
@@ -28,20 +36,18 @@ namespace unilog
         if (!(PL_unify(l_module_path, a_module_path) &&
               PL_unify(l_tag, a_axiom_statement.m_tag) &&
               PL_unify(l_theorem, a_axiom_statement.m_theorem)))
-            return false;
+            throw std::runtime_error(ERR_MSG_UNIFY);
 
         /////////////////////////////////////////
         // execute decl_theorem
         /////////////////////////////////////////
         if (!CALL_PRED("decl_theorem", 3, l_args))
-            return false;
+            throw std::runtime_error(ERR_MSG_DECL_THEOREM);
 
         PL_discard_foreign_frame(l_frame);
-
-        return true;
     }
 
-    bool execute(const redir_statement &a_redir_statement, term_t a_module_path)
+    void execute(const redir_statement &a_redir_statement, term_t a_module_path)
     {
         fid_t l_frame = PL_open_foreign_frame();
 
@@ -59,20 +65,18 @@ namespace unilog
         if (!(PL_unify(l_module_path, a_module_path) &&
               PL_unify(l_tag, a_redir_statement.m_tag) &&
               PL_unify(l_guide, a_redir_statement.m_guide)))
-            return false;
+            throw std::runtime_error(ERR_MSG_UNIFY);
 
         /////////////////////////////////////////
         // execute decl_redir
         /////////////////////////////////////////
         if (!CALL_PRED("decl_redir", 3, l_args))
-            return false;
+            throw std::runtime_error(ERR_MSG_DECL_REDIR);
 
         PL_discard_foreign_frame(l_frame);
-
-        return true;
     }
 
-    bool execute(const infer_statement &a_infer_statement, term_t a_module_path)
+    void execute(const infer_statement &a_infer_statement, term_t a_module_path)
     {
         fid_t l_frame = PL_open_foreign_frame();
 
@@ -90,20 +94,18 @@ namespace unilog
         if (!(PL_unify(l_module_path, a_module_path) &&
               PL_unify(l_tag, a_infer_statement.m_tag) &&
               PL_unify(l_guide, a_infer_statement.m_guide)))
-            return false;
+            throw std::runtime_error(ERR_MSG_UNIFY);
 
         /////////////////////////////////////////
         // execute infer
         /////////////////////////////////////////
         if (!CALL_PRED("infer", 3, l_args))
-            return false;
+            throw std::runtime_error(ERR_MSG_INFER);
 
         PL_discard_foreign_frame(l_frame);
-
-        return true;
     }
 
-    bool execute(const refer_statement &a_refer_statement, term_t a_module_path)
+    void execute(const refer_statement &a_refer_statement, term_t a_module_path)
     {
         fid_t l_frame = PL_open_foreign_frame();
 
@@ -112,14 +114,14 @@ namespace unilog
         /////////////////////////////////////////
         term_t l_new_module_path = PL_new_term_ref();
         if (!PL_cons_list(l_new_module_path, a_refer_statement.m_tag, a_module_path))
-            return false;
+            throw std::runtime_error(ERR_MSG_CONS_LIST);
 
         /////////////////////////////////////////
         // extract file path string from atom
         /////////////////////////////////////////
         char *l_file_path_c_str;
         if (!PL_get_atom_chars(a_refer_statement.m_file_path, &l_file_path_c_str))
-            return false;
+            throw std::runtime_error(ERR_MSG_GET_ATOM_CHARS);
 
         /////////////////////////////////////////
         // construct fs path objects
@@ -135,7 +137,7 @@ namespace unilog
         std::ifstream l_ifs(l_file_path);
 
         if (!l_ifs.good())
-            return false;
+            throw std::runtime_error(std::string(ERR_MSG_FILE_OPEN) + ": " + l_file_path_c_str);
 
         /////////////////////////////////////////
         // set cwd to parent path of the referee
@@ -161,9 +163,12 @@ namespace unilog
         fs::current_path(l_cwd);
 
         PL_discard_foreign_frame(l_frame);
-
-        return true;
     }
+}
+
+void wipe_database()
+{
+    CALL_PRED("wipe_database", 0, PL_new_term_ref());
 }
 
 #ifdef UNIT_TEST
@@ -173,46 +178,6 @@ namespace unilog
 ////////////////////////////////
 //// HELPER FUNCTIONS
 ////////////////////////////////
-
-static void wipe_database()
-{
-    // /////////////////////////////////////////
-    // // creates the head of clause: theorem(_, _, _)
-    // /////////////////////////////////////////
-    // term_t l_theorem_clause_head = PL_new_term_ref();
-    // functor_t l_theorem_functor = PL_new_functor(PL_new_atom("theorem"), 3);
-    // if (!PL_cons_functor(
-    //         l_theorem_clause_head, l_theorem_functor,
-    //         PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref()))
-    //     throw std::runtime_error("Error: failed to construct functor.");
-
-    // /////////////////////////////////////////
-    // // creates the head of clause: guide(_, _, _)
-    // /////////////////////////////////////////
-    // term_t l_guide_clause_head = PL_new_term_ref();
-    // functor_t l_guide_functor = PL_new_functor(PL_new_atom("redir"), 3);
-    // if (!PL_cons_functor(
-    //         l_guide_clause_head, l_guide_functor,
-    //         PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref()))
-    //     throw std::runtime_error("Error: failed to construct functor.");
-
-    // /////////////////////////////////////////
-    // // retract all dynamic statements
-    // /////////////////////////////////////////
-    // // retract_all(l_theorem_clause_head);
-    // // retract_all(l_guide_clause_head);
-    // {
-    //     fid_t l_query_frame = PL_open_foreign_frame();
-    //     assert(CALL_PRED("retractall", 1, l_theorem_clause_head));
-    //     PL_discard_foreign_frame(l_query_frame);
-    // };
-    // {
-    //     fid_t l_query_frame = PL_open_foreign_frame();
-    //     assert(CALL_PRED("retractall", 1, l_guide_clause_head));
-    //     PL_discard_foreign_frame(l_query_frame);
-    // };
-    CALL_PRED("wipe_database", 0, PL_new_term_ref());
-}
 
 ////////////////////////////////
 ////////////////////////////////
@@ -438,13 +403,12 @@ static void test_execute_axiom_statement()
     /////////////////////////////////////////
     // execute the axiom statement (in module path: l_module_stack)
     /////////////////////////////////////////
-    assert(
-        execute(
-            axiom_statement{
-                .m_tag = l_tag,
-                .m_theorem = l_declared_theorem,
-            },
-            l_module_stack));
+    execute(
+        axiom_statement{
+            .m_tag = l_tag,
+            .m_theorem = l_declared_theorem,
+        },
+        l_module_stack);
 
     /////////////////////////////////////////
     // ensure we CAN find theorem with this module stack + tag
@@ -515,13 +479,12 @@ static void test_execute_redir_statement()
     /////////////////////////////////////////
     // execute the guide statement (in module path: l_module_stack)
     /////////////////////////////////////////
-    assert(
-        execute(
-            redir_statement{
-                .m_tag = l_tag,
-                .m_guide = l_declared_guide,
-            },
-            l_module_stack));
+    execute(
+        redir_statement{
+            .m_tag = l_tag,
+            .m_guide = l_declared_guide,
+        },
+        l_module_stack);
 
     /////////////////////////////////////////
     // ensure we CAN find guide with this module stack + tag
@@ -578,55 +541,52 @@ static void test_execute_infer_statement()
     /////////////////////////////////////////
     // execute the setup statements (in module path: l_module_stack)
     /////////////////////////////////////////
-    assert(
-        execute(
-            redir_statement{
-                .m_tag = make_atom("g0"),
-                .m_guide = make_list({
-                    make_atom("mp"),
-                    make_list({
-                        make_atom("t"),
-                        make_atom("a0"),
-                    }),
-                    make_list({
-                        make_atom("t"),
-                        make_atom("a1"),
-                    }),
+    execute(
+        redir_statement{
+            .m_tag = make_atom("g0"),
+            .m_guide = make_list({
+                make_atom("mp"),
+                make_list({
+                    make_atom("t"),
+                    make_atom("a0"),
                 }),
-            },
-            l_module_stack));
-    assert(
-        execute(
-            axiom_statement{
-                .m_tag = make_atom("a0"),
-                .m_theorem = make_list({
-                    make_atom("if"),
-                    make_atom("y"),
-                    make_atom("x"),
+                make_list({
+                    make_atom("t"),
+                    make_atom("a1"),
                 }),
-            },
-            l_module_stack));
-    assert(
-        execute(
-            axiom_statement{
-                .m_tag = make_atom("a1"),
-                .m_theorem = make_atom("x"),
-            },
-            l_module_stack));
+            }),
+        },
+        l_module_stack);
+
+    execute(
+        axiom_statement{
+            .m_tag = make_atom("a0"),
+            .m_theorem = make_list({
+                make_atom("if"),
+                make_atom("y"),
+                make_atom("x"),
+            }),
+        },
+        l_module_stack);
+    execute(
+        axiom_statement{
+            .m_tag = make_atom("a1"),
+            .m_theorem = make_atom("x"),
+        },
+        l_module_stack);
 
     /////////////////////////////////////////
     // execute the infer_statement
     /////////////////////////////////////////
-    assert(
-        execute(
-            infer_statement{
-                .m_tag = l_tag,
-                .m_guide = make_list({
-                    make_atom("r"),
-                    make_atom("g0"),
-                }),
-            },
-            l_module_stack));
+    execute(
+        infer_statement{
+            .m_tag = l_tag,
+            .m_guide = make_list({
+                make_atom("r"),
+                make_atom("g0"),
+            }),
+        },
+        l_module_stack);
 
     /////////////////////////////////////////
     // ensure we CAN find theorem with this module stack + tag
@@ -1241,7 +1201,7 @@ static void test_execute_refer_statement()
         /////////////////////////////////////////
         // execute the guide statement (in module path: l_module_stack)
         /////////////////////////////////////////
-        assert(execute(l_file_test_case.m_refer_statement, l_file_test_case.m_module_stack));
+        execute(l_file_test_case.m_refer_statement, l_file_test_case.m_module_stack);
 
         /////////////////////////////////////////
         // check database for theorems

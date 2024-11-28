@@ -44,7 +44,7 @@ int main(int argc, char **argv)
         {
             "uni",
             "./src/test_input_files/executor_example_0/test.u",
-            //"./src/test_input_files/executor_example_1/main.u",
+            "./src/test_input_files/executor_example_1/main.u",
         };
     argc = l_input.size();
     std::vector<char *> l_input_converted;
@@ -63,12 +63,6 @@ int main(int argc, char **argv)
     std::vector<std::string> l_files;
     l_app.add_option("files", l_files, "List of input files");
 
-    // std::string l_file_path;
-    // l_app.add_option("file", l_file_path, "Input file path");
-
-    // CLI::App *l_aes_app = l_app.add_subcommand("aes", "AES (Advanced Encryption Standard) symmetric cryptographic algorithms.");
-    // CLI::App *l_rsa_app = l_app.add_subcommand("rsa", "RSA (Rivest Shamir Adleman) asymmetric cryptographic algorithms.");
-
     using unilog::execute;
     using unilog::refer_statement;
 
@@ -76,9 +70,12 @@ int main(int argc, char **argv)
     try
     {
         l_app.parse(argc, argv);
+
+        // execute all unilog files
         for (const std::string &l_file : l_files)
         {
             std::cout << l_file << std::endl;
+
             if (!execute(refer_statement{
                              .m_tag = make_atom("root"),
                              .m_file_path = make_atom(l_file),
@@ -87,6 +84,9 @@ int main(int argc, char **argv)
             {
                 std::cout << "failed to execute file." << std::endl;
             }
+
+            // clear the database before next file begins execution
+            wipe_database();
         }
     }
     catch (const CLI::ParseError &e)
