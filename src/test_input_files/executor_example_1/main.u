@@ -1,4 +1,5 @@
-axiom a0 [if b a];
-redir g0 [mp [t a0] [t a1]];
-refer math './math/arith.u';
-axiom a1 a;
+axiom a0 [if b a]; # abc1
+redir g0 [mp [t a0] [t a1]]; # abc2
+refer math './math/arith.u'; # abc3
+axiom a1 a; # abc4
+            # abc5

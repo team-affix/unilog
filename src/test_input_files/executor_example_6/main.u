@@ -1,4 +1,11 @@
+# sdflkgjsdflgkj
 axiom a0 [if y x];
+
+# 111123123123123\\\\\\\\\
 axiom a1 x;
+
+# create a redirect 
 redir r0 [mp [t a0] [t a1]];
+
+# conduct inference
 infer i0 [r r0];

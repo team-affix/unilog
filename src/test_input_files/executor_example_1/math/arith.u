@@ -1,3 +1,10 @@
-axiom a0 [if c d];
-axiom a1 d;
+axiom a0 [if c d]; # sfdfhgsdfgsdfg
+axiom a1 d; # sdfgsdfg[]sdfg[]sdfg[]sdfg[{} {] \ \ ?/ / }
+
+# COMMENT
+
+
+
+
+
 redir [g0 X Y] [mp X Y];

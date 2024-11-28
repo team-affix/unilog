@@ -1,10 +1,12 @@
 infer i0
-    [if
-        Y
-        [and
-            [if Y X]
-            X
-        ]
-    ]
+    [if # abc1
+        Y # abc2
+        [and # abc3
+            [if Y X] # abc4
+            X # abc5
+        ] # abc6
+    ] # abc7
+
+    # COMMENT
 axiom a0 [if b a]
 axiom a1 a

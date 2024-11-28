@@ -1,2 +1,6 @@
+# comment
+
 axiom a0 [if y x];
-axiom a1 x;
+
+# comment 2
+axiom a1 x; # comment 3
