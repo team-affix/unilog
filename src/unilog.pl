@@ -77,8 +77,12 @@ query(BStack, DStack, Conds, [mp, ImpGuide, JusGuide], Y) :-
     query(BStack, DStack, JusConds, JusGuide, X),
     append(ImpConds, JusConds, Conds).
 
-query(_, _, [], [conj], [and]).
+query(BStack, DStack, Conds, [mt, ImpGuide, DenGuide], [not, X]) :-
+    query(BStack, DStack, ImpConds, ImpGuide, [if, Y, X]),
+    query(BStack, DStack, DenConds, DenGuide, [not, Y]),
+    append(ImpConds, DenConds, Conds).
 
+query(_, _, [], [conj], [and]).
 query(BStack, DStack, Conds, [conj, FirstGuide | RestGuides], [and, FirstTheorem | RestTheorems]) :-
     query(BStack, DStack, FirstConds, FirstGuide, FirstTheorem),
     query(BStack, DStack, RestConds, [conj | RestGuides], [and | RestTheorems]),
@@ -321,21 +325,66 @@ test_r :-
     test_case(tc_r_0),
     test_case(tc_r_1).
 
+    % succeeds with correct format theorems
     tc_mp_0 :-
         decl_theorem([], a0, [if, y, x]),
         decl_theorem([], a1, x),
         query([], [mp, [t, a0], [t, a1]], R),
         R == y.
 
+    % produces correct format theorems
     tc_mp_1 :-
         decl_theorem([], a0, [if, [y], x]),
         decl_theorem([], a1, x),
         query([], [mp, [t, a0], [t, a1]], R),
         R == [y].
 
+    % fails on incorrect format theorems
+    tc_mp_2 :-
+        decl_theorem([], a0, [if, y, x]),
+        decl_theorem([], a1, y),
+        \+ query([], [mp, [t, a0], [t, a1]], _).
+
+    % fails on incorrect format theorems
+    tc_mp_3 :-
+        decl_theorem([], a0, [and, y, x]),
+        decl_theorem([], a1, x),
+        \+ query([], [mp, [t, a0], [t, a1]], _).
+
+    % fails on nonpresent theorems
+    tc_mp_4 :-
+        decl_theorem([], a0, [if, y, x]),
+        \+ query([], [mp, [t, a0], [t, a1]], _).
+
 test_mp :-
     test_case(tc_mp_0),
-    test_case(tc_mp_1).
+    test_case(tc_mp_1),
+    test_case(tc_mp_2),
+    test_case(tc_mp_3),
+    test_case(tc_mp_4).
+
+    % test mt with correct format theorems
+    tc_mt_0 :-
+        decl_theorem([], a0, [if, y, x]),
+        decl_theorem([], a1, [not, y]),
+        query([], [mt, [t, a0], [t, a1]], R),
+        R == [not, x].
+
+    % fails on incorrect format theorems
+    tc_mt_1 :-
+        decl_theorem([], a0, [if, y, x]),
+        decl_theorem([], a1, [not, x]),
+        \+ query([], [mt, [t, a0], [t, a1]], _).
+
+    % fails on nonexistent theorems
+    tc_mt_2 :-
+        decl_theorem([], a0, [if, y, x]),
+        \+ query([], [mt, [t, a0], [t, a1]], _).
+
+test_mt :-
+    test_case(tc_mt_0),
+    test_case(tc_mt_1),
+    test_case(tc_mt_2).
 
     % conj base case succeeds
     tc_conj_0 :-
@@ -349,7 +398,7 @@ test_mp :-
         
     % conj fails when first subguide fails
     tc_conj_2 :-
-        \+ query([], [conj, [t, a0]], R).
+        \+ query([], [conj, [t, a0]], _).
         
     % conj fails when second subguide fails
     tc_conj_3 :-
@@ -937,6 +986,60 @@ test_dout :-
         [discharge, fail], [if, [fail, assume], [and|X]]),
         X == []. % ensure no conditions transfer
 
+    % discharge/cond under mt, only denial is assumed
+    tc_discharge_assume_17 :-
+        decl_theorem([], a0, [if, b, a]),
+        query([], [discharge, [mt, [t, a0], assume]], R),
+        R == [if, [not, a], [and, [not, b]]].
+
+    % discharge/cond under mt, only implication is assumed
+    tc_discharge_assume_18 :-
+        decl_theorem([], a0, [not, b]),
+        query([], [discharge, [mt, assume, [t, a0]]], R),
+        R =@= [if, [not, X], [and, [if, b, X]]].
+
+    % discharge/cond under mt, both parts assumed
+    tc_discharge_assume_19 :-
+        query([], [discharge, [mt, assume, assume]], R),
+        R =@= [if, [not, X], [and, [if, Y, X], [not, Y]]].
+
+    % discharge/cond under conj (1 subguide)
+    tc_discharge_assume_20 :-
+        query([], [discharge, [conj, assume]], R),
+        R =@= [if, [and, X], [and, X]].
+
+    % discharge/cond under conj (2 subguides, only 1 assumption)
+    tc_discharge_assume_21 :-
+        decl_theorem([], a0, a),
+        query([], [discharge, [conj, assume, [t, a0]]], R),
+        R =@= [if, [and, X, a], [and, X]].
+
+    % discharge/cond under conj (2 subguides, 2nd is assumed)
+    tc_discharge_assume_22 :-
+        decl_theorem([], a0, a),
+        query([], [discharge, [conj, [t, a0], assume]], R),
+        R =@= [if, [and, a, X], [and, X]].
+
+    % discharge/cond under conj (2 subguides, both are assumed)
+    tc_discharge_assume_23 :-
+        query([], [discharge, [conj, assume, assume]], R),
+        R =@= [if, [and, X, Y], [and, X, Y]].
+
+    % test under disj, 1 subguide, 1st assumed
+    tc_discharge_assume_24 :-
+        query([], [discharge, [disj, assume]], R),
+        R =@= [if, [or, X | _], [and, X]].
+
+    % test under disj, 2 subguides, 1st assumed
+    tc_discharge_assume_25 :-
+        query([], [discharge, [disj, assume, [t, a0]]], R),
+        R =@= [if, [or, X | _], [and, X]].
+
+    % test under disj, 2 subguides, 2nd assumed (only one branch is ever taken)
+    tc_discharge_assume_26 :-
+        query([], [discharge, [disj, [t, a0], assume]], R),
+        R =@= [if, [or, _, X | _], [and, X]].
+
 test_discharge_assume :-
     test_case(tc_discharge_assume_0),
     test_case(tc_discharge_assume_1),
@@ -954,7 +1057,17 @@ test_discharge_assume :-
     test_case(tc_discharge_assume_13),
     test_case(tc_discharge_assume_14),
     test_case(tc_discharge_assume_15),
-    test_case(tc_discharge_assume_16).
+    test_case(tc_discharge_assume_16),
+    test_case(tc_discharge_assume_17),
+    test_case(tc_discharge_assume_18),
+    test_case(tc_discharge_assume_19),
+    test_case(tc_discharge_assume_20),
+    test_case(tc_discharge_assume_21),
+    test_case(tc_discharge_assume_22),
+    test_case(tc_discharge_assume_23),
+    test_case(tc_discharge_assume_24),
+    test_case(tc_discharge_assume_25),
+    test_case(tc_discharge_assume_26).
 
 :-
     test(test_wipe_database),
@@ -965,6 +1078,7 @@ test_discharge_assume :-
     test(test_t),
     test(test_r),
     test(test_mp),
+    test(test_mt),
     test(test_conj),
     test(test_disj),
     test(test_bind),
