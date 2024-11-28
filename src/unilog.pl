@@ -391,11 +391,18 @@ test_conj :-
         query([], [disj, [t, a0], [t, a1]], R),
         R =@= [or, _, b | _].
 
+    % succeeds if second subguide succeeds, and produces finite theorem
+    tc_disj_4 :-
+        decl_theorem([], a1, b),
+        query([], [disj, [t, a0], [t, a1]], [or, _, R]),
+        R == b.
+
 test_disj :-
     test_case(tc_disj_0),
     test_case(tc_disj_1),
     test_case(tc_disj_2),
-    test_case(tc_disj_3).
+    test_case(tc_disj_3),
+    test_case(tc_disj_4).
 
     % demonstrate bind ability to extract info from theorem
     tc_bind_0 :-
