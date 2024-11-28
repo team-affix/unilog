@@ -89,12 +89,26 @@ std::istream &escape(std::istream &a_istream, char &a_char)
     return a_istream;
 }
 
-static std::istream &consume_whitespace(std::istream &a_istream)
+static std::istream &consume_line(std::istream &a_istream)
 {
     char l_char;
 
     // Extract character (read until first non-whitespace)
-    while (std::isspace(a_istream.peek()) != 0 && a_istream.get(l_char))
+    while (a_istream.get(l_char) && l_char != '\n')
+        ;
+
+    return a_istream;
+}
+
+static std::istream &consume_whitespace(std::istream &a_istream)
+{
+    int l_char;
+
+    // Extract character (read until first non-whitespace)
+    while (
+        l_char = a_istream.peek(),
+        (std::isspace(l_char) != 0 && a_istream.get()) ||
+            (l_char == '#' && consume_line(a_istream)))
         ;
 
     return a_istream;
@@ -326,6 +340,26 @@ static void test_lexer_escape()
     }
 }
 
+static void test_consume_line()
+{
+    data_points<std::string, std::streampos> l_data_points =
+        {
+            {"\nakdsfhjghdjfgj", 1},
+            {"a\nakdsfhjghdjfgj", 2},
+            {"abcdefg\nakdsfhjghdjfgj", 8},
+            {"   \nakdsfhjghdjfgj", 4},
+            {"[] {} ( ? // sdfgfjgfdkjgl cxcsdc # fdsfdsfkf \nakdsfhjghdjfgj", 47},
+            {"[] {} ( ? // sdfgfjgfdkj\r\t cxcsdc # fdsfdsfkf \nakdsfhjghdjfgj", 47},
+        };
+
+    for (const auto &[l_key, l_value] : l_data_points)
+    {
+        std::stringstream l_ss(l_key);
+        assert(consume_line(l_ss));
+        assert(l_ss.tellg() == l_value); // make sure we extracted the correct # of chars
+    }
+}
+
 static void test_consume_whitespace()
 {
     data_points<std::string, std::streampos> l_data_points =
@@ -341,6 +375,9 @@ static void test_consume_whitespace()
             {"\r  \n\r\t\n0- \t", 7},
             {"\r  \n\r\t\n/ \t", 7},
             {"\r  \n\r\t\n? \t", 7},
+            {"a", 0},
+            {"\r  \n#\r\t\n? \t", 8},       // # marks the start of a comment, thus marking rest of line as whitespace
+            {"  \t \r \n \t #abcd\ne", 16}, // # marks the start of a comment, thus marking rest of line as whitespace
         };
 
     for (const auto &[l_key, l_value] : l_data_points)
@@ -1460,6 +1497,36 @@ static void test_lexer_extract_lexeme()
                 eol{},
             },
         },
+        {
+            "; # comment\n"
+            ";;# abc123\n"
+            "[test1;# I AM A COMMENT\n"
+            "\"test2\"];\n",
+            std::vector<lexeme>{
+                eol{},
+                eol{},
+                eol{},
+                list_open{},
+                atom{"test1"},
+                eol{},
+                atom{"test2"},
+                list_close{},
+                eol{},
+            },
+        },
+        {
+            "abc#[]",
+            std::vector<lexeme>{
+                atom{"abc"},
+            },
+        },
+        {
+            "abc#[| dasdsad \t\r\n]",
+            std::vector<lexeme>{
+                atom{"abc"},
+                list_close{},
+            },
+        },
     };
 
     // Execute pre-made tests
@@ -1715,6 +1782,7 @@ void test_lexer_main()
 
     // equivalence tests
     TEST(test_lexer_escape);
+    TEST(test_consume_line);
     TEST(test_consume_whitespace);
     TEST(test_extract_unquoted_text);
     TEST(test_extract_quoted_text);

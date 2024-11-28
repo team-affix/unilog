@@ -2583,6 +2583,16 @@ static void test_parser_extract_prolog_expression()
                                         },
                                         make_atom(""))),
                 },
+                {
+                    "[a # \t\r  asdas dsad dfsdfijfjgkhjk []\n|[b|'']]",
+                    make_list({
+                                  make_atom("a"),
+                              },
+                              make_list({
+                                            make_atom("b"),
+                                        },
+                                        make_atom(""))),
+                },
             };
 
     for (const auto &[l_key, l_value] : l_test_cases)
