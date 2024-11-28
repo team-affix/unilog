@@ -76,13 +76,17 @@ int main(int argc, char **argv)
         {
             std::cout << l_file << std::endl;
 
-            if (!execute(refer_statement{
-                             .m_tag = make_atom("root"),
-                             .m_file_path = make_atom(l_file),
-                         },
-                         make_nil()))
+            try
             {
-                std::cout << "failed to execute file." << std::endl;
+                execute(refer_statement{
+                            .m_tag = make_atom("root"),
+                            .m_file_path = make_atom(l_file),
+                        },
+                        make_nil());
+            }
+            catch (const std::runtime_error &l_err)
+            {
+                std::cout << l_err.what() << std::endl;
             }
 
             // clear the database before next file begins execution
