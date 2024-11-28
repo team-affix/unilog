@@ -2,11 +2,23 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "make_test",
+            "label": "make_debug",
             "type": "shell",
             "command": "make",
             "args": [
                 "test"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "make_release",
+            "type": "shell",
+            "command": "make",
+            "args": [
+                "main"
             ],
             "group": {
                 "kind": "build",

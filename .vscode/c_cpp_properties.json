@@ -1,13 +1,26 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "Linux-debug",
             "includePath": [
                 "${workspaceFolder}/**",
                 "/usr/lib/swi-prolog/include/**"
             ],
             "defines": [
                 "UNIT_TEST"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "linux-gcc-x64"
+        },
+        {
+            "name": "Linux-release",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/lib/swi-prolog/include/**"
+            ],
+            "defines": [
             ],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",

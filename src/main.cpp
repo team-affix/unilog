@@ -5,6 +5,7 @@
 #include <string.h>
 #include <SWI-Prolog.h>
 #include "../CLI11/include/CLI/CLI.hpp"
+#include "executor.hpp"
 
 #define MAXLINE 1024
 
@@ -34,8 +35,17 @@ int main(int argc, char **argv)
 
 #if 0
 
-    std::string l_input_string = "arm aes transform --help";
-    std::vector<std::string> l_input = affix_base::data::string_split(l_input_string, ' ');
+    // std::vector<std::string> l_input =
+    //     {
+    //         "uni",
+    //         "--help",
+    //     };
+    std::vector<std::string> l_input =
+        {
+            "uni",
+            "./src/test_input_files/executor_example_0/test.u",
+            //"./src/test_input_files/executor_example_1/main.u",
+        };
     argc = l_input.size();
     std::vector<char *> l_input_converted;
     for (int i = 0; i < l_input.size(); i++)
@@ -51,18 +61,33 @@ int main(int argc, char **argv)
     // l_app.require_subcommand(1);
 
     std::vector<std::string> l_files;
-
     l_app.add_option("files", l_files, "List of input files");
+
+    // std::string l_file_path;
+    // l_app.add_option("file", l_file_path, "Input file path");
 
     // CLI::App *l_aes_app = l_app.add_subcommand("aes", "AES (Advanced Encryption Standard) symmetric cryptographic algorithms.");
     // CLI::App *l_rsa_app = l_app.add_subcommand("rsa", "RSA (Rivest Shamir Adleman) asymmetric cryptographic algorithms.");
+
+    using unilog::execute;
+    using unilog::refer_statement;
 
     // PARSE ACTUAL DATA
     try
     {
         l_app.parse(argc, argv);
         for (const std::string &l_file : l_files)
+        {
             std::cout << l_file << std::endl;
+            if (!execute(refer_statement{
+                             .m_tag = make_atom("root"),
+                             .m_file_path = make_atom(l_file),
+                         },
+                         make_nil()))
+            {
+                std::cout << "failed to execute file." << std::endl;
+            }
+        }
     }
     catch (const CLI::ParseError &e)
     {

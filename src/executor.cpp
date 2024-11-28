@@ -176,41 +176,42 @@ namespace unilog
 
 static void wipe_database()
 {
-    /////////////////////////////////////////
-    // creates the head of clause: theorem(_, _, _)
-    /////////////////////////////////////////
-    term_t l_theorem_clause_head = PL_new_term_ref();
-    functor_t l_theorem_functor = PL_new_functor(PL_new_atom("theorem"), 3);
-    if (!PL_cons_functor(
-            l_theorem_clause_head, l_theorem_functor,
-            PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref()))
-        throw std::runtime_error("Error: failed to construct functor.");
+    // /////////////////////////////////////////
+    // // creates the head of clause: theorem(_, _, _)
+    // /////////////////////////////////////////
+    // term_t l_theorem_clause_head = PL_new_term_ref();
+    // functor_t l_theorem_functor = PL_new_functor(PL_new_atom("theorem"), 3);
+    // if (!PL_cons_functor(
+    //         l_theorem_clause_head, l_theorem_functor,
+    //         PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref()))
+    //     throw std::runtime_error("Error: failed to construct functor.");
 
-    /////////////////////////////////////////
-    // creates the head of clause: guide(_, _, _)
-    /////////////////////////////////////////
-    term_t l_guide_clause_head = PL_new_term_ref();
-    functor_t l_guide_functor = PL_new_functor(PL_new_atom("redir"), 3);
-    if (!PL_cons_functor(
-            l_guide_clause_head, l_guide_functor,
-            PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref()))
-        throw std::runtime_error("Error: failed to construct functor.");
+    // /////////////////////////////////////////
+    // // creates the head of clause: guide(_, _, _)
+    // /////////////////////////////////////////
+    // term_t l_guide_clause_head = PL_new_term_ref();
+    // functor_t l_guide_functor = PL_new_functor(PL_new_atom("redir"), 3);
+    // if (!PL_cons_functor(
+    //         l_guide_clause_head, l_guide_functor,
+    //         PL_new_term_ref(), PL_new_term_ref(), PL_new_term_ref()))
+    //     throw std::runtime_error("Error: failed to construct functor.");
 
-    /////////////////////////////////////////
-    // retract all dynamic statements
-    /////////////////////////////////////////
-    // retract_all(l_theorem_clause_head);
-    // retract_all(l_guide_clause_head);
-    {
-        fid_t l_query_frame = PL_open_foreign_frame();
-        assert(CALL_PRED("retractall", 1, l_theorem_clause_head));
-        PL_discard_foreign_frame(l_query_frame);
-    };
-    {
-        fid_t l_query_frame = PL_open_foreign_frame();
-        assert(CALL_PRED("retractall", 1, l_guide_clause_head));
-        PL_discard_foreign_frame(l_query_frame);
-    };
+    // /////////////////////////////////////////
+    // // retract all dynamic statements
+    // /////////////////////////////////////////
+    // // retract_all(l_theorem_clause_head);
+    // // retract_all(l_guide_clause_head);
+    // {
+    //     fid_t l_query_frame = PL_open_foreign_frame();
+    //     assert(CALL_PRED("retractall", 1, l_theorem_clause_head));
+    //     PL_discard_foreign_frame(l_query_frame);
+    // };
+    // {
+    //     fid_t l_query_frame = PL_open_foreign_frame();
+    //     assert(CALL_PRED("retractall", 1, l_guide_clause_head));
+    //     PL_discard_foreign_frame(l_query_frame);
+    // };
+    CALL_PRED("wipe_database", 0, PL_new_term_ref());
 }
 
 ////////////////////////////////

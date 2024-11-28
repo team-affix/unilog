@@ -7,7 +7,7 @@ LIBUNI_TEST     := build/libuni_test.so
 MAINBIN  		:= build/uni
 TESTBIN  		:= build/test
 
-all: $(LIBSWIPL) $(LIBUNI) $(MAINBIN) $(TESTBIN)
+all: $(LIBSWIPL) $(LIBUNI_TEST) $(LIBUNI) $(MAINBIN) $(TESTBIN)
 
 $(LIBSWIPL):
 	# Create the root build output
@@ -42,21 +42,35 @@ $(TESTBIN): $(wildcard src/*.cpp) $(wildcard src/*.hpp) $(LIBUNI_TEST) $(LIBSWIP
 	# Link manually to the library which will be expected to sit alongside the executable.
 	patchelf --set-rpath '$$ORIGIN' $(TESTBIN)
 
-# $(MAINBIN): $(wildcard src_main/*.cpp) $(wildcard src_main/*.hpp) $(LIBUNI) $(LIBSWIPL)
-# 	##########################
-# 	#### COMPILE UNI MAIN ####
-# 	##########################
+$(LIBUNI): $(LIBSWIPL) $(wildcard src/*.cpp) $(wildcard src/*.hpp) $(wildcard src/*.pl)
+	##############################
+	#### COMPILE UNI MAIN LIB ####
+	##############################
 
-# 	# Build our application
-# 	g++ -std=c++20 -Wall -g -o $(MAINBIN) src_main/*.cpp $(LIBUNI) $(LIBSWIPL) -I$(SWIPL_INCLUDE_PATH)
+	# Build our library
+	swipl-ld -c++ g++ -cc-options,"-std=c++20 -g" -shared -goal true src/*.cpp ./src/unilog.pl -o $(LIBUNI)
 
-# 	# Link manually to the library which will be expected to sit alongside the executable.
-# 	patchelf --set-rpath '$$ORIGIN' $(MAINBIN)
+	##############################
+	##############################
 
-# 	##########################
-# 	##########################
+$(MAINBIN): $(wildcard src/*.cpp) $(wildcard src/*.hpp) $(LIBUNI) $(LIBSWIPL)
+	##############################
+	#### COMPILE UNI MAIN BIN ####
+	##############################
+
+	# Build our test application
+	#g++ 
+	swipl-ld \
+		-c++ g++ \
+		-cc-options,"-std=c++20 -Wall -g -I$(SWIPL_INCLUDE_PATH)" \
+		-goal true src/*.cpp $(LIBUNI) $(LIBSWIPL) ./src/unilog.pl -o $(MAINBIN)
+
+	# Link manually to the library which will be expected to sit alongside the executable.
+	patchelf --set-rpath '$$ORIGIN' $(MAINBIN)
 
 test: $(TESTBIN)
+
+main: $(MAINBIN)
 
 clean:
 	# Remove the local build folder
