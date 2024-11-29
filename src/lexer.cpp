@@ -94,12 +94,14 @@ std::istream &escape(std::istream &a_istream, char &a_char)
 
 static std::istream &consume_line(std::istream &a_istream)
 {
-    char l_char;
+    int l_char;
 
-    // Extract character (read until first non-whitespace)
+    // Extract character (read all chars up to and including \n. If we peek EOF, return before consumption)
     while (
-        (a_istream.peek() != std::ios::traits_type::eof()) &&
-        (a_istream.get(l_char) && l_char != '\n'))
+        a_istream.good() &&
+        (l_char = a_istream.peek()) &&
+        (l_char != std::ios::traits_type::eof()) &&
+        (a_istream.get() && l_char != '\n'))
         ;
 
     return a_istream;
@@ -111,9 +113,10 @@ static std::istream &consume_whitespace(std::istream &a_istream)
 
     // Extract character (read until first non-whitespace)
     while (
-        l_char = a_istream.peek(),
-        (std::isspace(l_char) != 0 && a_istream.get()) ||
-            (l_char == '#' && consume_line(a_istream)))
+        a_istream.good() && // important to check a_istream.good() to prevent double-peeking an EOF, which will cause failbit.
+        (l_char = a_istream.peek()) &&
+        ((std::isspace(l_char) != 0 && a_istream.get()) ||
+         (l_char == '#' && consume_line(a_istream))))
         ;
 
     return a_istream;
@@ -366,8 +369,8 @@ static void test_consume_line()
     for (const auto &[l_key, l_value] : l_data_points)
     {
         std::stringstream l_ss(l_key);
-        assert(consume_line(l_ss));
-        assert(!l_ss.fail());
+        assert(consume_line(l_ss)); // eofbit = 2
+        std::cout << l_ss.rdstate() << std::endl;
         assert(l_ss.tellg() == l_value); // make sure we extracted the correct # of chars
     }
 }
@@ -390,6 +393,7 @@ static void test_consume_whitespace()
             {"a", 0},
             {"\r  \n#\r\t\n? \t", 8},       // # marks the start of a comment, thus marking rest of line as whitespace
             {"  \t \r \n \t #abcd\ne", 16}, // # marks the start of a comment, thus marking rest of line as whitespace
+            {"\t# abcdefg", -1},
         };
 
     for (const auto &[l_key, l_value] : l_data_points)
