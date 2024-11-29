@@ -97,7 +97,9 @@ static std::istream &consume_line(std::istream &a_istream)
     char l_char;
 
     // Extract character (read until first non-whitespace)
-    while (a_istream.get(l_char) && l_char != '\n')
+    while (
+        (a_istream.peek() != std::ios::traits_type::eof()) &&
+        (a_istream.get(l_char) && l_char != '\n'))
         ;
 
     return a_istream;
@@ -357,6 +359,8 @@ static void test_consume_line()
             {"   \nakdsfhjghdjfgj", 4},
             {"[] {} ( ? // sdfgfjgfdkjgl cxcsdc # fdsfdsfkf \nakdsfhjghdjfgj", 47},
             {"[] {} ( ? // sdfgfjgfdkj\r\t cxcsdc # fdsfdsfkf \nakdsfhjghdjfgj", 47},
+            {"abc", -1},        // in case of EOF, treat same as newline.
+            {"\t\tabdsd ", -1}, // in case of EOF, treat same as newline.
         };
 
     for (const auto &[l_key, l_value] : l_data_points)
