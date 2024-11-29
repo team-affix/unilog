@@ -227,8 +227,12 @@ namespace unilog
         lexeme l_command;
         a_istream >> l_command;
 
+        // if we fail to extract lexeme, gracefully return
+        if (a_istream.fail())
+            return a_istream;
+
         // atom is expected for the command
-        if (a_istream.fail() || !std::holds_alternative<atom>(l_command))
+        if (!std::holds_alternative<atom>(l_command))
             throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
         std::string l_command_text = std::get<atom>(l_command).m_text;
@@ -2589,7 +2593,7 @@ static void test_parser_extract_prolog_expression()
         LOG("success, case: \"" << l_key << "\"" << std::endl);
     }
 
-    std::vector<std::string> l_expect_failure_inputs =
+    std::vector<std::string> l_expect_throw_inputs =
         {
             "[abc",
             "[[abc] [123]",
@@ -2607,7 +2611,34 @@ static void test_parser_extract_prolog_expression()
 
         };
 
-    for (const auto &l_input : l_expect_failure_inputs)
+    for (const auto &l_input : l_expect_throw_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        // open PL stack frame
+        fid_t l_frame_id = PL_open_foreign_frame();
+
+        term_t l_exp = PL_new_term_ref();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        assert_throws(
+            ([&l_ss, &l_var_alist, &l_exp]
+             { unilog::extract_term_t(l_ss, l_var_alist, l_exp); }));
+
+        // close PL stack frame
+        PL_discard_foreign_frame(l_frame_id);
+
+        LOG("success, expected throw, case: " << l_input << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failbit_inputs =
+        {
+            "",
+            "     ",
+        };
+
+    for (const auto &l_input : l_expect_failbit_inputs)
     {
         std::stringstream l_ss(l_input);
 
@@ -2785,9 +2816,8 @@ static void test_parser_extract_axiom_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_fail_cases =
+    std::vector<std::string> l_throw_cases =
         {
-            "",
             "abc",
             "X",
             ";",
@@ -2804,7 +2834,32 @@ static void test_parser_extract_axiom_statement()
             "axiom \'a0\' \'x\' \'y\';",
         };
 
-    for (const auto &l_input : l_fail_cases)
+    for (const auto &l_input : l_throw_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
+
+        assert_throws(
+            ([&l_ss, &l_statement]
+             { l_ss >> l_statement; }));
+
+        LOG("success, case: expected throw extracting axiom_statement: " << l_input << std::endl);
+
+        PL_discard_foreign_frame(l_case_frame);
+    }
+
+    std::vector<std::string> l_failbit_cases =
+        {
+            "",
+            "      ",
+            "\n\n\t\r\t ",
+            "\n\n\t\r\t # this is a comment\n",
+        };
+
+    for (const auto &l_input : l_failbit_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -2816,7 +2871,7 @@ static void test_parser_extract_axiom_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
+        LOG("success, case: expected failbit extracting axiom_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
@@ -2992,9 +3047,8 @@ static void test_parser_extract_redir_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_fail_cases =
+    std::vector<std::string> l_throw_cases =
         {
-            "",
             "abc",
             "redir",
             "redir g0",
@@ -3002,7 +3056,7 @@ static void test_parser_extract_redir_statement()
             "redir g0 [] [theorem a0]",
         };
 
-    for (const auto &l_input : l_fail_cases)
+    for (const auto &l_input : l_throw_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -3010,12 +3064,36 @@ static void test_parser_extract_redir_statement()
 
         statement l_statement;
 
+        assert_throws(
+            ([&l_ss, &l_statement]
+             { l_ss >> l_statement; }));
+
+        LOG("success, case: expected throw extracting redir_statement: " << l_input << std::endl);
+
+        PL_discard_foreign_frame(l_case_frame);
+    }
+
+    std::vector<std::string> l_failbit_cases =
+        {
+            "",
+            "      ",
+            "\n\n\t\r\t ",
+            "\n\n\t\r\t # this is a comment\n",
+        };
+
+    for (const auto &l_input : l_failbit_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
         l_ss >> l_statement;
 
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting redir_statement: " << l_input << std::endl);
+        LOG("success, case: expected failbit extracting redir_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
@@ -3134,9 +3212,8 @@ static void test_parser_extract_infer_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_fail_cases =
+    std::vector<std::string> l_throw_cases =
         {
-            "",
             "a",
             "infer",
             "infer i0",
@@ -3148,7 +3225,32 @@ static void test_parser_extract_infer_statement()
             "infer i0 theorem [a | b | c];",
         };
 
-    for (const auto &l_input : l_fail_cases)
+    for (const auto &l_input : l_throw_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
+
+        assert_throws(
+            ([&l_ss, &l_statement]
+             { l_ss >> l_statement; }));
+
+        LOG("success, case: expected throw extracting infer_statement: " << l_input << std::endl);
+
+        PL_discard_foreign_frame(l_case_frame);
+    }
+
+    std::vector<std::string> l_failbit_cases =
+        {
+            "",
+            "      ",
+            "\n\n\t\r\t ",
+            "\n\n\t\r\t # this is a comment\n",
+        };
+
+    for (const auto &l_input : l_failbit_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -3160,7 +3262,7 @@ static void test_parser_extract_infer_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting redir_statement: " << l_input << std::endl);
+        LOG("success, case: expected failbit extracting infer_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
@@ -3243,9 +3345,8 @@ static void test_parser_extract_refer_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_fail_cases =
+    std::vector<std::string> l_throw_cases =
         {
-            "",
             "abc",
             "X",
             "refer r0",
@@ -3255,7 +3356,32 @@ static void test_parser_extract_refer_statement()
             "refer r0 [;];",
         };
 
-    for (const auto &l_input : l_fail_cases)
+    for (const auto &l_input : l_throw_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
+
+        assert_throws(
+            ([&l_ss, &l_statement]
+             { l_ss >> l_statement; }));
+
+        LOG("success, case: expected throw extracting refer_statement: " << l_input << std::endl);
+
+        PL_discard_foreign_frame(l_case_frame);
+    }
+
+    std::vector<std::string> l_failbit_cases =
+        {
+            "",
+            "      ",
+            "\n\n\t\r\t ",
+            "\n\n\t\r\t # this is a comment\n",
+        };
+
+    for (const auto &l_input : l_failbit_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -3267,7 +3393,7 @@ static void test_parser_extract_refer_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting redir_statement: " << l_input << std::endl);
+        LOG("success, case: expected failbit extracting refer_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
