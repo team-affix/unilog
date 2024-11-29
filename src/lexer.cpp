@@ -367,6 +367,7 @@ static void test_consume_line()
     {
         std::stringstream l_ss(l_key);
         assert(consume_line(l_ss));
+        assert(!l_ss.fail());
         assert(l_ss.tellg() == l_value); // make sure we extracted the correct # of chars
     }
 }
