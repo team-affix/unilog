@@ -1,7 +1,7 @@
 #include <string>
 #include <regex>
-#include <stdexcept>
 #include <cctype>
+#include <stdexcept>
 
 #include "lexer.hpp"
 
@@ -165,6 +165,10 @@ static std::istream &extract_quoted_text(std::istream &a_istream, std::string &a
         // Consume char now
         a_istream.get(l_char))
     {
+        // no multiline string literals
+        if (l_char == '\n')
+            throw std::runtime_error(ERR_MSG_CLOSING_QUOTE);
+
         if (l_char == l_quote_char)
             break;
 
@@ -370,7 +374,7 @@ static void test_consume_line()
     {
         std::stringstream l_ss(l_key);
         assert(consume_line(l_ss)); // eofbit = 2
-        std::cout << l_ss.rdstate() << std::endl;
+        // std::cout << l_ss.rdstate() << std::endl;
         assert(l_ss.tellg() == l_value); // make sure we extracted the correct # of chars
     }
 }
@@ -459,8 +463,8 @@ static void test_extract_quoted_text()
             {"\'abc_1_23 \'", "abc_1_23 "},
             {"\' abC_D_23\' ", " abC_D_23"},
             {"\"_abC_D_23\" ", "_abC_D_23"},
-            {"\'_abC_D_23\n\'", "_abC_D_23\n"},
-            {"\"_abC_D_23\n\t\"", "_abC_D_23\n\t"},
+            {"\'_abC_D_23\'", "_abC_D_23"},
+            {"\"_abC_D_23\t\"", "_abC_D_23\t"},
             {"\"_abC_D_2\"3/", "_abC_D_2"},
             {"\'_abC_D_23\\\\\'", "_abC_D_23\\"}, // extract_quote calls escape() when encountering a backslash.
             {"\'abc 123\'", "abc 123"},
@@ -469,7 +473,7 @@ static void test_extract_quoted_text()
             {"\'_abC_D_23\r\'", "_abC_D_23\r"},
             {"\"_abC_D_23\" abc", "_abC_D_23"},
             {"\'\r_abC_D_23\'", "\r_abC_D_23"},
-            {"\"\n_abC_D_23  \t \"", "\n_abC_D_23  \t "},
+            {"\"_abC_D_23  \t \"", "_abC_D_23  \t "},
             {"\'\t_abC_D_23\'", "\t_abC_D_23"},
             {"\'\\n\'", "\n"},
             {"\'\\t\'", "\t"},

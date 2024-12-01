@@ -17,6 +17,60 @@
 #define ERR_MSG_DECL_REDIR "Error: failed to declare redirect"
 #define ERR_MSG_INFER "Error: inference failed"
 
+class charpos_streambuf : public std::streambuf
+{
+private:
+    std::streambuf *m_underlying; // The original streambuf
+    int m_row = 1;                // Start row from 1
+    int m_col = 1;                // Start column from 0
+
+protected:
+    // Override underflow to handle character reading
+    int_type underflow() override
+    {
+        return m_underlying->sgetc();
+    }
+
+    // Override uflow to handle consuming a character
+    int_type uflow() override
+    {
+        int_type l_char = m_underlying->sbumpc(); // Consume the current character
+
+        if (l_char == traits_type::eof())
+            return traits_type::eof(); // Pass EOF back
+
+        // increment column
+        ++m_col;
+
+        // check for incrementing row
+        if (l_char == '\n')
+        {
+            ++m_row;
+            m_col = 1;
+        }
+
+        return l_char;
+    }
+
+    // Explicitly disallow seeking
+    std::streampos seekoff(std::streamoff, std::ios_base::seekdir, std::ios_base::openmode) override
+    {
+        return std::streampos(-1); // Indicate failure
+    }
+
+    std::streampos seekpos(std::streampos, std::ios_base::openmode) override
+    {
+        return std::streampos(-1); // Indicate failure
+    }
+
+public:
+    charpos_streambuf(std::streambuf *buf) : m_underlying(buf) {}
+
+    // Getters for row and column
+    int row() const { return m_row; }
+    int col() const { return m_col; }
+};
+
 namespace unilog
 {
     void execute(const axiom_statement &a_axiom_statement, term_t a_module_path)
@@ -152,16 +206,35 @@ namespace unilog
         fs::current_path(l_file_parent_path);
 
         /////////////////////////////////////////
+        // construct a charpos tracking streambuf
+        /////////////////////////////////////////
+        charpos_streambuf l_cpos_sbuf(l_ifs.rdbuf());
+        std::istream l_cpos_ifs(&l_cpos_sbuf);
+
+        /////////////////////////////////////////
         // execute all statements in file
         /////////////////////////////////////////
-        std::istream_iterator<statement> l_it(l_ifs);
+        std::istream_iterator<statement> l_it(l_cpos_ifs);
         std::istream_iterator<statement> l_end;
 
-        for (; l_it != l_end; ++l_it)
+        try
         {
-            std::visit(
-                [l_new_module_path](const auto &a_statement)
-                { execute(a_statement, l_new_module_path); }, *l_it);
+            for (; l_it != l_end; ++l_it)
+            {
+                std::visit(
+                    [l_new_module_path](const auto &a_statement)
+                    { execute(a_statement, l_new_module_path); }, *l_it);
+            }
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            // unwinding exception (call stack)
+            std::string l_unwind_msg =
+                std::string(l_err.what()) +
+                "\nin: " + l_file_path.string() +
+                std::string(":") + std::to_string(l_cpos_sbuf.row()) +
+                std::string(":") + std::to_string(l_cpos_sbuf.col());
+            throw std::runtime_error(l_unwind_msg);
         }
 
         /////////////////////////////////////////
@@ -188,6 +261,59 @@ void wipe_database()
 
 ////////////////////////////////
 ////////////////////////////////
+
+static void test_charpos_streambuf()
+{
+    using pos = std::pair<int, int>;
+
+    data_points<std::string, pos> l_data_points =
+        {
+            {"abc", {1, 4}},
+            {"abc\n", {2, 1}},
+            {"ab\nc", {2, 2}},
+            {"a\nbc", {2, 3}},
+            {"fasdfjklf fgd dfFFFjf 7 8^&>?/.?\\ \r ", {1, 37}},
+            {"fasdfjklf fgd dfFFFjf 7 8^&>?/.?\\ \r \n", {2, 1}},
+            {"fasdfjklf fgd\n dfFFFjf 7 8^&>?/.?\\ \r ", {2, 24}},
+        };
+
+    for (const auto &[l_str, l_position] : l_data_points)
+    {
+        std::stringstream l_ss(l_str);
+        charpos_streambuf l_sbuf(l_ss.rdbuf());
+        std::istream l_charpos_istream(&l_sbuf);
+
+        char l_char;
+        while (l_charpos_istream.get(l_char))
+            ; // extract all chars
+
+        assert(l_position == (pos{l_sbuf.row(), l_sbuf.col()}));
+    }
+
+    {
+        std::stringstream l_ss("\n");
+        charpos_streambuf l_sbuf(l_ss.rdbuf());
+        std::istream l_charpos_istream(&l_sbuf);
+        assert(l_charpos_istream.peek() == '\n');
+        assert(l_sbuf.row() == 1);
+        assert(l_sbuf.col() == 1);
+        assert(l_charpos_istream.get() == '\n');
+        assert(l_sbuf.row() == 2);
+        assert(l_sbuf.col() == 1);
+    }
+
+    {
+        std::stringstream l_ss("a");
+        charpos_streambuf l_sbuf(l_ss.rdbuf());
+        std::istream l_charpos_istream(&l_sbuf);
+        assert(l_charpos_istream.peek() == 'a');
+        assert(l_sbuf.row() == 1);
+        assert(l_sbuf.col() == 1);
+        assert(l_charpos_istream.get() == 'a');
+        assert(l_sbuf.row() == 1);
+        assert(l_sbuf.col() == 2);
+    }
+}
 
 static void test_query_first_solution()
 {
@@ -1316,6 +1442,7 @@ void test_executor_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
+    TEST(test_charpos_streambuf);
     TEST(test_query_first_solution);
     TEST(test_assertz_and_retract_all);
     TEST(test_wipe_database);
