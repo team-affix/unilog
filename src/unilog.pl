@@ -119,8 +119,8 @@ query(BStack, DStack, Conds, [cond, [CondGuide|NextGuide] | CondsRest], Target) 
 query(BStack, DStack, [], eval, [eval, Guide]) :-
     query(BStack, DStack, [], Guide, _).
 
-query(BStack, DStack, [], fail, [fail, Guide]) :-
-    \+ query(BStack, DStack, [], Guide, _).
+query(BStack, DStack, [], [fail, NextGuide], true) :-
+    \+ query(BStack, DStack, [], NextGuide, _).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% scope handling
@@ -629,12 +629,13 @@ test_eval :-
 
     % failure to find a theorem
     tc_fail_0 :-
-        query([], fail, [fail, [t, a0]]).
+        query([], [fail, [t, a0]], R),
+        R == true.
 
     % finds theorem, thus 'fail' fails
     tc_fail_1 :-
         decl_theorem([], a0, x),
-        \+ query([], fail, [fail, [t, a0]]).
+        \+ query([], [fail, [t, a0]], _).
 
 test_fail :-
     test_case(tc_fail_0),
@@ -981,9 +982,8 @@ test_dout :-
 
     % fail test, ensure that assumption list is NOT SHARED between caller and callee
     tc_discharge_assume_16 :-
-        decl_theorem([], a0, a),
-        query([],
-        [discharge, fail], [if, [fail, assume], [and|X]]),
+        decl_theorem([], a0, [if, b, a]),
+        query([], [discharge, [fail, [mp, [t, a0], assume]]], [if, true, [and|X]]),
         X == []. % ensure no conditions transfer
 
     % discharge/cond under mt, only denial is assumed
