@@ -182,20 +182,20 @@ namespace unilog
         // construct fs path objects
         /////////////////////////////////////////
         namespace fs = std::filesystem;
-        fs::path l_file_path = l_file_path_c_str;
-        fs::path l_file_parent_path = l_file_path.parent_path();
+        fs::path l_canonical_file_path = fs::canonical(l_file_path_c_str);
+        fs::path l_file_parent_path = l_canonical_file_path.parent_path();
         fs::path l_cwd = fs::current_path();
 
         /////////////////////////////////////////
         // ensure file_path is to a file
         /////////////////////////////////////////
-        if (fs::is_directory(l_file_path))
+        if (fs::is_directory(l_canonical_file_path))
             throw std::runtime_error(ERR_MSG_NOT_A_FILE);
 
         /////////////////////////////////////////
         // open filestream
         /////////////////////////////////////////
-        std::ifstream l_ifs(l_file_path);
+        std::ifstream l_ifs(l_canonical_file_path);
 
         if (!l_ifs.good())
             throw std::runtime_error(std::string(ERR_MSG_FILE_OPEN) + ": " + l_file_path_c_str);
@@ -231,7 +231,7 @@ namespace unilog
             // unwinding exception (call stack)
             std::string l_unwind_msg =
                 std::string(l_err.what()) +
-                "\nin: " + (l_cwd / l_file_path).string() +
+                "\nin: " + l_canonical_file_path.string() +
                 std::string(":") + std::to_string(l_cpos_sbuf.row()) +
                 std::string(":") + std::to_string(l_cpos_sbuf.col());
             throw std::runtime_error(l_unwind_msg);
