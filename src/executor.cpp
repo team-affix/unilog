@@ -231,7 +231,7 @@ namespace unilog
             // unwinding exception (call stack)
             std::string l_unwind_msg =
                 std::string(l_err.what()) +
-                "\nin: " + l_file_path.string() +
+                "\nin: " + (l_cwd / l_file_path).string() +
                 std::string(":") + std::to_string(l_cpos_sbuf.row()) +
                 std::string(":") + std::to_string(l_cpos_sbuf.col());
             throw std::runtime_error(l_unwind_msg);
