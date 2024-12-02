@@ -17,6 +17,7 @@
 #define ERR_MSG_DECL_REDIR "Error: failed to declare redirect"
 #define ERR_MSG_INFER "Error: inference failed"
 
+// custom row+col tracking streambuf for exception
 class charpos_streambuf : public std::streambuf
 {
 private:
@@ -291,19 +292,7 @@ static void test_charpos_streambuf()
     }
 
     {
-        std::stringstream l_ss("\n");
-        charpos_streambuf l_sbuf(l_ss.rdbuf());
-        std::istream l_charpos_istream(&l_sbuf);
-        assert(l_charpos_istream.peek() == '\n');
-        assert(l_sbuf.row() == 1);
-        assert(l_sbuf.col() == 1);
-        assert(l_charpos_istream.get() == '\n');
-        assert(l_sbuf.row() == 2);
-        assert(l_sbuf.col() == 1);
-    }
-
-    {
-        std::stringstream l_ss("a");
+        std::stringstream l_ss("a\n");
         charpos_streambuf l_sbuf(l_ss.rdbuf());
         std::istream l_charpos_istream(&l_sbuf);
         assert(l_charpos_istream.peek() == 'a');
@@ -312,6 +301,30 @@ static void test_charpos_streambuf()
         assert(l_charpos_istream.get() == 'a');
         assert(l_sbuf.row() == 1);
         assert(l_sbuf.col() == 2);
+        assert(l_charpos_istream.peek() == '\n');
+        assert(l_sbuf.row() == 1);
+        assert(l_sbuf.col() == 2);
+        assert(l_charpos_istream.get() == '\n');
+        assert(l_sbuf.row() == 2);
+        assert(l_sbuf.col() == 1);
+    }
+
+    {
+        std::stringstream l_ss("a\n");
+        charpos_streambuf l_sbuf(l_ss.rdbuf());
+        std::istream l_charpos_istream(&l_sbuf);
+        assert(l_charpos_istream.peek() == 'a');
+        assert(l_sbuf.row() == 1);
+        assert(l_sbuf.col() == 1);
+        assert(l_charpos_istream.get() == 'a');
+        assert(l_sbuf.row() == 1);
+        assert(l_sbuf.col() == 2);
+        assert(l_charpos_istream.peek() == '\n');
+        assert(l_sbuf.row() == 1);
+        assert(l_sbuf.col() == 2);
+        assert(l_charpos_istream.get() == '\n');
+        assert(l_sbuf.row() == 2);
+        assert(l_sbuf.col() == 1);
     }
 }
 
