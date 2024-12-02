@@ -66,6 +66,33 @@ public:
     int col() const { return m_col; }
 };
 
+static int call_predicate(const std::string &a_functor, const std::vector<term_t> &a_args)
+{
+    /////////////////////////////////////////
+    // define predicate we wish to call
+    /////////////////////////////////////////
+    predicate_t l_predicate = PL_predicate(a_functor.c_str(), a_args.size(), NULL);
+
+    /////////////////////////////////////////
+    // construct contiguous term refs for args
+    /////////////////////////////////////////
+    term_t l_contiguous_args = PL_new_term_refs(a_args.size());
+
+    /////////////////////////////////////////
+    // unify supplied args with contiguous refs
+    /////////////////////////////////////////
+    for (int i = 0; i < (int)a_args.size(); ++i)
+    {
+        if (!PL_unify(l_contiguous_args + i, a_args[i]))
+            throw std::runtime_error(ERR_MSG_UNIFY);
+    }
+
+    /////////////////////////////////////////
+    // call the predicate finally, and return the result.
+    /////////////////////////////////////////
+    return PL_call_predicate(NULL, PL_Q_NORMAL, l_predicate, l_contiguous_args);
+}
+
 namespace unilog
 {
     void execute(const axiom_statement &a_axiom_statement, term_t a_module_path)
@@ -130,27 +157,13 @@ namespace unilog
     {
         fid_t l_frame = PL_open_foreign_frame();
 
-        /////////////////////////////////////////
-        // create term refs for each argument
-        /////////////////////////////////////////
-        term_t l_args = PL_new_term_refs(3);
-        term_t l_module_path = l_args;
-        term_t l_tag = l_args + 1;
-        term_t l_guide = l_args + 2;
+        term_t l_theorem = PL_new_term_ref();
 
-        /////////////////////////////////////////
-        // set up arguments
-        /////////////////////////////////////////
-        if (!(PL_unify(l_module_path, a_module_path) &&
-              PL_unify(l_tag, a_infer_statement.m_tag) &&
-              PL_unify(l_guide, a_infer_statement.m_guide)))
-            throw std::runtime_error(ERR_MSG_UNIFY);
-
-        /////////////////////////////////////////
-        // execute infer
-        /////////////////////////////////////////
-        if (!CALL_PRED("infer", 3, l_args))
+        if (!call_predicate("query", {a_module_path, a_infer_statement.m_guide, l_theorem}))
             throw std::runtime_error(ERR_MSG_INFER);
+
+        if (!call_predicate("decl_theorem", {a_module_path, a_infer_statement.m_tag, l_theorem}))
+            throw std::runtime_error(ERR_MSG_DECL_THEOREM);
 
         PL_discard_foreign_frame(l_frame);
     }
@@ -256,6 +269,43 @@ void wipe_database()
 
 ////////////////////////////////
 ////////////////////////////////
+
+static void test_call_predicate()
+{
+    fid_t l_frame = PL_open_foreign_frame();
+
+    term_t l_x = PL_new_term_ref();
+    term_t l_y = PL_new_term_ref();
+
+    /////////////////////////////////////////
+    // right now, both args variable so ==/2 fails
+    /////////////////////////////////////////
+    assert(!call_predicate("==", {l_x, l_y}));
+
+    /////////////////////////////////////////
+    // set argument to an atom using PL_unify
+    /////////////////////////////////////////
+    term_t l_atom_term = PL_new_term_ref();
+    assert(PL_put_atom_chars(l_atom_term, "I am an atom"));
+    assert(PL_unify(l_atom_term, l_x));
+
+    /////////////////////////////////////////
+    // right now, args not strictly equal
+    /////////////////////////////////////////
+    assert(!call_predicate("==", {l_x, l_y}));
+
+    /////////////////////////////////////////
+    // set argument to an atom using PL_unify
+    /////////////////////////////////////////
+    assert(PL_unify(l_atom_term, l_y));
+
+    /////////////////////////////////////////
+    // now, args are strictly equal
+    /////////////////////////////////////////
+    assert(call_predicate("==", {l_x, l_y}));
+
+    PL_discard_foreign_frame(l_frame);
+}
 
 static void test_charpos_streambuf()
 {
@@ -1449,6 +1499,7 @@ void test_executor_main()
 {
     constexpr bool ENABLE_DEBUG_LOGS = true;
 
+    TEST(test_call_predicate);
     TEST(test_charpos_streambuf);
     TEST(test_query_first_solution);
     TEST(test_assertz_and_retract_all);
