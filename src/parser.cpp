@@ -6,18 +6,6 @@
 #include "parser.hpp"
 #include "lexer.hpp"
 
-#define ERR_MSG_UNIFY "Error: failed to unify terms"
-#define ERR_MSG_CONS_LIST "Error: failed to cons list"
-#define ERR_MSG_GET_ATOM_CHARS "Error: failed to get atom chars"
-#define ERR_MSG_PUT_ATOM_CHARS "Error: failed to put atom chars"
-#define ERR_MSG_PUT_NIL "Error: failed to put nil"
-
-#define ERR_MSG_NO_LIST_CLOSE "Error: no list close"
-#define ERR_MSG_MALFORMED_TERM "Error: malformed term"
-#define ERR_MSG_INVALID_COMMAND "Error: invalid command"
-#define ERR_MSG_MALFORMED_STMT "Error: malformed statement"
-#define ERR_MSG_NO_EOL "Error: expected end-of-line (;)"
-
 /// This macro function defines
 ///     getting a value from cache if key contained,
 ///     otherwise, computing value and caching it.
@@ -2593,25 +2581,24 @@ static void test_parser_extract_prolog_expression()
         LOG("success, case: \"" << l_key << "\"" << std::endl);
     }
 
-    std::vector<std::string> l_expect_throw_inputs =
+    data_points<std::string, std::string> l_expect_throw_inputs =
         {
-            "[abc",
-            "[[abc] [123]",
-            "]",
-            "\'",
-            "\"",
-            "[a|]",
-            "[a|b|c]",
-            "[a|b c]",
-            "[a|[b|']]",
-            "[;]",
-            "[|]",
+            {"[abc", ERR_MSG_NO_LIST_CLOSE},
+            {"[[abc] [123]", ERR_MSG_INVALID_LEXEME},
+            {"]", ERR_MSG_MALFORMED_TERM},
+            {"\'", ERR_MSG_CLOSING_QUOTE},
+            {"\"", ERR_MSG_CLOSING_QUOTE},
+            {"[a|]", ERR_MSG_MALFORMED_TERM},
+            {"[a|b|c]", ERR_MSG_NO_LIST_CLOSE},
+            {"[a|b c]", ERR_MSG_NO_LIST_CLOSE},
+            {"[a|[b|']]", ERR_MSG_CLOSING_QUOTE},
+            {"[;]", ERR_MSG_MALFORMED_TERM},
+            {"[|]", ERR_MSG_MALFORMED_TERM},
             // "abc]", // this is NOT an expect failure input.
             // this is because it will only try to parse the first prolog expression before a lexeme separator char.
-
         };
 
-    for (const auto &l_input : l_expect_throw_inputs)
+    for (const auto &[l_input, l_err_msg] : l_expect_throw_inputs)
     {
         std::stringstream l_ss(l_input);
 
@@ -2622,9 +2609,15 @@ static void test_parser_extract_prolog_expression()
 
         std::map<std::string, term_t> l_var_alist;
 
-        assert_throws(
-            ([&l_ss, &l_var_alist, &l_exp]
-             { unilog::extract_term_t(l_ss, l_var_alist, l_exp); }));
+        try
+        {
+            unilog::extract_term_t(l_ss, l_var_alist, l_exp);
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
 
         // close PL stack frame
         PL_discard_foreign_frame(l_frame_id);
@@ -2816,25 +2809,25 @@ static void test_parser_extract_axiom_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_throw_cases =
+    data_points<std::string, std::string> l_throw_cases =
         {
-            "abc",
-            "X",
-            ";",
-            "[]",
-            "axiom",
-            "axiom a0",
-            "axiom a0;",
-            "axiom a0 x",
-            "axiom a0 x y;",
-            "\'axiom\'",
-            "axiom \'a0\'",
-            "axiom \'a0\';",
-            "axiom \'a0\' \'x\'",
-            "axiom \'a0\' \'x\' \'y\';",
+            {"abc", ERR_MSG_INVALID_COMMAND},
+            {"X", ERR_MSG_MALFORMED_STMT},
+            {";", ERR_MSG_MALFORMED_STMT},
+            {"[]", ERR_MSG_MALFORMED_STMT},
+            {"axiom", ERR_MSG_MALFORMED_STMT},
+            {"axiom a0", ERR_MSG_MALFORMED_STMT},
+            {"axiom a0;", ERR_MSG_MALFORMED_TERM},
+            {"axiom a0 x", ERR_MSG_NO_EOL},
+            {"axiom a0 x y;", ERR_MSG_NO_EOL},
+            {"\'axiom\'", ERR_MSG_MALFORMED_STMT},
+            {"axiom \'a0\'", ERR_MSG_MALFORMED_STMT},
+            {"axiom \'a0\';", ERR_MSG_MALFORMED_TERM},
+            {"axiom \'a0\' \'x\'", ERR_MSG_NO_EOL},
+            {"axiom \'a0\' \'x\' \'y\';", ERR_MSG_NO_EOL},
         };
 
-    for (const auto &l_input : l_throw_cases)
+    for (const auto &[l_input, l_err_msg] : l_throw_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -2842,9 +2835,15 @@ static void test_parser_extract_axiom_statement()
 
         statement l_statement;
 
-        assert_throws(
-            ([&l_ss, &l_statement]
-             { l_ss >> l_statement; }));
+        try
+        {
+            l_ss >> l_statement;
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
 
         LOG("success, case: expected throw extracting axiom_statement: " << l_input << std::endl);
 
@@ -3047,16 +3046,16 @@ static void test_parser_extract_redir_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_throw_cases =
+    data_points<std::string, std::string> l_throw_cases =
         {
-            "abc",
-            "redir",
-            "redir g0",
-            "redir g0 []",
-            "redir g0 [] [theorem a0]",
+            {"abc", ERR_MSG_INVALID_COMMAND},
+            {"redir", ERR_MSG_MALFORMED_STMT},
+            {"redir g0", ERR_MSG_MALFORMED_STMT},
+            {"redir g0 []", ERR_MSG_NO_EOL},
+            {"redir g0 [] [theorem a0]", ERR_MSG_NO_EOL},
         };
 
-    for (const auto &l_input : l_throw_cases)
+    for (const auto &[l_input, l_err_msg] : l_throw_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -3064,9 +3063,15 @@ static void test_parser_extract_redir_statement()
 
         statement l_statement;
 
-        assert_throws(
-            ([&l_ss, &l_statement]
-             { l_ss >> l_statement; }));
+        try
+        {
+            l_ss >> l_statement;
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
 
         LOG("success, case: expected throw extracting redir_statement: " << l_input << std::endl);
 
@@ -3212,20 +3217,20 @@ static void test_parser_extract_infer_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_throw_cases =
+    data_points<std::string, std::string> l_throw_cases =
         {
-            "a",
-            "infer",
-            "infer i0",
-            "infer i0 theorem",
-            "infer i0 theorem guide",
-            "infer i0 theorem \';",
-            "infer i0 theorem [;",
-            "infer i0 theorem [;];",
-            "infer i0 theorem [a | b | c];",
+            {"a", ERR_MSG_INVALID_COMMAND},
+            {"infer", ERR_MSG_MALFORMED_STMT},
+            {"infer i0", ERR_MSG_MALFORMED_STMT},
+            {"infer i0 theorem", ERR_MSG_NO_EOL},
+            {"infer i0 theorem guide", ERR_MSG_NO_EOL},
+            {"infer i0 theorem \';", ERR_MSG_CLOSING_QUOTE},
+            {"infer i0 theorem [;", ERR_MSG_NO_EOL},
+            {"infer i0 theorem [;];", ERR_MSG_NO_EOL},
+            {"infer i0 theorem [a | b | c];", ERR_MSG_NO_EOL},
         };
 
-    for (const auto &l_input : l_throw_cases)
+    for (const auto &[l_input, l_err_msg] : l_throw_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -3233,9 +3238,15 @@ static void test_parser_extract_infer_statement()
 
         statement l_statement;
 
-        assert_throws(
-            ([&l_ss, &l_statement]
-             { l_ss >> l_statement; }));
+        try
+        {
+            l_ss >> l_statement;
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
 
         LOG("success, case: expected throw extracting infer_statement: " << l_input << std::endl);
 
@@ -3345,18 +3356,18 @@ static void test_parser_extract_refer_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_throw_cases =
+    data_points<std::string, std::string> l_throw_cases =
         {
-            "abc",
-            "X",
-            "refer r0",
-            "refer r0 \'file/path\'",
-            "refer r0 \';",
-            "refer r0 \";",
-            "refer r0 [;];",
+            {"abc", ERR_MSG_INVALID_COMMAND},
+            {"X", ERR_MSG_MALFORMED_STMT},
+            {"refer r0", ERR_MSG_MALFORMED_STMT},
+            {"refer r0 \'file/path\'", ERR_MSG_NO_EOL},
+            {"refer r0 \';", ERR_MSG_CLOSING_QUOTE},
+            {"refer r0 \";", ERR_MSG_CLOSING_QUOTE},
+            {"refer r0 [;];", ERR_MSG_MALFORMED_TERM},
         };
 
-    for (const auto &l_input : l_throw_cases)
+    for (const auto &[l_input, l_err_msg] : l_throw_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -3364,9 +3375,15 @@ static void test_parser_extract_refer_statement()
 
         statement l_statement;
 
-        assert_throws(
-            ([&l_ss, &l_statement]
-             { l_ss >> l_statement; }));
+        try
+        {
+            l_ss >> l_statement;
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
 
         LOG("success, case: expected throw extracting refer_statement: " << l_input << std::endl);
 

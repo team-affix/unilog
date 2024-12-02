@@ -9,6 +9,18 @@
 #include <list>
 #include <SWI-Prolog.h>
 
+#define ERR_MSG_UNIFY "Error: failed to unify terms"
+#define ERR_MSG_CONS_LIST "Error: failed to cons list"
+#define ERR_MSG_GET_ATOM_CHARS "Error: failed to get atom chars"
+#define ERR_MSG_PUT_ATOM_CHARS "Error: failed to put atom chars"
+#define ERR_MSG_PUT_NIL "Error: failed to put nil"
+
+#define ERR_MSG_NO_LIST_CLOSE "Error: no list close"
+#define ERR_MSG_MALFORMED_TERM "Error: malformed term"
+#define ERR_MSG_INVALID_COMMAND "Error: invalid command"
+#define ERR_MSG_MALFORMED_STMT "Error: malformed statement"
+#define ERR_MSG_NO_EOL "Error: expected end-of-line (;)"
+
 namespace unilog
 {
 

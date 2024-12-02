@@ -5,9 +5,6 @@
 
 #include "lexer.hpp"
 
-#define ERR_MSG_CLOSING_QUOTE "Error: no closing quote"
-#define ERR_MSG_INVALID_LEXEME "Error: invalid lexeme"
-
 std::istream &escape(std::istream &a_istream, char &a_char)
 {
     char l_char;
@@ -1567,48 +1564,55 @@ static void test_lexer_extract_lexeme()
         LOG("success, case: \"" << l_key << "\"" << std::endl);
     }
 
-    std::vector<std::string> l_expect_throw_inputs =
+    data_points<std::string, std::string> l_expect_throw_inputs =
         {
-            "\'hello, this is an unclosed quote",
-            "\"hello, this is an unclosed quote",
-            "!test1!test2",
-            "!test1\\!test2",
+            {"\'hello, this is an unclosed quote", ERR_MSG_CLOSING_QUOTE},
+            {"\"hello, this is an unclosed quote", ERR_MSG_CLOSING_QUOTE},
+            {"!test1!test2", ERR_MSG_INVALID_LEXEME},
+            {"!test1\\!test2", ERR_MSG_INVALID_LEXEME},
 
-            "!Test",
-            "!test1[abc]",
-            "<-",
-            "+",
-            "@",
-            "1.24",
-            "\\test",
+            {"!Test", ERR_MSG_INVALID_LEXEME},
+            {"!test1[abc]", ERR_MSG_INVALID_LEXEME},
+            {"<-", ERR_MSG_INVALID_LEXEME},
+            {"+", ERR_MSG_INVALID_LEXEME},
+            {"@", ERR_MSG_INVALID_LEXEME},
+            {"1.24", ERR_MSG_INVALID_LEXEME},
+            {"\\test", ERR_MSG_INVALID_LEXEME},
 
             // atoms that start with numbers
-            "1ab",
+            {"1ab", ERR_MSG_INVALID_LEXEME},
 
             // special symbols
-            "!",
-            "@",
-            "$",
-            "%",
-            "^",
-            "&",
-            "*",
-            "(",
-            ")",
-            "-",
-            "=",
+            {"!", ERR_MSG_INVALID_LEXEME},
+            {"@", ERR_MSG_INVALID_LEXEME},
+            {"$", ERR_MSG_INVALID_LEXEME},
+            {"%", ERR_MSG_INVALID_LEXEME},
+            {"^", ERR_MSG_INVALID_LEXEME},
+            {"&", ERR_MSG_INVALID_LEXEME},
+            {"*", ERR_MSG_INVALID_LEXEME},
+            {"(", ERR_MSG_INVALID_LEXEME},
+            {")", ERR_MSG_INVALID_LEXEME},
+            {"-", ERR_MSG_INVALID_LEXEME},
+            {"=", ERR_MSG_INVALID_LEXEME},
 
         };
 
-    for (const auto &l_input : l_expect_throw_inputs)
+    for (const auto &[l_input, l_err_msg] : l_expect_throw_inputs)
     {
         std::stringstream l_ss(l_input);
 
         lexeme l_lexeme;
 
         // Make sure the case throws an exception.
-        assert_throws(([&l_ss, &l_lexeme]
-                       { l_ss >> l_lexeme; }));
+        try
+        {
+            l_ss >> l_lexeme;
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
 
         LOG("success, expected throw, case: " << l_input << std::endl);
     }
