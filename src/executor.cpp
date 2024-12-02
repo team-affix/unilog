@@ -310,21 +310,21 @@ static void test_charpos_streambuf()
     }
 
     {
-        std::stringstream l_ss("a\n");
+        std::stringstream l_ss("\na");
         charpos_streambuf l_sbuf(l_ss.rdbuf());
         std::istream l_charpos_istream(&l_sbuf);
-        assert(l_charpos_istream.peek() == 'a');
-        assert(l_sbuf.row() == 1);
-        assert(l_sbuf.col() == 1);
-        assert(l_charpos_istream.get() == 'a');
-        assert(l_sbuf.row() == 1);
-        assert(l_sbuf.col() == 2);
         assert(l_charpos_istream.peek() == '\n');
         assert(l_sbuf.row() == 1);
-        assert(l_sbuf.col() == 2);
+        assert(l_sbuf.col() == 1);
         assert(l_charpos_istream.get() == '\n');
         assert(l_sbuf.row() == 2);
         assert(l_sbuf.col() == 1);
+        assert(l_charpos_istream.peek() == 'a');
+        assert(l_sbuf.row() == 2);
+        assert(l_sbuf.col() == 1);
+        assert(l_charpos_istream.get() == 'a');
+        assert(l_sbuf.row() == 2);
+        assert(l_sbuf.col() == 2);
     }
 }
 
