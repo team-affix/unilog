@@ -7,9 +7,6 @@
 #include <iterator>
 #include <variant>
 
-#define ERR_MSG_CLOSING_QUOTE "Error: no closing quote"
-#define ERR_MSG_INVALID_LEXEME "Error: invalid lexeme"
-
 namespace unilog
 {
 

@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include "lexer.hpp"
+#include "err_msg.hpp"
 
 std::istream &escape(std::istream &a_istream, char &a_char)
 {

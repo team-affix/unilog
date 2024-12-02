@@ -5,6 +5,7 @@
 
 #include "parser.hpp"
 #include "lexer.hpp"
+#include "err_msg.hpp"
 
 /// This macro function defines
 ///     getting a value from cache if key contained,

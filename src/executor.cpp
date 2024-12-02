@@ -3,7 +3,9 @@
 #include <iterator>
 #include <functional>
 #include <deque>
+
 #include "executor.hpp"
+#include "err_msg.hpp"
 
 #define CALL_PRED(name, arity, arg0) \
     (PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate(name, arity, NULL), arg0))
