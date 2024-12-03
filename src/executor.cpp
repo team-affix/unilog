@@ -951,7 +951,7 @@ static void test_program_throws_exception()
     data_points<std::list<stmt_decl>, std::string> l_throw_cases =
         {
             {
-                // ensure theorem tags must be unique
+                // expect ERR_MSG_DECL_THEOREM throws
                 {
                     stmt_decl{
                         .m_module_stack = make_list({}),
@@ -971,27 +971,7 @@ static void test_program_throws_exception()
                 ERR_MSG_DECL_THEOREM,
             },
             {
-                // ensure redirect tags must be unique
-                {
-                    stmt_decl{
-                        .m_module_stack = make_list({}),
-                        .m_statement = redir_statement{
-                            .m_tag = make_atom("tag0"),
-                            .m_guide = make_atom("x"),
-                        },
-                    },
-                    stmt_decl{
-                        .m_module_stack = make_list({}),
-                        .m_statement = redir_statement{
-                            .m_tag = make_atom("tag0"), // duplicate tag
-                            .m_guide = make_atom("y"),
-                        },
-                    },
-                },
-                ERR_MSG_DECL_REDIR,
-            },
-            {
-                // ensure redirect tags must be unique
+                // expect ERR_MSG_DECL_REDIR throws
                 {
                     stmt_decl{
                         .m_module_stack = make_list({}),
@@ -1015,6 +995,7 @@ static void test_program_throws_exception()
                 ERR_MSG_DECL_REDIR,
             },
             {
+                // expect ERR_MSG_INFER throws
                 {
                     stmt_decl{
                         .m_module_stack = make_list({}),
@@ -1055,6 +1036,8 @@ static void test_program_throws_exception()
                 ERR_MSG_INFER,
             },
             {
+                // expect ERR_MSG_DECL_THEOREM throws from
+                //     infer statement with common tag
                 {
                     stmt_decl{
                         .m_module_stack = make_list({}),
