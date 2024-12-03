@@ -503,65 +503,97 @@ static void test_execute_axiom_statement()
 
     fid_t l_frame = PL_open_foreign_frame();
 
-    term_t l_args = PL_new_term_refs(3);
-    term_t l_module_stack = l_args;
-    term_t l_tag = l_args + 1;
-    term_t l_theorem = l_args + 2;
-
-    assert(
-        PL_unify(l_module_stack,
-                 make_list({
-                     make_atom("daniel"),
-                     make_atom("jake"),
-                 })));
-    assert(PL_unify(l_tag, make_atom("a0")));
-
     /////////////////////////////////////////
-    // ensure we CANNOT find theorem with this module stack + tag
+    // helper struct
     /////////////////////////////////////////
+    struct axiom_decl
     {
-        fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(!call_predicate("theorem", {l_module_stack, l_tag, l_theorem}));
-        PL_discard_foreign_frame(l_unification_frame);
+        term_t m_module_stack;
+        axiom_statement m_axiom_statement;
     };
 
-    /////////////////////////////////////////
-    // create the theorem s-expression which we will declare
-    /////////////////////////////////////////
-    term_t l_declared_theorem =
-        make_list({
-            make_atom("claims"),
-            make_atom("leon"),
-            make_atom("x"),
-        });
+    std::vector<axiom_decl> l_test_cases =
+        {
+            {
+                .m_module_stack = make_list({}),
+                .m_axiom_statement = axiom_statement{
+                    .m_tag = make_atom("a0"),
+                    .m_theorem = make_atom("x"),
+                },
+            },
+            {
+                .m_module_stack = make_list({}),
+                .m_axiom_statement = axiom_statement{
+                    .m_tag = make_atom("tag"),
+                    .m_theorem = make_list({
+                        make_atom("if"),
+                        make_atom("y"),
+                        make_atom("x"),
+                    }),
+                },
+            },
+            {
+                .m_module_stack = make_list({
+                    make_atom("root"),
+                }),
+                .m_axiom_statement = axiom_statement{
+                    .m_tag = make_atom("tag"),
+                    .m_theorem = make_list({
+                        make_atom("if"),
+                        make_atom("y"),
+                        make_atom("x"),
+                    }),
+                },
+            },
+            {
+                .m_module_stack = make_list({
+                    make_atom("main"),
+                    make_atom("root"),
+                }),
+                .m_axiom_statement = axiom_statement{
+                    .m_tag = make_atom("tag"),
+                    .m_theorem = make_list({
+                        make_atom("if"),
+                        make_atom("y"),
+                        make_atom("x"),
+                    }),
+                },
+            },
+        };
 
-    /////////////////////////////////////////
-    // execute the axiom statement (in module path: l_module_stack)
-    /////////////////////////////////////////
-    execute(
-        axiom_statement{
-            .m_tag = l_tag,
-            .m_theorem = l_declared_theorem,
-        },
-        l_module_stack);
-
-    /////////////////////////////////////////
-    // ensure we CAN find theorem with this module stack + tag
-    /////////////////////////////////////////
+    for (const auto &l_case : l_test_cases)
     {
-        fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(call_predicate("theorem", {l_module_stack, l_tag, l_theorem}));
-        // assert(CALL_PRED("writeln", 1, l_module_stack));
-        // assert(CALL_PRED("writeln", 1, l_tag));
-        // assert(CALL_PRED("writeln", 1, l_theorem));
-        assert(equal_forms(l_theorem, l_declared_theorem));
-        PL_discard_foreign_frame(l_unification_frame);
-    };
+        fid_t l_case_frame = PL_open_foreign_frame();
 
-    /////////////////////////////////////////
-    // clean database before throw tests run
-    /////////////////////////////////////////
-    wipe_database();
+        term_t l_theorem_result = PL_new_term_ref();
+
+        /////////////////////////////////////////
+        // before executing the axiom statement, querying should fail
+        /////////////////////////////////////////
+        assert(!call_predicate("theorem", {l_case.m_module_stack, l_case.m_axiom_statement.m_tag, l_theorem_result}));
+
+        /////////////////////////////////////////
+        // execute axiom statement
+        /////////////////////////////////////////
+        execute(l_case.m_axiom_statement, l_case.m_module_stack);
+
+        /////////////////////////////////////////
+        // querying should succeed
+        /////////////////////////////////////////
+        assert(call_predicate("theorem", {l_case.m_module_stack, l_case.m_axiom_statement.m_tag, l_theorem_result}));
+
+        /////////////////////////////////////////
+        // ensure theorem transferred properly
+        /////////////////////////////////////////
+        assert(equal_forms(l_theorem_result, l_case.m_axiom_statement.m_theorem));
+
+        /////////////////////////////////////////
+        // make sure to wipe the db between test cases
+        /////////////////////////////////////////
+        wipe_database();
+
+        PL_close_foreign_frame(l_case_frame);
+    }
 
     PL_discard_foreign_frame(l_frame);
 }
