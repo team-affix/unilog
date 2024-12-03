@@ -63,6 +63,33 @@ public:
     int col() const { return m_col; }
 };
 
+static int call_predicate(const std::string &a_functor, const std::vector<term_t> &a_args)
+{
+    /////////////////////////////////////////
+    // define predicate we wish to call
+    /////////////////////////////////////////
+    predicate_t l_predicate = PL_predicate(a_functor.c_str(), a_args.size(), NULL);
+
+    /////////////////////////////////////////
+    // construct contiguous term refs for args (must always declare at least 1)
+    /////////////////////////////////////////
+    term_t l_contiguous_args = PL_new_term_refs(std::max(1, (int)a_args.size()));
+
+    /////////////////////////////////////////
+    // unify supplied args with contiguous refs
+    /////////////////////////////////////////
+    for (int i = 0; i < (int)a_args.size(); ++i)
+    {
+        if (!PL_unify(l_contiguous_args + i, a_args[i]))
+            throw std::runtime_error(ERR_MSG_UNIFY);
+    }
+
+    /////////////////////////////////////////
+    // call the predicate finally, and return the result.
+    /////////////////////////////////////////
+    return PL_call_predicate(NULL, PL_Q_NORMAL, l_predicate, l_contiguous_args);
+}
+
 namespace unilog
 {
     void execute(const axiom_statement &a_axiom_statement, term_t a_module_path)
@@ -196,33 +223,6 @@ namespace unilog
 
         PL_discard_foreign_frame(l_frame);
     }
-}
-
-int call_predicate(const std::string &a_functor, const std::vector<term_t> &a_args)
-{
-    /////////////////////////////////////////
-    // define predicate we wish to call
-    /////////////////////////////////////////
-    predicate_t l_predicate = PL_predicate(a_functor.c_str(), a_args.size(), NULL);
-
-    /////////////////////////////////////////
-    // construct contiguous term refs for args (must always declare at least 1)
-    /////////////////////////////////////////
-    term_t l_contiguous_args = PL_new_term_refs(std::max(1, (int)a_args.size()));
-
-    /////////////////////////////////////////
-    // unify supplied args with contiguous refs
-    /////////////////////////////////////////
-    for (int i = 0; i < (int)a_args.size(); ++i)
-    {
-        if (!PL_unify(l_contiguous_args + i, a_args[i]))
-            throw std::runtime_error(ERR_MSG_UNIFY);
-    }
-
-    /////////////////////////////////////////
-    // call the predicate finally, and return the result.
-    /////////////////////////////////////////
-    return PL_call_predicate(NULL, PL_Q_NORMAL, l_predicate, l_contiguous_args);
 }
 
 void wipe_database()
@@ -605,71 +605,98 @@ static void test_execute_redir_statement()
 
     fid_t l_frame = PL_open_foreign_frame();
 
-    term_t l_args = PL_new_term_refs(3);
-    term_t l_module_stack = l_args;
-    term_t l_tag = l_args + 1;
-    term_t l_guide = l_args + 2;
-
-    assert(
-        PL_unify(l_module_stack,
-                 make_list({
-                     make_atom("daniel"),
-                     make_atom("jake"),
-                 })));
-    assert(PL_unify(l_tag, make_atom("g0")));
-
     /////////////////////////////////////////
-    // ensure we CANNOT find guide with this module stack + tag
+    // helper struct
     /////////////////////////////////////////
+    struct redir_decl
     {
-        fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(!call_predicate("redir", {l_module_stack, l_tag, l_guide}));
-        PL_discard_foreign_frame(l_unification_frame);
+        term_t m_module_stack;
+        redir_statement m_redir_statement;
     };
 
-    /////////////////////////////////////////
-    // create the guide s-expression which we will declare
-    /////////////////////////////////////////
-    term_t l_declared_guide =
-        make_list({
-            make_atom("mp"),
-            make_list({
-                make_atom("theorem"),
-                make_atom("a0"),
-            }),
-            make_list({
-                make_atom("theorem"),
-                make_atom("a1"),
-            }),
-        });
+    std::vector<redir_decl> l_test_cases =
+        {
+            {
+                .m_module_stack = make_list({}),
+                .m_redir_statement = redir_statement{
+                    .m_tag = make_atom("r0"),
+                    .m_guide = make_atom("x"),
+                },
+            },
+            {
+                .m_module_stack = make_list({
+                    make_atom("root"),
+                }),
+                .m_redir_statement = redir_statement{
+                    .m_tag = make_atom("tag"),
+                    .m_guide = make_atom("x"),
+                },
+            },
+            {
+                .m_module_stack = make_list({
+                    make_atom("main"),
+                    make_atom("root"),
+                }),
+                .m_redir_statement = redir_statement{
+                    .m_tag = make_atom("tag"),
+                    .m_guide = make_atom("x"),
+                },
+            },
+            {
+                .m_module_stack = make_list({
+                    make_atom("main"),
+                    make_atom("root"),
+                }),
+                .m_redir_statement = redir_statement{
+                    .m_tag = make_atom("tag"),
+                    .m_guide = make_list({
+                        make_atom("mp"),
+                        make_list({
+                            make_atom("t"),
+                            make_atom("a0"),
+                        }),
+                        make_list({
+                            make_atom("t"),
+                            make_atom("a1"),
+                        }),
+                    }),
+                },
+            },
+        };
 
-    /////////////////////////////////////////
-    // execute the guide statement (in module path: l_module_stack)
-    /////////////////////////////////////////
-    execute(
-        redir_statement{
-            .m_tag = l_tag,
-            .m_guide = l_declared_guide,
-        },
-        l_module_stack);
-
-    /////////////////////////////////////////
-    // ensure we CAN find guide with this module stack + tag
-    /////////////////////////////////////////
+    for (const auto &l_case : l_test_cases)
     {
-        fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(call_predicate("redir", {l_module_stack, l_tag, l_guide}));
-        // assert(CALL_PRED("writeln", 1, l_module_stack));
-        // assert(CALL_PRED("writeln", 1, l_tag));
-        // assert(CALL_PRED("writeln", 1, l_guide));
-        assert(equal_forms(l_guide, l_declared_guide));
-        PL_discard_foreign_frame(l_unification_frame);
-    };
+        fid_t l_case_frame = PL_open_foreign_frame();
 
-    /////////////////////////////////////////
-    // ensure we do NOT have to worry about info persisting to next test case
-    /////////////////////////////////////////
-    wipe_database();
+        term_t l_guide_result = PL_new_term_ref();
+
+        /////////////////////////////////////////
+        // before executing the statement, querying should fail
+        /////////////////////////////////////////
+        assert(!call_predicate("redir", {l_case.m_module_stack, l_case.m_redir_statement.m_tag, l_guide_result}));
+
+        /////////////////////////////////////////
+        // execute statement
+        /////////////////////////////////////////
+        execute(l_case.m_redir_statement, l_case.m_module_stack);
+
+        /////////////////////////////////////////
+        // querying should succeed
+        /////////////////////////////////////////
+        assert(call_predicate("redir", {l_case.m_module_stack, l_case.m_redir_statement.m_tag, l_guide_result}));
+
+        /////////////////////////////////////////
+        // ensure content transferred properly
+        /////////////////////////////////////////
+        assert(equal_forms(l_guide_result, l_case.m_redir_statement.m_guide));
+
+        /////////////////////////////////////////
+        // make sure to wipe the db between test cases
+        /////////////////////////////////////////
+        wipe_database();
+
+        PL_close_foreign_frame(l_case_frame);
+    }
 
     PL_discard_foreign_frame(l_frame);
 }
