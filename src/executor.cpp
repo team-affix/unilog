@@ -241,6 +241,15 @@ void wipe_database()
 ////////////////////////////////
 ////////////////////////////////
 
+/////////////////////////////////////////
+// helper struct(s)
+/////////////////////////////////////////
+struct stmt_decl
+{
+    term_t m_module_stack;
+    unilog::statement m_statement;
+};
+
 static void test_call_predicate()
 {
     fid_t l_frame = PL_open_foreign_frame();
@@ -711,15 +720,6 @@ static void test_execute_infer_statement()
 
     fid_t l_frame = PL_open_foreign_frame();
 
-    /////////////////////////////////////////
-    // helper struct(s)
-    /////////////////////////////////////////
-    struct stmt_decl
-    {
-        term_t m_module_stack;
-        statement m_statement;
-    };
-
     struct conclusion
     {
         term_t m_module_stack;
@@ -936,11 +936,60 @@ static void test_execute_infer_statement()
         PL_close_foreign_frame(l_case_frame);
     }
 
+    PL_discard_foreign_frame(l_frame);
+}
+
+static void test_execute_program_throws()
+{
+    using unilog::axiom_statement;
+    using unilog::infer_statement;
+    using unilog::redir_statement;
+
     /////////////////////////////////////////
     // expect throw data points
     /////////////////////////////////////////
     data_points<std::list<stmt_decl>, std::string> l_throw_cases =
         {
+            {
+                // ensure theorem tags must be unique
+                {
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag0"),
+                            .m_theorem = make_atom("x"),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag0"), // duplicate tag
+                            .m_theorem = make_atom("y"),
+                        },
+                    },
+                },
+                ERR_MSG_DECL_THEOREM,
+            },
+            {
+                // ensure redirect tags must be unique
+                {
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = redir_statement{
+                            .m_tag = make_atom("tag0"),
+                            .m_guide = make_atom("x"),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = redir_statement{
+                            .m_tag = make_atom("tag0"), // duplicate tag
+                            .m_guide = make_atom("y"),
+                        },
+                    },
+                },
+                ERR_MSG_DECL_REDIR,
+            },
             {
                 {
                     stmt_decl{
@@ -1051,8 +1100,6 @@ static void test_execute_infer_statement()
 
         PL_close_foreign_frame(l_case_frame);
     }
-
-    PL_discard_foreign_frame(l_frame);
 }
 
 static void test_execute_refer_statement()
@@ -1762,6 +1809,7 @@ void test_executor_main()
     TEST(test_execute_axiom_statement);
     TEST(test_execute_redir_statement);
     TEST(test_execute_infer_statement);
+    TEST(test_execute_program_throws);
     TEST(test_execute_refer_statement);
 }
 
