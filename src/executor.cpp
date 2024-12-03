@@ -939,7 +939,7 @@ static void test_execute_infer_statement()
     PL_discard_foreign_frame(l_frame);
 }
 
-static void test_execute_program_throws()
+static void test_program_throws_exception()
 {
     using unilog::axiom_statement;
     using unilog::infer_statement;
@@ -1833,7 +1833,12 @@ void test_executor_main()
     TEST(test_execute_axiom_statement);
     TEST(test_execute_redir_statement);
     TEST(test_execute_infer_statement);
-    TEST(test_execute_program_throws);
+
+    // this test is more fundamental
+    //     than the execution of refer_statement
+    TEST(test_program_throws_exception);
+
+    // this test depends on behavior tested in above functions
     TEST(test_execute_refer_statement);
 }
 
