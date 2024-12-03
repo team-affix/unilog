@@ -11,6 +11,7 @@ namespace unilog
     void execute(const refer_statement &a_refer_statement, term_t a_module_path);
 }
 
+int call_predicate(const std::string &a_functor, const std::vector<term_t> &a_args);
 void wipe_database();
 
 #endif

@@ -7,9 +7,6 @@
 #include "executor.hpp"
 #include "err_msg.hpp"
 
-#define CALL_PRED(name, arity, arg0) \
-    (PL_call_predicate(NULL, PL_Q_NORMAL, PL_predicate(name, arity, NULL), arg0))
-
 // custom row+col tracking streambuf for printing
 //     call stack of files on exception throw
 class charpos_streambuf : public std::streambuf
@@ -66,33 +63,6 @@ public:
     int col() const { return m_col; }
 };
 
-static int call_predicate(const std::string &a_functor, const std::vector<term_t> &a_args)
-{
-    /////////////////////////////////////////
-    // define predicate we wish to call
-    /////////////////////////////////////////
-    predicate_t l_predicate = PL_predicate(a_functor.c_str(), a_args.size(), NULL);
-
-    /////////////////////////////////////////
-    // construct contiguous term refs for args
-    /////////////////////////////////////////
-    term_t l_contiguous_args = PL_new_term_refs(a_args.size());
-
-    /////////////////////////////////////////
-    // unify supplied args with contiguous refs
-    /////////////////////////////////////////
-    for (int i = 0; i < (int)a_args.size(); ++i)
-    {
-        if (!PL_unify(l_contiguous_args + i, a_args[i]))
-            throw std::runtime_error(ERR_MSG_UNIFY);
-    }
-
-    /////////////////////////////////////////
-    // call the predicate finally, and return the result.
-    /////////////////////////////////////////
-    return PL_call_predicate(NULL, PL_Q_NORMAL, l_predicate, l_contiguous_args);
-}
-
 namespace unilog
 {
     void execute(const axiom_statement &a_axiom_statement, term_t a_module_path)
@@ -100,25 +70,9 @@ namespace unilog
         fid_t l_frame = PL_open_foreign_frame();
 
         /////////////////////////////////////////
-        // create term refs for each argument
-        /////////////////////////////////////////
-        term_t l_args = PL_new_term_refs(3);
-        term_t l_module_path = l_args;
-        term_t l_tag = l_args + 1;
-        term_t l_theorem = l_args + 2;
-
-        /////////////////////////////////////////
-        // set up arguments
-        /////////////////////////////////////////
-        if (!(PL_unify(l_module_path, a_module_path) &&
-              PL_unify(l_tag, a_axiom_statement.m_tag) &&
-              PL_unify(l_theorem, a_axiom_statement.m_theorem)))
-            throw std::runtime_error(ERR_MSG_UNIFY);
-
-        /////////////////////////////////////////
         // execute decl_theorem
         /////////////////////////////////////////
-        if (!CALL_PRED("decl_theorem", 3, l_args))
+        if (!call_predicate("decl_theorem", {a_module_path, a_axiom_statement.m_tag, a_axiom_statement.m_theorem}))
             throw std::runtime_error(ERR_MSG_DECL_THEOREM);
 
         PL_discard_foreign_frame(l_frame);
@@ -129,25 +83,9 @@ namespace unilog
         fid_t l_frame = PL_open_foreign_frame();
 
         /////////////////////////////////////////
-        // create term refs for each argument
-        /////////////////////////////////////////
-        term_t l_args = PL_new_term_refs(3);
-        term_t l_module_path = l_args;
-        term_t l_tag = l_args + 1;
-        term_t l_guide = l_args + 2;
-
-        /////////////////////////////////////////
-        // set up arguments
-        /////////////////////////////////////////
-        if (!(PL_unify(l_module_path, a_module_path) &&
-              PL_unify(l_tag, a_redir_statement.m_tag) &&
-              PL_unify(l_guide, a_redir_statement.m_guide)))
-            throw std::runtime_error(ERR_MSG_UNIFY);
-
-        /////////////////////////////////////////
         // execute decl_redir
         /////////////////////////////////////////
-        if (!CALL_PRED("decl_redir", 3, l_args))
+        if (!call_predicate("decl_redir", {a_module_path, a_redir_statement.m_tag, a_redir_statement.m_guide}))
             throw std::runtime_error(ERR_MSG_DECL_REDIR);
 
         PL_discard_foreign_frame(l_frame);
@@ -159,9 +97,15 @@ namespace unilog
 
         term_t l_theorem = PL_new_term_ref();
 
+        /////////////////////////////////////////
+        // first, query to get the theorem produced by the guide
+        /////////////////////////////////////////
         if (!call_predicate("query", {a_module_path, a_infer_statement.m_guide, l_theorem}))
             throw std::runtime_error(ERR_MSG_INFER);
 
+        /////////////////////////////////////////
+        // declare the theorem with the provided tag
+        /////////////////////////////////////////
         if (!call_predicate("decl_theorem", {a_module_path, a_infer_statement.m_tag, l_theorem}))
             throw std::runtime_error(ERR_MSG_DECL_THEOREM);
 
@@ -254,9 +198,36 @@ namespace unilog
     }
 }
 
+int call_predicate(const std::string &a_functor, const std::vector<term_t> &a_args)
+{
+    /////////////////////////////////////////
+    // define predicate we wish to call
+    /////////////////////////////////////////
+    predicate_t l_predicate = PL_predicate(a_functor.c_str(), a_args.size(), NULL);
+
+    /////////////////////////////////////////
+    // construct contiguous term refs for args (must always declare at least 1)
+    /////////////////////////////////////////
+    term_t l_contiguous_args = PL_new_term_refs(std::max(1, (int)a_args.size()));
+
+    /////////////////////////////////////////
+    // unify supplied args with contiguous refs
+    /////////////////////////////////////////
+    for (int i = 0; i < (int)a_args.size(); ++i)
+    {
+        if (!PL_unify(l_contiguous_args + i, a_args[i]))
+            throw std::runtime_error(ERR_MSG_UNIFY);
+    }
+
+    /////////////////////////////////////////
+    // call the predicate finally, and return the result.
+    /////////////////////////////////////////
+    return PL_call_predicate(NULL, PL_Q_NORMAL, l_predicate, l_contiguous_args);
+}
+
 void wipe_database()
 {
-    CALL_PRED("wipe_database", 0, PL_new_term_ref());
+    call_predicate("wipe_database", {});
 }
 
 #ifdef UNIT_TEST
@@ -372,32 +343,6 @@ static void test_charpos_streambuf()
     }
 }
 
-static void test_query_first_solution()
-{
-    fid_t l_frame = PL_open_foreign_frame();
-
-    term_t l_argument = PL_new_term_ref();
-
-    /////////////////////////////////////////
-    // right now, argument is a variable thus atom/1 will fail.
-    /////////////////////////////////////////
-    assert(!CALL_PRED("atom", 1, l_argument));
-
-    /////////////////////////////////////////
-    // set argument to an atom using PL_unify
-    /////////////////////////////////////////
-    term_t l_atom_term = PL_new_term_ref();
-    assert(PL_put_atom_chars(l_atom_term, "I am an atom"));
-    assert(PL_unify(l_atom_term, l_argument));
-
-    /////////////////////////////////////////
-    // now, argument is an atom, thus atom/1 will succeed
-    /////////////////////////////////////////
-    assert(CALL_PRED("atom", 1, l_argument));
-
-    PL_discard_foreign_frame(l_frame);
-}
-
 static void test_assertz_and_retract_all()
 {
     fid_t l_frame = PL_open_foreign_frame();
@@ -425,9 +370,9 @@ static void test_assertz_and_retract_all()
     // assertz(l_clause_0);
     // assertz(l_clause_1);
     // assertz(l_clause_2);
-    assert(CALL_PRED("assertz", 1, l_clause_0));
-    assert(CALL_PRED("assertz", 1, l_clause_1));
-    assert(CALL_PRED("assertz", 1, l_clause_2));
+    assert(call_predicate("assertz", {l_clause_0}));
+    assert(call_predicate("assertz", {l_clause_1}));
+    assert(call_predicate("assertz", {l_clause_2}));
 
     predicate_t l_predicate_0 = PL_predicate("pred0", 1, NULL);
     predicate_t l_predicate_1 = PL_predicate("pred1", 1, NULL);
@@ -475,9 +420,9 @@ static void test_assertz_and_retract_all()
     /////////////////////////////////////////
     // try to erase the entries from the DB.
     /////////////////////////////////////////
-    assert(CALL_PRED("retractall", 1, l_clause_0));
-    assert(CALL_PRED("retractall", 1, l_clause_1));
-    assert(CALL_PRED("retractall", 1, l_clause_2));
+    assert(call_predicate("retractall", {l_clause_0}));
+    assert(call_predicate("retractall", {l_clause_1}));
+    assert(call_predicate("retractall", {l_clause_2}));
 
     /////////////////////////////////////////
     // ensure these statements do NOT unify
@@ -527,14 +472,14 @@ static void test_wipe_database()
         // /////////////////////////////////////////
         // // add clauses to db
         // /////////////////////////////////////////
-        assert(CALL_PRED("assertz", 1, l_theorem_clause));
-        assert(CALL_PRED("assertz", 1, l_guide_clause));
+        assert(call_predicate("assertz", {l_theorem_clause}));
+        assert(call_predicate("assertz", {l_guide_clause}));
 
         /////////////////////////////////////////
         // ensure these statements unify (since clauses are bodyless, clause IS head)
         /////////////////////////////////////////
-        assert(CALL_PRED("theorem", 3, l_args));
-        assert(CALL_PRED("redir", 3, l_args));
+        assert(call_predicate("theorem", {l_atom_0, l_atom_1, l_atom_2}));
+        assert(call_predicate("redir", {l_atom_0, l_atom_1, l_atom_2}));
 
         /////////////////////////////////////////
         // wipe the database
@@ -544,8 +489,8 @@ static void test_wipe_database()
         /////////////////////////////////////////
         // ensure these statements do NOT unify
         /////////////////////////////////////////
-        assert(!CALL_PRED("theorem", 3, l_args));
-        assert(!CALL_PRED("redir", 3, l_args));
+        assert(!call_predicate("theorem", {l_atom_0, l_atom_1, l_atom_2}));
+        assert(!call_predicate("redir", {l_atom_0, l_atom_1, l_atom_2}));
     };
 
     PL_discard_foreign_frame(l_frame);
@@ -576,7 +521,7 @@ static void test_execute_axiom_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(!CALL_PRED("theorem", 3, l_args));
+        assert(!call_predicate("theorem", {l_module_stack, l_tag, l_theorem}));
         PL_discard_foreign_frame(l_unification_frame);
     };
 
@@ -605,7 +550,7 @@ static void test_execute_axiom_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(CALL_PRED("theorem", 3, l_args));
+        assert(call_predicate("theorem", {l_module_stack, l_tag, l_theorem}));
         // assert(CALL_PRED("writeln", 1, l_module_stack));
         // assert(CALL_PRED("writeln", 1, l_tag));
         // assert(CALL_PRED("writeln", 1, l_theorem));
@@ -614,7 +559,7 @@ static void test_execute_axiom_statement()
     };
 
     /////////////////////////////////////////
-    // ensure we do NOT have to worry about info persisting to next test case
+    // clean database before throw tests run
     /////////////////////////////////////////
     wipe_database();
 
@@ -646,7 +591,7 @@ static void test_execute_redir_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(!CALL_PRED("redir", 3, l_args));
+        assert(!call_predicate("redir", {l_module_stack, l_tag, l_guide}));
         PL_discard_foreign_frame(l_unification_frame);
     };
 
@@ -681,7 +626,7 @@ static void test_execute_redir_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(CALL_PRED("redir", 3, l_args));
+        assert(call_predicate("redir", {l_module_stack, l_tag, l_guide}));
         // assert(CALL_PRED("writeln", 1, l_module_stack));
         // assert(CALL_PRED("writeln", 1, l_tag));
         // assert(CALL_PRED("writeln", 1, l_guide));
@@ -724,7 +669,7 @@ static void test_execute_infer_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(!CALL_PRED("theorem", 3, l_args));
+        assert(!call_predicate("theorem", {l_module_stack, l_tag, l_theorem}));
         PL_discard_foreign_frame(l_unification_frame);
     };
 
@@ -783,7 +728,7 @@ static void test_execute_infer_statement()
     /////////////////////////////////////////
     {
         fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(CALL_PRED("theorem", 3, l_args));
+        assert(call_predicate("theorem", {l_module_stack, l_tag, l_theorem}));
         // assert(CALL_PRED("writeln", 1, l_module_stack));
         // assert(CALL_PRED("writeln", 1, l_tag));
         // assert(CALL_PRED("writeln", 1, l_theorem));
@@ -1501,7 +1446,6 @@ void test_executor_main()
 
     TEST(test_call_predicate);
     TEST(test_charpos_streambuf);
-    TEST(test_query_first_solution);
     TEST(test_assertz_and_retract_all);
     TEST(test_wipe_database);
     TEST(test_execute_axiom_statement);

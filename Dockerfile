@@ -30,8 +30,9 @@ RUN apt-get update -y && apt-get install -y gdb
 #RUN apt-get update -y && apt-get install -y libgoogle-perftools-dev
 
 # SWI-Prolog specific apt repository and packages
-RUN apt-get update -y && apt-get install -y software-properties-common
+RUN apt-get update -y && apt-get install -y software-properties-common=0.99.22.9
 RUN apt-get update -y && apt-add-repository -y ppa:swi-prolog/stable
-RUN apt-get update -y && apt-get -y install swi-prolog swi-prolog-nox
+RUN apt-get update -y && apt-get -y install swi-prolog=9.2.8-2-g4ec5587f8-jammyppa2
+RUN apt-get update -y && apt-get -y install swi-prolog-nox=9.2.8-2-g4ec5587f8-jammyppa2
 
 CMD ["/bin/bash"]
