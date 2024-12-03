@@ -707,98 +707,350 @@ static void test_execute_infer_statement()
     using unilog::execute;
     using unilog::infer_statement;
     using unilog::redir_statement;
+    using unilog::statement;
 
     fid_t l_frame = PL_open_foreign_frame();
 
-    term_t l_args = PL_new_term_refs(3);
-    term_t l_module_stack = l_args;
-    term_t l_tag = l_args + 1;
-    term_t l_theorem = l_args + 2;
-
-    assert(
-        PL_unify(l_module_stack,
-                 make_list({
-                     make_atom("daniel"),
-                     make_atom("jake"),
-                 })));
-    assert(PL_unify(l_tag, make_atom("i0")));
-
     /////////////////////////////////////////
-    // ensure we CANNOT find theorem with this module stack + tag
+    // helper struct(s)
     /////////////////////////////////////////
+    struct stmt_decl
     {
-        fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(!call_predicate("theorem", {l_module_stack, l_tag, l_theorem}));
-        PL_discard_foreign_frame(l_unification_frame);
+        term_t m_module_stack;
+        statement m_statement;
     };
 
-    /////////////////////////////////////////
-    // execute the setup statements (in module path: l_module_stack)
-    /////////////////////////////////////////
-    execute(
-        redir_statement{
-            .m_tag = make_atom("g0"),
-            .m_guide = make_list({
-                make_atom("mp"),
-                make_list({
-                    make_atom("t"),
-                    make_atom("a0"),
-                }),
-                make_list({
-                    make_atom("t"),
-                    make_atom("a1"),
-                }),
-            }),
-        },
-        l_module_stack);
-
-    execute(
-        axiom_statement{
-            .m_tag = make_atom("a0"),
-            .m_theorem = make_list({
-                make_atom("if"),
-                make_atom("y"),
-                make_atom("x"),
-            }),
-        },
-        l_module_stack);
-    execute(
-        axiom_statement{
-            .m_tag = make_atom("a1"),
-            .m_theorem = make_atom("x"),
-        },
-        l_module_stack);
-
-    /////////////////////////////////////////
-    // execute the infer_statement
-    /////////////////////////////////////////
-    execute(
-        infer_statement{
-            .m_tag = l_tag,
-            .m_guide = make_list({
-                make_atom("r"),
-                make_atom("g0"),
-            }),
-        },
-        l_module_stack);
-
-    /////////////////////////////////////////
-    // ensure we CAN find theorem with this module stack + tag
-    /////////////////////////////////////////
+    struct conclusion
     {
-        fid_t l_unification_frame = PL_open_foreign_frame();
-        assert(call_predicate("theorem", {l_module_stack, l_tag, l_theorem}));
-        // assert(CALL_PRED("writeln", 1, l_module_stack));
-        // assert(CALL_PRED("writeln", 1, l_tag));
-        // assert(CALL_PRED("writeln", 1, l_theorem));
-        assert(equal_forms(l_theorem, make_atom("y")));
-        PL_discard_foreign_frame(l_unification_frame);
+        term_t m_module_stack;
+        term_t m_theorem;
     };
 
+    term_t l_universal_conclusion_tag = make_atom("conclusion");
+
     /////////////////////////////////////////
-    // ensure we do NOT have to worry about info persisting to next test case
+    // expect success data points
     /////////////////////////////////////////
-    wipe_database();
+    data_points<std::list<stmt_decl>, conclusion> l_test_cases =
+        {
+            {
+                // this case is a basic integration test for inferences
+                {
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag0"),
+                            .m_theorem = make_list({
+                                make_atom("if"),
+                                make_atom("y"),
+                                make_atom("x"),
+                            }),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag1"),
+                            .m_theorem = make_atom("x"),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = infer_statement{
+                            .m_tag = l_universal_conclusion_tag,
+                            .m_guide = make_list({
+                                make_atom("mp"),
+                                make_list({
+                                    make_atom("t"),
+                                    make_atom("tag0"),
+                                }),
+                                make_list({
+                                    make_atom("t"),
+                                    make_atom("tag1"),
+                                }),
+                            }),
+                        },
+                    },
+                },
+                conclusion{
+                    .m_module_stack = make_list({}),
+                    .m_theorem = make_atom("y"),
+                },
+            },
+            {
+                // this case tests if module_stack is received correctly
+                {
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag0"),
+                            .m_theorem = make_list({
+                                make_atom("claim"),
+                                make_atom("m1"),
+                                make_list({
+                                    make_atom("if"),
+                                    make_atom("y"),
+                                    make_atom("x"),
+                                }),
+                            }),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({
+                            make_atom("m1"),
+                        }),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag1"),
+                            .m_theorem = make_atom("x"),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = infer_statement{
+                            .m_tag = l_universal_conclusion_tag,
+                            .m_guide = make_list({
+                                make_atom("bout"),
+                                make_atom("m1"),
+                                make_list({
+                                    make_atom("mp"),
+                                    make_list({
+                                        make_atom("bin"),
+                                        make_atom("m1"),
+                                        make_list({
+                                            make_atom("t"),
+                                            make_atom("tag0"),
+                                        }),
+                                    }),
+                                    make_list({
+                                        make_atom("dout"),
+                                        make_atom("m1"),
+                                        make_list({
+                                            make_atom("t"),
+                                            make_atom("tag1"),
+                                        }),
+                                    }),
+                                }),
+                            }),
+                        },
+                    },
+                },
+                conclusion{
+                    .m_module_stack = make_list({}),
+                    .m_theorem = make_list({
+                        make_atom("claim"),
+                        make_atom("m1"),
+                        make_atom("y"),
+                    }),
+                },
+            },
+            {
+                // this tests to ensure module_stack is received correctly
+                {
+                    stmt_decl{
+                        .m_module_stack = make_list({
+                            make_atom("module"),
+                        }),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag0"),
+                            .m_theorem = make_list({
+                                make_atom("if"),
+                                make_atom("y"),
+                                make_atom("x"),
+                            }),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({
+                            make_atom("module"),
+                        }),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag1"),
+                            .m_theorem = make_atom("x"),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({
+                            make_atom("module"),
+                        }),
+                        .m_statement = infer_statement{
+                            .m_tag = l_universal_conclusion_tag,
+                            .m_guide = make_list({
+                                make_atom("mp"),
+                                make_list({
+                                    make_atom("t"),
+                                    make_atom("tag0"),
+                                }),
+                                make_list({
+                                    make_atom("t"),
+                                    make_atom("tag1"),
+                                }),
+                            }),
+                        },
+                    },
+                },
+                conclusion{
+                    .m_module_stack = make_list({
+                        make_atom("module"),
+                    }),
+                    .m_theorem = make_atom("y"),
+                },
+            },
+        };
+
+    for (const auto &[l_statements, l_conclusion] : l_test_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        term_t l_produced_theorem = PL_new_term_ref();
+
+        /////////////////////////////////////////
+        // before executing the statements, querying should fail
+        /////////////////////////////////////////
+        assert(!call_predicate("theorem", {l_conclusion.m_module_stack, l_universal_conclusion_tag, l_produced_theorem}));
+
+        /////////////////////////////////////////
+        // execute statements
+        /////////////////////////////////////////
+        for (const stmt_decl &l_stmt_decl : l_statements)
+        {
+            std::visit(
+                [&l_stmt_decl](const auto &l_stmt)
+                { execute(l_stmt, l_stmt_decl.m_module_stack); }, l_stmt_decl.m_statement);
+        }
+
+        /////////////////////////////////////////
+        // querying should succeed
+        /////////////////////////////////////////
+        assert(call_predicate("theorem", {l_conclusion.m_module_stack, l_universal_conclusion_tag, l_produced_theorem}));
+
+        /////////////////////////////////////////
+        // ensure content transferred properly
+        /////////////////////////////////////////
+        assert(equal_forms(l_produced_theorem, l_conclusion.m_theorem));
+
+        /////////////////////////////////////////
+        // make sure to wipe the db between test cases
+        /////////////////////////////////////////
+        wipe_database();
+
+        PL_close_foreign_frame(l_case_frame);
+    }
+
+    /////////////////////////////////////////
+    // expect throw data points
+    /////////////////////////////////////////
+    data_points<std::list<stmt_decl>, std::string> l_throw_cases =
+        {
+            {
+                {
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag0"),
+                            .m_theorem = make_list({
+                                make_atom("if"),
+                                make_atom("y"),
+                                make_atom("x"),
+                            }),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag1"),
+                            .m_theorem = make_atom("y"), // wrong theorem for inference to succeed
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = infer_statement{
+                            .m_tag = make_atom("i0"),
+                            .m_guide = make_list({
+                                make_atom("mp"),
+                                make_list({
+                                    make_atom("t"),
+                                    make_atom("tag0"),
+                                }),
+                                make_list({
+                                    make_atom("t"),
+                                    make_atom("tag1"),
+                                }),
+                            }),
+                        },
+                    },
+                },
+                ERR_MSG_INFER,
+            },
+            {
+                {
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag0"),
+                            .m_theorem = make_list({
+                                make_atom("if"),
+                                make_atom("y"),
+                                make_atom("x"),
+                            }),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = axiom_statement{
+                            .m_tag = make_atom("tag1"),
+                            .m_theorem = make_atom("x"),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = infer_statement{
+                            .m_tag = make_atom("tag0"), // tag is not unique
+                            .m_guide = make_list({
+                                make_atom("mp"),
+                                make_list({
+                                    make_atom("t"),
+                                    make_atom("tag0"),
+                                }),
+                                make_list({
+                                    make_atom("t"),
+                                    make_atom("tag1"),
+                                }),
+                            }),
+                        },
+                    },
+                },
+                ERR_MSG_DECL_THEOREM,
+            },
+        };
+
+    for (const auto &[l_statements, l_err_msg] : l_throw_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        try
+        {
+            /////////////////////////////////////////
+            // execute statements
+            /////////////////////////////////////////
+            for (const stmt_decl &l_stmt_decl : l_statements)
+            {
+                std::visit(
+                    [&l_stmt_decl](const auto &l_stmt)
+                    { execute(l_stmt, l_stmt_decl.m_module_stack); }, l_stmt_decl.m_statement);
+            }
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
+
+        /////////////////////////////////////////
+        // make sure to wipe the db between test cases
+        /////////////////////////////////////////
+        wipe_database();
+
+        PL_close_foreign_frame(l_case_frame);
+    }
 
     PL_discard_foreign_frame(l_frame);
 }
