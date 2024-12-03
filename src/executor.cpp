@@ -991,6 +991,30 @@ static void test_execute_program_throws()
                 ERR_MSG_DECL_REDIR,
             },
             {
+                // ensure redirect tags must be unique
+                {
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = redir_statement{
+                            .m_tag = make_list({
+                                make_atom("tag"),
+                            }),
+                            .m_guide = make_atom("x"),
+                        },
+                    },
+                    stmt_decl{
+                        .m_module_stack = make_list({}),
+                        .m_statement = redir_statement{
+                            .m_tag = make_list({
+                                PL_new_term_ref(),
+                            }), // tag unifies
+                            .m_guide = make_atom("y"),
+                        },
+                    },
+                },
+                ERR_MSG_DECL_REDIR,
+            },
+            {
                 {
                     stmt_decl{
                         .m_module_stack = make_list({}),
