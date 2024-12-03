@@ -15,20 +15,6 @@
     void_fn();                                            \
     LOG("    <<<< TEST FINISHED: " << #void_fn << std::endl);
 
-#define assert_throws(void_fxn) \
-    {                           \
-        bool l_threw = false;   \
-        try                     \
-        {                       \
-            void_fxn();         \
-        }                       \
-        catch (...)             \
-        {                       \
-            l_threw = true;     \
-        }                       \
-        assert(l_threw);        \
-    }
-
 template <typename Key, typename Value>
 using data_points = std::vector<std::pair<Key, Value>>;
 

@@ -5,6 +5,7 @@
 
 #include "parser.hpp"
 #include "lexer.hpp"
+#include "err_msg.hpp"
 
 /// This macro function defines
 ///     getting a value from cache if key contained,
@@ -38,10 +39,7 @@ namespace unilog
             // try to bind the term to an atom with specific text
             /////////////////////////////////////////
             if (!PL_put_atom_chars(a_term_t, l_atom.m_text.c_str()))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_PUT_ATOM_CHARS);
         }
         else if (std::holds_alternative<variable>(l_lexeme))
         {
@@ -66,10 +64,7 @@ namespace unilog
             // unify current term with entry
             /////////////////////////////////////////
             if (!PL_unify(a_term_t, l_alist_entry->second))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_UNIFY);
         }
         else if (std::holds_alternative<list_open>(l_lexeme))
         {
@@ -92,29 +87,16 @@ namespace unilog
                 extract_term_t(a_istream, a_var_alist, l_sub_term, &l_list_terminated);
 
                 if (a_istream.fail())
-                {
-                    a_istream.setstate(std::ios::failbit);
-                    return a_istream;
-                }
+                    throw std::runtime_error(ERR_MSG_NO_LIST_CLOSE);
 
                 l_list.push_back(l_sub_term);
-            }
-
-            // ensure the list was terminated
-            if (a_istream.fail() || !l_list_terminated)
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
             }
 
             /////////////////////////////////////////
             // extract the tail of the list
             /////////////////////////////////////////
             if (!PL_unify(a_term_t, l_list.back()))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_UNIFY);
             l_list.pop_back();
 
             /////////////////////////////////////////
@@ -123,29 +105,20 @@ namespace unilog
             for (auto l_it = l_list.rbegin(); l_it != l_list.rend(); l_it++)
             {
                 if (!PL_cons_list(a_term_t, *l_it, a_term_t))
-                {
-                    a_istream.setstate(std::ios::failbit);
-                    return a_istream;
-                }
+                    throw std::runtime_error(ERR_MSG_CONS_LIST);
             }
         }
         else if (std::holds_alternative<list_close>(l_lexeme))
         {
             // this basically checks if the list termination was expected
             if (a_list_terminated == nullptr)
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_MALFORMED_TERM);
 
             /////////////////////////////////////////
             // default tail is always nil
             /////////////////////////////////////////
             if (!PL_put_nil(a_term_t))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_PUT_NIL);
 
             /////////////////////////////////////////
             // notify the caller the list terminated
@@ -156,10 +129,7 @@ namespace unilog
         {
             // this basically checks if the list termination was expected
             if (a_list_terminated == nullptr)
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_MALFORMED_TERM);
 
             /////////////////////////////////////////
             // extract the tail of the list.
@@ -174,10 +144,7 @@ namespace unilog
             a_istream >> l_list_close;
 
             if (a_istream.fail() || !std::holds_alternative<list_close>(l_list_close))
-            {
-                a_istream.setstate(std::ios::failbit);
-                return a_istream;
-            }
+                throw std::runtime_error(ERR_MSG_NO_LIST_CLOSE);
 
             /////////////////////////////////////////
             // notify the caller the list terminated
@@ -187,7 +154,7 @@ namespace unilog
         else
         {
             // failed to extract prolog expression
-            a_istream.setstate(std::ios::failbit);
+            throw std::runtime_error(ERR_MSG_MALFORMED_TERM);
         }
 
         return a_istream;
@@ -249,12 +216,13 @@ namespace unilog
         lexeme l_command;
         a_istream >> l_command;
 
-        // atom is expected for the command
-        if (a_istream.fail() || !std::holds_alternative<atom>(l_command))
-        {
-            a_istream.setstate(std::ios::failbit);
+        // if we fail to extract lexeme, gracefully return
+        if (a_istream.fail())
             return a_istream;
-        }
+
+        // atom is expected for the command
+        if (!std::holds_alternative<atom>(l_command))
+            throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
         std::string l_command_text = std::get<atom>(l_command).m_text;
 
@@ -275,7 +243,7 @@ namespace unilog
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_theorem)))
-                return a_istream;
+                throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
             a_statement = l_result;
         }
@@ -291,7 +259,7 @@ namespace unilog
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_guide)))
-                return a_istream;
+                throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
             a_statement = l_result;
         }
@@ -307,7 +275,7 @@ namespace unilog
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_guide)))
-                return a_istream;
+                throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
             a_statement = l_result;
         }
@@ -323,14 +291,13 @@ namespace unilog
 
             if (!(extract_term_t(a_istream, l_var_alist, l_result.m_tag) &&
                   extract_term_t(a_istream, l_var_alist, l_result.m_file_path)))
-                return a_istream;
+                throw std::runtime_error(ERR_MSG_MALFORMED_STMT);
 
             a_statement = l_result;
         }
         else
         {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
+            throw std::runtime_error(ERR_MSG_INVALID_COMMAND);
         }
 
         /////////////////////////////////////////
@@ -340,10 +307,7 @@ namespace unilog
         a_istream >> l_eol;
 
         if (a_istream.fail() || !std::holds_alternative<eol>(l_eol))
-        {
-            a_istream.setstate(std::ios::failbit);
-            return a_istream;
-        }
+            throw std::runtime_error(ERR_MSG_NO_EOL);
 
         return a_istream;
     }
@@ -2618,25 +2582,57 @@ static void test_parser_extract_prolog_expression()
         LOG("success, case: \"" << l_key << "\"" << std::endl);
     }
 
-    std::vector<std::string> l_expect_failure_inputs =
+    data_points<std::string, std::string> l_expect_throw_inputs =
         {
-            "[abc",
-            "[[abc] [123]",
-            "]",
-            "\'",
-            "\"",
-            "[a|]",
-            "[a|b|c]",
-            "[a|b c]",
-            "[a|[b|']]",
-            "[;]",
-            "[|]",
+            {"[abc", ERR_MSG_NO_LIST_CLOSE},
+            {"[[abc] [123]", ERR_MSG_INVALID_LEXEME},
+            {"]", ERR_MSG_MALFORMED_TERM},
+            {"\'", ERR_MSG_CLOSING_QUOTE},
+            {"\"", ERR_MSG_CLOSING_QUOTE},
+            {"[a|]", ERR_MSG_MALFORMED_TERM},
+            {"[a|b|c]", ERR_MSG_NO_LIST_CLOSE},
+            {"[a|b c]", ERR_MSG_NO_LIST_CLOSE},
+            {"[a|[b|']]", ERR_MSG_CLOSING_QUOTE},
+            {"[;]", ERR_MSG_MALFORMED_TERM},
+            {"[|]", ERR_MSG_MALFORMED_TERM},
             // "abc]", // this is NOT an expect failure input.
             // this is because it will only try to parse the first prolog expression before a lexeme separator char.
-
         };
 
-    for (const auto &l_input : l_expect_failure_inputs)
+    for (const auto &[l_input, l_err_msg] : l_expect_throw_inputs)
+    {
+        std::stringstream l_ss(l_input);
+
+        // open PL stack frame
+        fid_t l_frame_id = PL_open_foreign_frame();
+
+        term_t l_exp = PL_new_term_ref();
+
+        std::map<std::string, term_t> l_var_alist;
+
+        try
+        {
+            unilog::extract_term_t(l_ss, l_var_alist, l_exp);
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
+
+        // close PL stack frame
+        PL_discard_foreign_frame(l_frame_id);
+
+        LOG("success, expected throw, case: " << l_input << std::endl);
+    }
+
+    std::vector<std::string> l_expect_failbit_inputs =
+        {
+            "",
+            "     ",
+        };
+
+    for (const auto &l_input : l_expect_failbit_inputs)
     {
         std::stringstream l_ss(l_input);
 
@@ -2814,26 +2810,56 @@ static void test_parser_extract_axiom_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_fail_cases =
+    data_points<std::string, std::string> l_throw_cases =
         {
-            "",
-            "abc",
-            "X",
-            ";",
-            "[]",
-            "axiom",
-            "axiom a0",
-            "axiom a0;",
-            "axiom a0 x",
-            "axiom a0 x y;",
-            "\'axiom\'",
-            "axiom \'a0\'",
-            "axiom \'a0\';",
-            "axiom \'a0\' \'x\'",
-            "axiom \'a0\' \'x\' \'y\';",
+            {"abc", ERR_MSG_INVALID_COMMAND},
+            {"X", ERR_MSG_MALFORMED_STMT},
+            {";", ERR_MSG_MALFORMED_STMT},
+            {"[]", ERR_MSG_MALFORMED_STMT},
+            {"axiom", ERR_MSG_MALFORMED_STMT},
+            {"axiom a0", ERR_MSG_MALFORMED_STMT},
+            {"axiom a0;", ERR_MSG_MALFORMED_TERM},
+            {"axiom a0 x", ERR_MSG_NO_EOL},
+            {"axiom a0 x y;", ERR_MSG_NO_EOL},
+            {"\'axiom\'", ERR_MSG_MALFORMED_STMT},
+            {"axiom \'a0\'", ERR_MSG_MALFORMED_STMT},
+            {"axiom \'a0\';", ERR_MSG_MALFORMED_TERM},
+            {"axiom \'a0\' \'x\'", ERR_MSG_NO_EOL},
+            {"axiom \'a0\' \'x\' \'y\';", ERR_MSG_NO_EOL},
         };
 
-    for (const auto &l_input : l_fail_cases)
+    for (const auto &[l_input, l_err_msg] : l_throw_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
+
+        try
+        {
+            l_ss >> l_statement;
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
+
+        LOG("success, case: expected throw extracting axiom_statement: " << l_input << std::endl);
+
+        PL_discard_foreign_frame(l_case_frame);
+    }
+
+    std::vector<std::string> l_failbit_cases =
+        {
+            "",
+            "      ",
+            "\n\n\t\r\t ",
+            "\n\n\t\r\t # this is a comment\n",
+        };
+
+    for (const auto &l_input : l_failbit_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -2845,7 +2871,7 @@ static void test_parser_extract_axiom_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting axiom_statement: " << l_input << std::endl);
+        LOG("success, case: expected failbit extracting axiom_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
@@ -3021,17 +3047,16 @@ static void test_parser_extract_redir_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_fail_cases =
+    data_points<std::string, std::string> l_throw_cases =
         {
-            "",
-            "abc",
-            "redir",
-            "redir g0",
-            "redir g0 []",
-            "redir g0 [] [theorem a0]",
+            {"abc", ERR_MSG_INVALID_COMMAND},
+            {"redir", ERR_MSG_MALFORMED_STMT},
+            {"redir g0", ERR_MSG_MALFORMED_STMT},
+            {"redir g0 []", ERR_MSG_NO_EOL},
+            {"redir g0 [] [theorem a0]", ERR_MSG_NO_EOL},
         };
 
-    for (const auto &l_input : l_fail_cases)
+    for (const auto &[l_input, l_err_msg] : l_throw_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -3039,12 +3064,42 @@ static void test_parser_extract_redir_statement()
 
         statement l_statement;
 
+        try
+        {
+            l_ss >> l_statement;
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
+
+        LOG("success, case: expected throw extracting redir_statement: " << l_input << std::endl);
+
+        PL_discard_foreign_frame(l_case_frame);
+    }
+
+    std::vector<std::string> l_failbit_cases =
+        {
+            "",
+            "      ",
+            "\n\n\t\r\t ",
+            "\n\n\t\r\t # this is a comment\n",
+        };
+
+    for (const auto &l_input : l_failbit_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
         l_ss >> l_statement;
 
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting redir_statement: " << l_input << std::endl);
+        LOG("success, case: expected failbit extracting redir_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
@@ -3163,21 +3218,51 @@ static void test_parser_extract_infer_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_fail_cases =
+    data_points<std::string, std::string> l_throw_cases =
         {
-            "",
-            "a",
-            "infer",
-            "infer i0",
-            "infer i0 theorem",
-            "infer i0 theorem guide",
-            "infer i0 theorem \';",
-            "infer i0 theorem [;",
-            "infer i0 theorem [;];",
-            "infer i0 theorem [a | b | c];",
+            {"a", ERR_MSG_INVALID_COMMAND},
+            {"infer", ERR_MSG_MALFORMED_STMT},
+            {"infer i0", ERR_MSG_MALFORMED_STMT},
+            {"infer i0 theorem", ERR_MSG_NO_EOL},
+            {"infer i0 theorem guide", ERR_MSG_NO_EOL},
+            {"infer i0 theorem \';", ERR_MSG_CLOSING_QUOTE},
+            {"infer i0 theorem [;", ERR_MSG_NO_EOL},
+            {"infer i0 theorem [;];", ERR_MSG_NO_EOL},
+            {"infer i0 theorem [a | b | c];", ERR_MSG_NO_EOL},
         };
 
-    for (const auto &l_input : l_fail_cases)
+    for (const auto &[l_input, l_err_msg] : l_throw_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
+
+        try
+        {
+            l_ss >> l_statement;
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
+
+        LOG("success, case: expected throw extracting infer_statement: " << l_input << std::endl);
+
+        PL_discard_foreign_frame(l_case_frame);
+    }
+
+    std::vector<std::string> l_failbit_cases =
+        {
+            "",
+            "      ",
+            "\n\n\t\r\t ",
+            "\n\n\t\r\t # this is a comment\n",
+        };
+
+    for (const auto &l_input : l_failbit_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -3189,7 +3274,7 @@ static void test_parser_extract_infer_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting redir_statement: " << l_input << std::endl);
+        LOG("success, case: expected failbit extracting infer_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }
@@ -3272,19 +3357,49 @@ static void test_parser_extract_refer_statement()
         PL_discard_foreign_frame(l_case_frame);
     }
 
-    std::vector<std::string> l_fail_cases =
+    data_points<std::string, std::string> l_throw_cases =
         {
-            "",
-            "abc",
-            "X",
-            "refer r0",
-            "refer r0 \'file/path\'",
-            "refer r0 \';",
-            "refer r0 \";",
-            "refer r0 [;];",
+            {"abc", ERR_MSG_INVALID_COMMAND},
+            {"X", ERR_MSG_MALFORMED_STMT},
+            {"refer r0", ERR_MSG_MALFORMED_STMT},
+            {"refer r0 \'file/path\'", ERR_MSG_NO_EOL},
+            {"refer r0 \';", ERR_MSG_CLOSING_QUOTE},
+            {"refer r0 \";", ERR_MSG_CLOSING_QUOTE},
+            {"refer r0 [;];", ERR_MSG_MALFORMED_TERM},
         };
 
-    for (const auto &l_input : l_fail_cases)
+    for (const auto &[l_input, l_err_msg] : l_throw_cases)
+    {
+        fid_t l_case_frame = PL_open_foreign_frame();
+
+        std::stringstream l_ss(l_input);
+
+        statement l_statement;
+
+        try
+        {
+            l_ss >> l_statement;
+            throw std::runtime_error("Failed test case: expected throw");
+        }
+        catch (const std::runtime_error &l_err)
+        {
+            assert(l_err.what() == l_err_msg);
+        }
+
+        LOG("success, case: expected throw extracting refer_statement: " << l_input << std::endl);
+
+        PL_discard_foreign_frame(l_case_frame);
+    }
+
+    std::vector<std::string> l_failbit_cases =
+        {
+            "",
+            "      ",
+            "\n\n\t\r\t ",
+            "\n\n\t\r\t # this is a comment\n",
+        };
+
+    for (const auto &l_input : l_failbit_cases)
     {
         fid_t l_case_frame = PL_open_foreign_frame();
 
@@ -3296,7 +3411,7 @@ static void test_parser_extract_refer_statement()
         // ensure failure of extraction
         assert(l_ss.fail());
 
-        LOG("success, case: expected failure extracting redir_statement: " << l_input << std::endl);
+        LOG("success, case: expected failbit extracting refer_statement: " << l_input << std::endl);
 
         PL_discard_foreign_frame(l_case_frame);
     }

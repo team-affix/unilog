@@ -38,10 +38,6 @@ decl_redir(ModulePath, Tag, Redirect) :-
         redir(ModulePath, Tag, Redirect)
     )).
 
-infer(ModulePath, Tag, Guide) :-
-    query(ModulePath, Guide, Theorem),
-    decl_theorem(ModulePath, Tag, Theorem).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% Handle querying
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -119,8 +115,8 @@ query(BStack, DStack, Conds, [cond, [CondGuide|NextGuide] | CondsRest], Target) 
 query(BStack, DStack, [], eval, [eval, Guide]) :-
     query(BStack, DStack, [], Guide, _).
 
-query(BStack, DStack, [], fail, [fail, Guide]) :-
-    \+ query(BStack, DStack, [], Guide, _).
+query(BStack, DStack, [], [fail, NextGuide], true) :-
+    \+ query(BStack, DStack, [], NextGuide, _).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% scope handling
@@ -230,48 +226,48 @@ test_decl_redir :-
     test_case(tc_decl_redir_1).
 
     % inference fails if guide fails
-    tc_infer_0 :-
-        \+ infer([], i0, [mp, [t, a0], [t, a1]]),
-        \+ theorem([], i0, _).
-
-    % inference fails if guide succeeds but tag not unique
-    tc_infer_1 :-
-        decl_theorem([], a0, [if, y, x]),
-        decl_theorem([], a1, x),
-        decl_theorem([], i0, obstruction),
-        \+ infer([], i0, [mp, [t, a0], [t, a1]]),
-        theorem([], i0, R),
-        R == obstruction.
-
-    % inference succeeds if guide succeeds AND tag unique
-    tc_infer_2 :-
-        decl_theorem([], a0, [if, y, x]),
-        decl_theorem([], a1, x),
-        %decl_theorem([], i0, obstruction),
-        infer([], i0, [mp, [t, a0], [t, a1]]),
-        theorem([], i0, R),
-        R == y.
-
-    % inference succeeds requires same module stack
-    tc_infer_3 :-
-        decl_theorem([], a0, [if, y, x]),
-        decl_theorem([], a1, x),
-        \+ infer([m1], i0, [mp, [t, a0], [t, a1]]),
-        \+ theorem([m1], i0, _).
-
-    % inference succeeds requires same module stack
-    tc_infer_4 :-
-        decl_theorem([m1], a0, [if, y, x]),
-        decl_theorem([m1], a1, x),
-        \+ infer([], i0, [mp, [t, a0], [t, a1]]),
-        \+ theorem([], i0, _).
-
-test_infer :-
-    test_case(tc_infer_0),
-    test_case(tc_infer_1),
-    test_case(tc_infer_2),
-    test_case(tc_infer_3),
-    test_case(tc_infer_4).
+%    tc_infer_0 :-
+%        \+ infer([], i0, [mp, [t, a0], [t, a1]]),
+%        \+ theorem([], i0, _).
+%
+%    % inference fails if guide succeeds but tag not unique
+%    tc_infer_1 :-
+%        decl_theorem([], a0, [if, y, x]),
+%        decl_theorem([], a1, x),
+%        decl_theorem([], i0, obstruction),
+%        \+ infer([], i0, [mp, [t, a0], [t, a1]]),
+%        theorem([], i0, R),
+%        R == obstruction.
+%
+%    % inference succeeds if guide succeeds AND tag unique
+%    tc_infer_2 :-
+%        decl_theorem([], a0, [if, y, x]),
+%        decl_theorem([], a1, x),
+%        %decl_theorem([], i0, obstruction),
+%        infer([], i0, [mp, [t, a0], [t, a1]]),
+%        theorem([], i0, R),
+%        R == y.
+%
+%    % inference succeeds requires same module stack
+%    tc_infer_3 :-
+%        decl_theorem([], a0, [if, y, x]),
+%        decl_theorem([], a1, x),
+%        \+ infer([m1], i0, [mp, [t, a0], [t, a1]]),
+%        \+ theorem([m1], i0, _).
+%
+%    % inference succeeds requires same module stack
+%    tc_infer_4 :-
+%        decl_theorem([m1], a0, [if, y, x]),
+%        decl_theorem([m1], a1, x),
+%        \+ infer([], i0, [mp, [t, a0], [t, a1]]),
+%        \+ theorem([], i0, _).
+%
+%test_infer :-
+%    test_case(tc_infer_0),
+%    test_case(tc_infer_1),
+%    test_case(tc_infer_2),
+%    test_case(tc_infer_3),
+%    test_case(tc_infer_4).
 
     % ensure query of nonexistent theorem fails
     tc_query_0 :-
@@ -629,12 +625,13 @@ test_eval :-
 
     % failure to find a theorem
     tc_fail_0 :-
-        query([], fail, [fail, [t, a0]]).
+        query([], [fail, [t, a0]], R),
+        R == true.
 
     % finds theorem, thus 'fail' fails
     tc_fail_1 :-
         decl_theorem([], a0, x),
-        \+ query([], fail, [fail, [t, a0]]).
+        \+ query([], [fail, [t, a0]], _).
 
 test_fail :-
     test_case(tc_fail_0),
@@ -981,9 +978,8 @@ test_dout :-
 
     % fail test, ensure that assumption list is NOT SHARED between caller and callee
     tc_discharge_assume_16 :-
-        decl_theorem([], a0, a),
-        query([],
-        [discharge, fail], [if, [fail, assume], [and|X]]),
+        decl_theorem([], a0, [if, b, a]),
+        query([], [discharge, [fail, [mp, [t, a0], assume]]], [if, true, [and|X]]),
         X == []. % ensure no conditions transfer
 
     % discharge/cond under mt, only denial is assumed
@@ -1073,7 +1069,7 @@ test_discharge_assume :-
     test(test_wipe_database),
     test(test_decl_theorem),
     test(test_decl_redir),
-    test(test_infer),
+    %test(test_infer),
     test(test_query),
     test(test_t),
     test(test_r),
