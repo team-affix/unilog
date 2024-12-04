@@ -78,6 +78,16 @@ query(BStack, DStack, Conds, [mt, ImpGuide, DenGuide], [not, X]) :-
     query(BStack, DStack, DenConds, DenGuide, [not, Y]),
     append(ImpConds, DenConds, Conds).
 
+query(BStack, DStack, Conds, [hs, ZifY, YifX], [if, Z, X]) :-
+    query(BStack, DStack, ZifYConds, ZifY, [if, Z, Y]),
+    query(BStack, DStack, YifXConds, YifX, [if, Y, X]),
+    append(ZifYConds, YifXConds, Conds).
+
+query(BStack, DStack, Conds, [ds, PorQ, NotP], Q) :-
+    query(BStack, DStack, PorQConds, PorQ, [or, P, Q]),
+    query(BStack, DStack, NotPConds, NotP, [not, P]),
+    append(PorQConds, NotPConds, Conds).
+
 query(_, _, [], [conj], [and]).
 query(BStack, DStack, Conds, [conj, FirstGuide | RestGuides], [and, FirstTheorem | RestTheorems]) :-
     query(BStack, DStack, FirstConds, FirstGuide, FirstTheorem),
@@ -385,6 +395,52 @@ test_mt :-
     test_case(tc_mt_0),
     test_case(tc_mt_1),
     test_case(tc_mt_2).
+
+    % hs succeeds on correct theorem forms
+    tc_hs_0 :-
+        decl_theorem([], a0, [if, c, b]),
+        decl_theorem([], a1, [if, b, a]),
+        query([], [hs, [t, a0], [t, a1]], R),
+        R == [if, c, a].
+
+    % hs fails on incorrect theorem forms
+    tc_hs_1 :-
+        decl_theorem([], a0, [if, c, b]),
+        decl_theorem([], a1, [if, c, a]), % incorrect thm
+        \+ query([], [hs, [t, a0], [t, a1]], _).
+
+    % hs fails on nonexistent theorem
+    tc_hs_2 :-
+        decl_theorem([], a0, [if, c, b]),
+        \+ query([], [hs, [t, a0], [t, a1]], _).
+
+test_hs :-
+    test_case(tc_hs_0),
+    test_case(tc_hs_1),
+    test_case(tc_hs_2).
+
+    % ds succeeds on correct thm forms
+    tc_ds_0 :-
+        decl_theorem([], a0, [or, a, b]),
+        decl_theorem([], a1, [not, a]),
+        query([], [ds, [t, a0], [t, a1]], R),
+        R == b.
+
+    % ds fails on incorrect thm forms
+    tc_ds_1 :-
+        decl_theorem([], a0, [or, a, b]),
+        decl_theorem([], a1, [not, b]),
+        \+ query([], [ds, [t, a0], [t, a1]], _).
+
+    % ds fails on nonexistent theorems
+    tc_ds_2 :-
+        decl_theorem([], a0, [or, a, b]),
+        \+ query([], [ds, [t, a0], [t, a1]], _).
+
+test_ds :-
+    test_case(tc_ds_0),
+    test_case(tc_ds_1),
+    test_case(tc_ds_2).
 
     % conj base case succeeds
     tc_conj_0 :-
@@ -1056,6 +1112,16 @@ test_dout :-
         query([], [discharge, [disj, [t, a0], assume]], R),
         R =@= [if, [or, _, X | _], [and, X]].
 
+    % test under hs
+    tc_discharge_assume_27 :-
+        query([], [discharge, [hs, assume, assume]], R),
+        R =@= [if, [if, Z, X], [and, [if, Z, Y], [if, Y, X]]].
+
+    % test under ds
+    tc_discharge_assume_28 :-
+        query([], [discharge, [ds, assume, assume]], R),
+        R =@= [if, Q, [and, [or, P, Q], [not, P]]].
+
 test_discharge_assume :-
     test_case(tc_discharge_assume_0),
     test_case(tc_discharge_assume_1),
@@ -1083,7 +1149,9 @@ test_discharge_assume :-
     test_case(tc_discharge_assume_23),
     test_case(tc_discharge_assume_24),
     test_case(tc_discharge_assume_25),
-    test_case(tc_discharge_assume_26).
+    test_case(tc_discharge_assume_26),
+    test_case(tc_discharge_assume_27),
+    test_case(tc_discharge_assume_28).
 
 :-
     test(test_wipe_database),
@@ -1095,6 +1163,8 @@ test_discharge_assume :-
     test(test_r),
     test(test_mp),
     test(test_mt),
+    test(test_hs),
+    test(test_ds),
     test(test_conj),
     test(test_disj),
     test(test_bind),
