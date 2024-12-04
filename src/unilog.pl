@@ -96,9 +96,13 @@ query(BStack, DStack, Conds, [disj, FirstGuide | RestGuides], [or, FirstTheorem 
 query(BStack, DStack, Conds, [bind, Target, NextGuide], Target) :-
     query(BStack, DStack, Conds, NextGuide, Target).
 
-query(BStack, DStack, Conds, [sub, SubGuide, NextGuide], Target) :-
+query(BStack, DStack, Conds, [seq, ReturnGuide], Target) :-
+    query(BStack, DStack, Conds, ReturnGuide, Target),
+    !.
+query(BStack, DStack, Conds, [seq, SubGuide | RestGuides], Target) :-
     query(BStack, DStack, [], SubGuide, _),
-    query(BStack, DStack, Conds, NextGuide, Target).
+    query(BStack, DStack, Conds, [seq | RestGuides], Target),
+    !.
 
 query(BStack, DStack, Conds, [gor, NextGuide | Rest], Target) :-
     query(BStack, DStack, Conds, NextGuide, Target)
@@ -468,20 +472,36 @@ test_bind :-
     test_case(tc_bind_1).
 
     % demonstrate successful subguide
-    tc_sub_0 :-
+    tc_seq_0 :-
         decl_theorem([], a0, indicator),
         decl_theorem([], a1, x),
-        query([], [sub, [t, a0], [t, a1]], R),
+        query([], [seq, [t, a0], [t, a1]], R),
         R == x.
 
     % demonstrate unsuccessful subguide
-    tc_sub_1 :-
+    tc_seq_1 :-
         decl_theorem([], a1, x),
-        \+ query([], [sub, [t, a0], [t, a1]], _).
+        \+ query([], [seq, [t, a0], [t, a1]], _).
 
-test_sub :-
-    test_case(tc_sub_0),
-    test_case(tc_sub_1).
+    % successful multiple subguides
+    tc_seq_2 :-
+        decl_theorem([], a0, indicator0),
+        decl_theorem([], a1, indicator1),
+        decl_theorem([], a2, x),
+        query([], [seq, [t, a0], [t, a1], [t, a2]], R),
+        R == x.
+
+    % unsuccessful multiple subguides
+    tc_seq_3 :-
+        decl_theorem([], a0, indicator0),
+        decl_theorem([], a2, x),
+        \+ query([], [seq, [t, a0], [t, a1], [t, a2]], _).
+
+test_seq :-
+    test_case(tc_seq_0),
+    test_case(tc_seq_1),
+    test_case(tc_seq_2),
+    test_case(tc_seq_3).
 
     % empty gor fails (no branches)
     tc_gor_0 :-
@@ -912,16 +932,16 @@ test_dout :-
         B =@= _,
         R =@= [if, Y, [and, [if, Y, X], X]].
 
-    % discharge/assume under sub (no assumptions in subguide)
+    % discharge/assume under seq (no assumptions in subguide)
     tc_discharge_assume_9 :-
         decl_theorem([], a0, x),
-        query([], [discharge, [sub, [t, a0], [mp, assume, assume]]], R),
+        query([], [discharge, [seq, [t, a0], [mp, assume, assume]]], R),
         R =@= [if, Y, [and, [if, Y, X], X]].
 
-    % discharge/assume under sub (undischarged assumptions in subguide) (subguide is different query, thus should be discharged)
+    % discharge/assume under seq (undischarged assumptions in subguide) (subguide is different query, thus should be discharged)
     tc_discharge_assume_10 :-
         decl_theorem([], a0, x),
-        \+ query([], [discharge, [sub, assume, [mp, assume, assume]]], _).
+        \+ query([], [discharge, [seq, assume, [mp, assume, assume]]], _).
 
     % discharge/assume under gor (first branch succeeds)
     tc_discharge_assume_11 :-
@@ -1078,7 +1098,7 @@ test_discharge_assume :-
     test(test_conj),
     test(test_disj),
     test(test_bind),
-    test(test_sub),
+    test(test_seq),
     test(test_gor),
     test(test_cond),
     test(test_eval),
