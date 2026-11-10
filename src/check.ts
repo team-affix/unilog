@@ -13,7 +13,11 @@ export interface Declaration {
     readonly uses: readonly string[];
     /** For theorems: how the proof was checked, step by step. */
     readonly proof?: Derivation;
+    /** For theorems: whether the claim was written out (`name : P = proof`) rather than inferred. */
+    readonly stated?: boolean;
     readonly loc: Loc;
+    /** Where the declaration's name is written. */
+    readonly nameLoc: Loc;
 }
 
 /**
@@ -22,12 +26,13 @@ export interface Declaration {
  */
 export type Derivation =
     /** A reference to a declaration, or to an assumption when `decl` is undefined. */
-    | { readonly k: 'use'; readonly text: string; readonly term: Term; readonly decl?: Declaration }
+    | { readonly k: 'use'; readonly text: string; readonly term: Term; readonly loc: Loc; readonly decl?: Declaration }
     /** `fn arg` */
     | {
           readonly k: 'apply';
           readonly text: string;
           readonly term: Term;
+          readonly loc: Loc;
           readonly fn: Derivation;
           readonly arg: Derivation;
       }
@@ -36,6 +41,7 @@ export type Derivation =
           readonly k: 'assume';
           readonly text: string;
           readonly term: Term;
+          readonly loc: Loc;
           readonly param: string;
           readonly body: Derivation;
       };
@@ -45,6 +51,8 @@ export interface Module {
     readonly name: string;
     readonly file: string;
     readonly imports: readonly string[];
+    /** Where each import's module name is written, parallel to `imports`. */
+    readonly importLocs: readonly Loc[];
     readonly decls: ReadonlyMap<string, Declaration>;
 }
 
@@ -108,6 +116,7 @@ export function checkModule(
 ): Module {
     const local = new Map<string, Declaration>();
     const imports: string[] = [];
+    const importLocs: Loc[] = [];
     /** All names this module declares, for clearer errors on forward references. */
     const declaredHere = new Set(decls.flatMap((d) => (d.k === 'import' ? [] : [d.name])));
     /** The declaration being checked, for a clearer error on self-reference. */
@@ -119,6 +128,7 @@ export function checkModule(
             if (local.size > 0) throw new UnilogError('Imports must come before declarations', decl.loc);
             if (imports.includes(path)) throw new UnilogError(`Module ${path} is imported twice`, decl.loc);
             imports.push(path);
+            importLocs.push(decl.pathLoc);
             continue;
         }
         if (local.has(decl.name)) throw new UnilogError(`'${decl.name}' is already declared in this module`, decl.loc);
@@ -134,6 +144,7 @@ export function checkModule(
                 scheme: generalize(prop),
                 uses: [],
                 loc: decl.loc,
+                nameLoc: decl.nameLoc,
             });
             continue;
         }
@@ -165,11 +176,13 @@ export function checkModule(
             scheme: generalize(proves),
             uses: [...uses],
             proof: derivation,
+            stated: decl.prop !== undefined,
             loc: decl.loc,
+            nameLoc: decl.nameLoc,
         });
     }
 
-    return { name, file, imports, decls: local };
+    return { name, file, imports, importLocs, decls: local };
 
     /** Resolves a name to an assumption (undefined) or a declaration. */
     function lookup(
@@ -223,11 +236,11 @@ export function checkModule(
         const text = showProof(e);
         switch (e.k) {
             case 'ref':
-                return { k: 'use', text, ...lookup(e, env, uses) };
+                return { k: 'use', text, loc: e.loc, ...lookup(e, env, uses) };
             case 'lam': {
                 const assumed = fresh();
                 const body = infer(e.body, new Map([...env, [e.param, assumed]]), uses);
-                return { k: 'assume', text, term: imp(assumed, body.term), param: e.param, body };
+                return { k: 'assume', text, term: imp(assumed, body.term), loc: e.loc, param: e.param, body };
             }
             case 'app': {
                 const fnD = infer(e.fn, env, uses);
@@ -247,7 +260,7 @@ export function checkModule(
                             explainMismatch(p, mismatch.a, mismatch.b, mismatch.occurs),
                         e.loc,
                     );
-                return { k: 'apply', text, term: result, fn: fnD, arg: argD };
+                return { k: 'apply', text, term: result, loc: e.loc, fn: fnD, arg: argD };
             }
         }
     }

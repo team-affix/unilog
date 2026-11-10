@@ -7,7 +7,8 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "bin": {
-        "unilog": "dist/cli.js"
+        "unilog": "dist/cli.js",
+        "unilog-lsp": "dist/lsp/server.js"
     },
     "files": [
         "dist"
@@ -24,20 +25,25 @@
         "test:watch": "vitest",
         "lint": "eslint src test",
         "format": "prettier --write src test",
-        "prepublishOnly": "npm run build && npm run lint && npm test"
+        "prepublishOnly": "npm run build && npm run lint && npm test",
+        "bundle": "npm run grammar && esbuild src/cli.ts --bundle --platform=node --target=node20 --outfile=release/unilog.cjs && esbuild src/lsp/server.ts --bundle --platform=node --target=node20 --outfile=release/unilog-lsp.cjs"
     },
     "dependencies": {
         "antlr4ng": "^3.0.16",
-        "commander": "^14.0.0"
+        "commander": "^14.0.0",
+        "vscode-languageserver": "^9.0.1",
+        "vscode-languageserver-textdocument": "^1.0.16"
     },
     "devDependencies": {
         "@eslint/js": "^9.32.0",
         "@types/node": "^22.15.30",
         "antlr-ng": "^1.0.10",
+        "esbuild": "^0.25.12",
         "eslint": "^9.32.0",
         "prettier": "^3.6.2",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.39.0",
-        "vitest": "^4.1.12"
+        "vitest": "^4.1.12",
+        "vscode-jsonrpc": "^8.2.1"
     }
 }

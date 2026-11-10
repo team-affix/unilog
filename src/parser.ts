@@ -1,5 +1,5 @@
 import { BaseErrorListener, CharStream, CommonTokenStream, ParserRuleContext, Recognizer, Token } from 'antlr4ng';
-import { Loc, UnilogError } from './errors';
+import { Loc, span, UnilogError } from './errors';
 import { UnilogLexer } from './generated/UnilogLexer';
 import {
     ApplyContext,
@@ -74,11 +74,18 @@ export function parseProposition(src: string, file = '<query>'): PropExpr {
     return converters(file).prop(makeParser(src, file).query().prop());
 }
 
-/** Functions turning parse-tree nodes into AST nodes, reporting locations in `file`. */
+/** Functions turning parse-tree nodes into AST nodes, reporting locations (with ranges) in `file`. */
 function converters(file: string) {
     const locOf = (ctx: ParserRuleContext | Token): Loc => {
         const start = ctx instanceof ParserRuleContext ? ctx.start : ctx;
-        return { file, line: start?.line ?? 0, col: (start?.column ?? 0) + 1 };
+        const stop = ctx instanceof ParserRuleContext ? (ctx.stop ?? ctx.start) : ctx;
+        return {
+            file,
+            line: start?.line ?? 0,
+            col: (start?.column ?? 0) + 1,
+            // Tokens never span lines: a token ends on its own line, its length after its start.
+            end: { line: stop?.line ?? 0, col: (stop?.column ?? 0) + 1 + (stop?.text?.length ?? 0) },
+        };
     };
 
     const simpleName = (tok: Token, role: string): string => {
@@ -95,9 +102,11 @@ function converters(file: string) {
         const atoms = ctx.propApp().propAtom().map(propAtom);
         const left = atoms
             .slice(1)
-            .reduce((fn, arg) => ({ k: 'app', fn, arg, loc: fn.loc }) as PropExpr, atoms[0] as PropExpr);
+            .reduce((fn, arg) => ({ k: 'app', fn, arg, loc: span(fn.loc, arg.loc) }) as PropExpr, atoms[0] as PropExpr);
         const rest = ctx.prop();
-        return rest ? { k: 'imp', from: left, to: prop(rest), loc: left.loc } : left;
+        if (!rest) return left;
+        const to = prop(rest);
+        return { k: 'imp', from: left, to, loc: span(left.loc, to.loc) };
     }
 
     function propAtom(ctx: PropAtomContext): PropExpr {
@@ -118,7 +127,10 @@ function converters(file: string) {
         const atoms = (ctx as ApplyContext).proofAtom().map(proofAtom);
         return atoms
             .slice(1)
-            .reduce((fn, arg) => ({ k: 'app', fn, arg, loc: fn.loc }) as ProofExpr, atoms[0] as ProofExpr);
+            .reduce(
+                (fn, arg) => ({ k: 'app', fn, arg, loc: span(fn.loc, arg.loc) }) as ProofExpr,
+                atoms[0] as ProofExpr,
+            );
     }
 
     function proofAtom(ctx: ProofAtomContext): ProofExpr {
@@ -129,22 +141,25 @@ function converters(file: string) {
 
     function decl(ctx: DeclContext): Decl {
         if (ctx instanceof ImportDeclContext)
-            return { k: 'import', path: ctx.NAME().getText().split('.'), loc: locOf(ctx) };
+            return {
+                k: 'import',
+                path: ctx.NAME().getText().split('.'),
+                loc: locOf(ctx),
+                pathLoc: locOf(ctx.NAME().symbol),
+            };
         const named = ctx as ClaimDeclContext | TheoremDeclContext;
         const name = simpleName(named.NAME().symbol, 'A declaration name');
+        const nameLoc = locOf(named.NAME().symbol);
         if (!/^[a-z0-9]/.test(name))
-            throw new UnilogError(
-                `Declaration names must start with a lowercase letter or digit: '${name}'`,
-                locOf(ctx),
-            );
+            throw new UnilogError(`Declaration names must start with a lowercase letter or digit: '${name}'`, nameLoc);
         if (ctx instanceof TheoremDeclContext)
-            return { k: 'theorem', name, proof: proof(ctx.proof()), loc: locOf(ctx) };
+            return { k: 'theorem', name, proof: proof(ctx.proof()), loc: locOf(ctx), nameLoc };
         const claim = ctx as ClaimDeclContext;
         const p = prop(claim.prop());
         const pr = claim.proof();
         return pr
-            ? { k: 'theorem', name, prop: p, proof: proof(pr), loc: locOf(ctx) }
-            : { k: 'axiom', name, prop: p, loc: locOf(ctx) };
+            ? { k: 'theorem', name, prop: p, proof: proof(pr), loc: locOf(ctx), nameLoc }
+            : { k: 'axiom', name, prop: p, loc: locOf(ctx), nameLoc };
     }
 
     return { prop, file: (tree: FileContext) => tree.decl().map(decl) };

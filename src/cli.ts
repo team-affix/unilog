@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
+import { VERSION } from './version';
 import { axioms, check, find, init, Output, proof, restsOn, show, summary, theorems } from './commands';
 
 const emit = (o: Output) => {
@@ -8,7 +9,10 @@ const emit = (o: Output) => {
     if (!o.ok) process.exitCode = 1;
 };
 
-const program = new Command().name('unilog').description('Check Unilog proofs, and list the beliefs a claim rests on');
+const program = new Command()
+    .name('unilog')
+    .version(VERSION)
+    .description('Check Unilog proofs, and list the beliefs a claim rests on');
 
 program
     .command('init')
