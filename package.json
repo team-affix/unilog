@@ -1,6 +1,6 @@
 {
     "name": "@team-affix/unilog",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "A minimal constructive logic for stating beliefs and checking what follows from them.",
     "license": "MIT",
     "author": "Team Affix",

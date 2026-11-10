@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { Declaration, Derivation, keyOf, Module } from '../check';
 import { Loc, UnilogError } from '../errors';
-import { Printer } from '../term';
+import { Printer, prune } from '../term';
 import { PROJECT_FILE, SourceProvider, targetOf, Workspace } from '../workspace';
 
 /**
@@ -45,10 +45,13 @@ export function rangeOf(loc: Loc): Range {
 const before = (a: Position, b: Position) => a.line < b.line || (a.line === b.line && a.character < b.character);
 const notAfter = (a: Position, b: Position) => !before(b, a);
 
-/** Whether `pos` is inside `loc` (end inclusive, so a cursor right after a name still counts). */
-export function contains(loc: Loc, pos: Position): boolean {
+/**
+ * Whether the character at `pos` is inside `loc`. With `cursor`, a position just after the end also counts,
+ * as a text cursor right after a name refers to that name (a mouse always points at a character).
+ */
+export function contains(loc: Loc, pos: Position, cursor = false): boolean {
     const r = rangeOf(loc);
-    return notAfter(r.start, pos) && notAfter(pos, r.end);
+    return notAfter(r.start, pos) && (cursor ? notAfter(pos, r.end) : before(pos, r.end));
 }
 
 /**
@@ -101,21 +104,29 @@ export function problems(a: Analysis): Problem[] {
     }));
 }
 
-/** The innermost proof step containing `pos`, if any. */
-function stepAt(d: Derivation, pos: Position): Derivation | undefined {
-    if (!contains(d.loc, pos)) return undefined;
+/** The proof steps containing `pos`, outermost first; the last is the innermost. Empty if none does. */
+function stepsAt(d: Derivation, pos: Position, cursor: boolean): Derivation[] {
+    if (!contains(d.loc, pos, cursor)) return [];
     const children = d.k === 'apply' ? [d.fn, d.arg] : d.k === 'assume' ? [d.body] : [];
     for (const c of children) {
-        const inner = stepAt(c, pos);
-        if (inner) return inner;
+        const inner = stepsAt(c, pos, cursor);
+        if (inner.length > 0) return [d, ...inner];
     }
-    return d;
+    return [d];
 }
 
-const code = (text: string) => '```unilog\n' + text + '\n```';
+const code = (lines: string[]) => '```unilog\n' + lines.join('\n') + '\n```';
 const describe = (d: Declaration, p: Printer) => `${d.kind} ${keyOf(d)} : ${p.print(d.scheme.body)}`;
 
-/** Markdown describing what is under the cursor: a declaration, a proof step, or an imported module. */
+/**
+ * Markdown describing what is under the cursor:
+ * - a declaration's name: what it proves;
+ * - a rule applied to arguments, e.g. `pair` in `pair (snd p) (fst p)`: every step of applying it, one
+ *   argument at a time, so partial applications can be seen without parentheses; then its general statement;
+ * - an assumption where it is introduced (`p` in `p => ...`): what it is assumed to prove;
+ * - any other proof step (a parenthesized one includes its parentheses): what it proves there;
+ * - an import: the module.
+ */
 export function hover(a: Analysis, file: string, pos: Position): string | undefined {
     const mod = a.ws.moduleAt(file);
     if (!mod) return undefined;
@@ -132,14 +143,32 @@ export function hover(a: Analysis, file: string, pos: Position): string | undefi
 
     for (const d of mod.decls.values()) {
         if (contains(d.nameLoc, pos))
-            return code(describe(d, p)) + (d.kind === 'theorem' && !d.stated ? '\n\n(inferred)' : '');
+            return code([describe(d, p)]) + (d.kind === 'theorem' && !d.stated ? '\n\n(inferred)' : '');
         if (!d.proof || !contains(d.loc, pos)) continue;
-        const step = stepAt(d.proof, pos);
+        const path = stepsAt(d.proof, pos, false);
+        const step = path.at(-1);
         if (!step) continue;
-        const here = code(`${step.text} : ${p.print(step.term)}`);
+        // Name variables as in the theorem's own statement (and its inlay hint), so every step agrees with it.
+        p.print(d.proof.term);
+
+        if (step.k === 'assume' && contains(step.paramLoc, pos)) {
+            const assumed = prune(step.term);
+            const proves = assumed.k === 'imp' ? p.print(assumed.from) : '?';
+            return code([`${step.param} : ${proves}`]) + '\n\nassumption';
+        }
+
+        // Climb while this step is the function being applied: that chain is the rule taking its arguments.
+        const spine = [step];
+        for (let i = path.length - 2; i >= 0; i--) {
+            const parent = path[i] as Derivation;
+            if (parent.k !== 'apply' || parent.fn !== spine[spine.length - 1]) break;
+            spine.push(parent);
+        }
+        const here = code(spine.map((s) => `${s.text} : ${p.print(s.term)}`));
         if (step.k !== 'use') return here;
         if (!step.decl) return `${here}\n\nassumption`;
-        return `${here}\n\n${code(describe(step.decl, p))}`;
+        // The rule's general statement has its own variables: name them independently.
+        return `${here}\n\n${code([describe(step.decl, new Printer())])}`;
     }
     return undefined;
 }
@@ -168,7 +197,7 @@ export function inlayHints(a: Analysis, file: string): InlayHint[] {
 export function definition(a: Analysis, file: string, pos: Position): { file: string; range: Range } | undefined {
     const mod = a.ws.moduleAt(file);
     if (!mod) return undefined;
-    const imported = mod.importLocs.findIndex((loc) => contains(loc, pos));
+    const imported = mod.importLocs.findIndex((loc) => contains(loc, pos, true));
     if (imported >= 0) {
         const m = a.ws.loaded().find((x) => x.name === mod.imports[imported]);
         return (
@@ -179,8 +208,8 @@ export function definition(a: Analysis, file: string, pos: Position): { file: st
         );
     }
     for (const d of mod.decls.values()) {
-        if (!d.proof || !contains(d.loc, pos)) continue;
-        const step = stepAt(d.proof, pos);
+        if (!d.proof || !contains(d.loc, pos, true)) continue;
+        const step = stepsAt(d.proof, pos, true).at(-1);
         if (step?.k === 'use' && step.decl)
             return { file: path.resolve(step.decl.nameLoc.file), range: rangeOf(step.decl.nameLoc) };
     }

@@ -145,7 +145,7 @@ describe('summary', () => {
         debate(`
             import Alice.Beliefs.
             party_wrong = lying_wrong (surprise_lies party).
-            via = p => lying_wrong p.
+            via = P => lying_wrong P.
         `);
 
     it('tabulates axioms and theorems per module, checked and imported', () => {

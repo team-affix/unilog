@@ -1,4 +1,5 @@
 import { Loc, UnilogError } from './errors';
+import { isVariableName } from './parser';
 import { Decl, PropExpr, ProofExpr } from './syntax';
 import { app, atom, fresh, generalize, imp, instantiate, Printer, rigid, Scheme, Term, unify, Var } from './term';
 
@@ -43,6 +44,8 @@ export type Derivation =
           readonly term: Term;
           readonly loc: Loc;
           readonly param: string;
+          /** Where the assumption's name is written. */
+          readonly paramLoc: Loc;
           readonly body: Derivation;
       };
 
@@ -196,8 +199,16 @@ export function checkModule(
         };
         if (e.path.length === 1) {
             const id = e.path[0] as string;
-            const assumed = env.get(id);
-            if (assumed) return { term: assumed };
+            // In a proof, a variable (uppercase) is an assumption, and anything else is a declaration.
+            if (isVariableName(id)) {
+                const assumed = env.get(id);
+                if (!assumed)
+                    throw new UnilogError(
+                        `'${id}' is not an assumption in scope (assumptions are introduced with '${id} => ...')`,
+                        e.loc,
+                    );
+                return { term: assumed };
+            }
             const mine = local.get(id);
             if (mine) return use(mine);
             const found = imports.flatMap((m) => {
@@ -240,7 +251,15 @@ export function checkModule(
             case 'lam': {
                 const assumed = fresh();
                 const body = infer(e.body, new Map([...env, [e.param, assumed]]), uses);
-                return { k: 'assume', text, term: imp(assumed, body.term), loc: e.loc, param: e.param, body };
+                return {
+                    k: 'assume',
+                    text,
+                    term: imp(assumed, body.term),
+                    loc: e.loc,
+                    param: e.param,
+                    paramLoc: e.paramLoc,
+                    body,
+                };
             }
             case 'app': {
                 const fnD = infer(e.fn, env, uses);

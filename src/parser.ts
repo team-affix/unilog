@@ -114,15 +114,19 @@ function converters(file: string) {
             const name = simpleName(ctx.NAME().symbol, 'A symbol in a proposition');
             return { k: isVariableName(name) ? 'var' : 'atom', name, loc: locOf(ctx) };
         }
-        return prop((ctx as PropAtomContext & { prop(): PropContext }).prop());
+        // A parenthesized proposition's range includes its parentheses.
+        return { ...prop((ctx as PropAtomContext & { prop(): PropContext }).prop()), loc: locOf(ctx) };
     }
 
     function proof(ctx: ProofContext): ProofExpr {
         if (ctx instanceof AssumeContext) {
             const param = simpleName(ctx.NAME().symbol, 'An assumption');
-            if (isVariableName(param))
-                throw new UnilogError(`Assumption names must start with a lowercase letter: '${param}'`, locOf(ctx));
-            return { k: 'lam', param, body: proof(ctx.proof()), loc: locOf(ctx) };
+            if (!isVariableName(param))
+                throw new UnilogError(
+                    `Assumptions are variables, so their names start with an uppercase letter or '_': '${param}'`,
+                    locOf(ctx),
+                );
+            return { k: 'lam', param, body: proof(ctx.proof()), loc: locOf(ctx), paramLoc: locOf(ctx.NAME().symbol) };
         }
         const atoms = (ctx as ApplyContext).proofAtom().map(proofAtom);
         return atoms
@@ -136,7 +140,8 @@ function converters(file: string) {
     function proofAtom(ctx: ProofAtomContext): ProofExpr {
         if (ctx instanceof ProofNameContext)
             return { k: 'ref', path: ctx.NAME().getText().split('.'), loc: locOf(ctx) };
-        return proof((ctx as ProofAtomContext & { proof(): ProofContext }).proof());
+        // A parenthesized step's range includes its parentheses.
+        return { ...proof((ctx as ProofAtomContext & { proof(): ProofContext }).proof()), loc: locOf(ctx) };
     }
 
     function decl(ctx: DeclContext): Decl {

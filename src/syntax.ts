@@ -13,8 +13,8 @@ export type ProofExpr =
     | { k: 'ref'; path: string[]; loc: Loc }
     /** Applying a proof to another: `b a`. */
     | { k: 'app'; fn: ProofExpr; arg: ProofExpr; loc: Loc }
-    /** Assuming a proof: `p => body` proves `A => B` if `body` proves B given p proves A. */
-    | { k: 'lam'; param: string; body: ProofExpr; loc: Loc };
+    /** Assuming a proof: `p => body` proves `A => B` if `body` proves B given p proves A. `paramLoc` is where `p` is written. */
+    | { k: 'lam'; param: string; body: ProofExpr; loc: Loc; paramLoc: Loc };
 
 export type Decl =
     /** `pathLoc` is the module name's location. */
