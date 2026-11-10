@@ -62,9 +62,9 @@ describe('find', () => {
         expect(commands.find('likes X sugar', dir)).toMatchObject({ ok: false });
     });
 
-    it('--pattern matches anything of the query shape', () => {
+    it('--unify matches anything of the query shape', () => {
         const dir = project('import Base.Facts.');
-        expect(commands.find('likes X sugar', dir, { pattern: true }).out).toEqual([
+        expect(commands.find('likes X sugar', dir, { unify: true }).out).toEqual([
             'theorem Base.Facts.c : likes jake sugar',
         ]);
     });

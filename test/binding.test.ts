@@ -19,17 +19,17 @@ const DECLS = `
     nested_c : (c => c) => done.
 `;
 
-function names(query: string, mode: 'default' | 'exact' | 'pattern'): string[] {
+function names(query: string, mode: 'default' | 'exact' | 'unify'): string[] {
     const dir = tmpDir();
     write(dir, { 'M/D.ul': DECLS });
-    const r = commands.find(query, dir, { exact: mode === 'exact', pattern: mode === 'pattern', json: true });
+    const r = commands.find(query, dir, { exact: mode === 'exact', unify: mode === 'unify', json: true });
     return (JSON.parse(r.out[0] as string) as { found: { name: string }[] }).found.map((f) => f.name.slice(4)).sort();
 }
 
 describe('find never confuses bound variables', () => {
     it.each([
-        // query,                         default (proves it),            exact (same generality),  pattern (same shape)
-        ['X => Y', ['any'], ['any'], ['any', 'b', 'bj', 'fixed', 'later', 'nested', 'nested_c', 'same', 'twin']], // pattern: any implication at all
+        // query,                         default (proves it),            exact (same generality),  unify (same shape)
+        ['X => Y', ['any'], ['any'], ['any', 'b', 'bj', 'fixed', 'later', 'nested', 'nested_c', 'same', 'twin']], // unify: any implication at all
         ['X => X', ['any', 'same'], ['same'], ['any', 'same']],
         ['c => c', ['any', 'same'], [], ['any', 'same']],
         // A variable first introduced at the second premise (Y) is still bound by the whole declaration.
@@ -45,14 +45,14 @@ describe('find never confuses bound variables', () => {
         // A premise that is itself an implication: its variables are bound by the outer declaration too.
         ['(c => c) => done', ['any', 'nested', 'nested_c'], ['nested_c'], ['any', 'nested', 'nested_c']],
         ['(A => A) => done', ['any', 'nested'], ['nested'], ['any', 'nested', 'nested_c']],
-    ])('%s', (query, byDefault, exact, pattern) => {
+    ])('%s', (query, byDefault, exact, unified) => {
         expect(names(query, 'default')).toEqual(byDefault);
         expect(names(query, 'exact')).toEqual(exact);
-        expect(names(query, 'pattern')).toEqual(pattern);
+        expect(names(query, 'unify')).toEqual(unified);
     });
 
-    it('rejects --pattern together with --exact', () => {
-        expect(commands.find('X', tmpDir(), { pattern: true, exact: true })).toMatchObject({ ok: false });
+    it('rejects --unify together with --exact', () => {
+        expect(commands.find('X', tmpDir(), { unify: true, exact: true })).toMatchObject({ ok: false });
     });
 });
 

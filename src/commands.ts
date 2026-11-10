@@ -266,11 +266,11 @@ export function init(dir: string, options: InitOptions = {}): Output {
 
 export interface FindOptions {
     /**
-     * Match declarations whose proposition merely fits the query's shape, with the query's variables
-     * standing for anything (e.g. `wrong X` finds `wrong bob_party`). Without it, a declaration must prove
-     * the query in full generality (e.g. `wrong X` only matches a proof that everything is wrong).
+     * Match declarations whose proposition unifies with the query: variables on both sides may bind, so it
+     * matches by shape (e.g. `wrong X` finds `wrong bob_party`). This finds candidates; it does not mean the
+     * declaration proves the query.
      */
-    pattern?: boolean;
+    unify?: boolean;
     /**
      * Match only declarations of exactly the query's generality: the declaration proves the query and the
      * query proves the declaration. `likes Y cake => likes Y sugar` matches `likes X cake => likes X sugar`
@@ -286,8 +286,7 @@ export interface FindOptions {
  * declarations that exist; it does not search for new proofs. Fails (non-zero exit) if none is found.
  */
 export function find(query: string, dir: string, options: FindOptions = {}): Output {
-    if (options.pattern && options.exact)
-        return { ok: false, out: [], err: ['--pattern and --exact cannot be combined'] };
+    if (options.unify && options.exact) return { ok: false, out: [], err: ['--unify and --exact cannot be combined'] };
     let l: Loaded;
     let expr: ReturnType<typeof parseProposition>;
     try {
@@ -304,9 +303,9 @@ export function find(query: string, dir: string, options: FindOptions = {}): Out
     // "a proves b" = a's variables may bind, b's are rigid (fixed but arbitrary).
     const declProvesQuery = (d: Declaration) => unify(instantiate(d.scheme), propositionTerm(expr, true)) === undefined;
     const queryProvesDecl = (d: Declaration) => unify(propositionTerm(expr), instantiateRigid(d.scheme)) === undefined;
-    const shapeMatches = (d: Declaration) => unify(instantiate(d.scheme), propositionTerm(expr)) === undefined;
-    const matches = options.pattern
-        ? shapeMatches
+    const unifies = (d: Declaration) => unify(instantiate(d.scheme), propositionTerm(expr)) === undefined;
+    const matches = options.unify
+        ? unifies
         : options.exact
           ? (d: Declaration) => declProvesQuery(d) && queryProvesDecl(d)
           : declProvesQuery;
