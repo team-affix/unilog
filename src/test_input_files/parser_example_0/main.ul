@@ -1,3 +1,0 @@
-axiom "a0" test;
-axiom [a1] "x";
-axiom 'a2' [x];

@@ -1,6 +1,0 @@
-# comment
-
-axiom a0 [if y x];
-
-# comment 2
-axiom a1 x; # comment 3

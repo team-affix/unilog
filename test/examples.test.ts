@@ -1,0 +1,27 @@
+import path from 'path';
+import { describe, expect, it } from 'vitest';
+import { commands } from '../src';
+
+const examples = path.join(__dirname, '..', 'examples');
+
+describe('examples/', () => {
+    it('all check', () => {
+        const r = commands.check(examples);
+        expect(r.err).toEqual([]);
+        expect(r.ok).toBe(true);
+    });
+
+    it('classical results list excluded middle among their axioms', () => {
+        expect(commands.axioms('Logic.Classical.double_negation', examples).out).toEqual([
+            'Logic.Classical.lem : or P (P => false)',
+            'Logic.Prelude.case : or A B => (A => C) => (B => C) => C',
+            'Logic.Prelude.explode : false => C',
+        ]);
+    });
+
+    it('constructive results do not', () => {
+        expect(commands.axioms('Logic.Prelude.tollens', examples).out).toEqual([
+            'Logic.Prelude.tollens rests on no axioms',
+        ]);
+    });
+});

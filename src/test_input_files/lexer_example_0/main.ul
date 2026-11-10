@@ -1,5 +1,0 @@
-# declare the first axiom
-axiom a0 [if y x] # this is a comment
-
-# declare the second axiom
-axiom a1 x
