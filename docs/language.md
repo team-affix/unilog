@@ -75,7 +75,9 @@ A project is configured by a `unilog.json` file in its directory (like Agda's `.
 - `roots`: where modules are looked up, in order, relative to the project. Put your own source's parent directory here, along with wherever your dependencies are installed. Roots that don't exist yet are skipped.
 - `check`: the folders (or `.ul` files) that `unilog check` checks. Modules they import are checked as far as they're used.
 
-Only the checked project's `unilog.json` applies. One that comes with a dependency is ignored.
+`unilog init` writes a starting one (`"roots": ["."]`, `"check": []`) for you to fill in. `unilog check` refuses to run while `check` is empty.
+
+Only the `unilog.json` of the project you run `unilog` in applies. One that comes with a dependency is ignored.
 
 A directory without a `unilog.json` checks every `.ul` file in it, with the directory as its only root.
 

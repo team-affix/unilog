@@ -1,7 +1,9 @@
+import fs from 'fs';
+import path from 'path';
 import { Declaration, keyOf } from './check';
 import { UnilogError } from './errors';
 import { Printer } from './term';
-import { targetOf, Workspace } from './workspace';
+import { DEFAULT_CONFIG, PROJECT_FILE, targetOf, Workspace } from './workspace';
 
 /** The outcome of a command: lines for stdout and stderr, and whether it succeeded. */
 export interface Output {
@@ -236,4 +238,17 @@ export function summary(dir: string, json = false): Output {
     const total = (own: boolean) => modules.filter((m) => m.own === own).reduce((n, m) => n + m.axioms, 0);
     out.push(`axioms: ${total(true)} in checked code, ${total(false)} in imported modules`);
     return { ok: true, out, err: [] };
+}
+
+/** `unilog init [dir]`: writes a starting `unilog.json`. Never overwrites an existing one. */
+export function init(dir: string): Output {
+    return guarded((out) => {
+        const file = path.join(dir, PROJECT_FILE);
+        if (fs.existsSync(file)) throw new UnilogError(`${file} already exists`);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(file, JSON.stringify(DEFAULT_CONFIG, null, 4) + '\n');
+        out.push(
+            `Created ${file}. List the folders to check under "check", and add any dependency folders to "roots".`,
+        );
+    });
 }

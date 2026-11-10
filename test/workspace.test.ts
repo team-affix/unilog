@@ -184,8 +184,9 @@ describe('targetOf', () => {
     it.each([
         ['invalid JSON', '{', /not valid JSON/],
         ['a non-object', '[]', /must be a JSON object/],
-        ['missing roots', JSON.stringify({ check: ['P'] }), /'roots' must be a non-empty array/],
-        ['empty check', JSON.stringify({ roots: ['.'], check: [] }), /'check' must be a non-empty array/],
+        ['missing roots', JSON.stringify({ check: ['P'] }), /'roots' must be an array of paths/],
+        ['non-string paths', JSON.stringify({ roots: [1], check: ['P'] }), /'roots' must be an array of paths/],
+        ['nothing to check', JSON.stringify({ roots: ['.'], check: [] }), /nothing to check yet/],
         ['an unknown field', JSON.stringify({ roots: ['.'], check: ['P'], name: 'x' }), /unknown field\(s\): name/],
         [
             'a missing check path',
@@ -198,6 +199,35 @@ describe('targetOf', () => {
         write(dir, { 'unilog.json': config, 'P/A.ul': '', 'P/readme.md': '' });
         expect(() => targetOf(dir)).toThrow(msg);
         expect(commands.check(dir)).toMatchObject({ ok: false, err: [expect.stringMatching(msg)] });
+    });
+});
+
+describe('init', () => {
+    it('writes a starting unilog.json with both fields', () => {
+        const dir = tmpDir();
+        expect(commands.init(dir).ok).toBe(true);
+        expect(JSON.parse(fs.readFileSync(path.join(dir, 'unilog.json'), 'utf8'))).toEqual({ roots: ['.'], check: [] });
+    });
+
+    it('creates the directory if needed', () => {
+        const dir = path.join(tmpDir(), 'new', 'project');
+        expect(commands.init(dir).ok).toBe(true);
+        expect(fs.existsSync(path.join(dir, 'unilog.json'))).toBe(true);
+    });
+
+    it('never overwrites an existing unilog.json', () => {
+        const dir = tmpDir();
+        write(dir, { 'unilog.json': '{"roots":["src"],"check":["src"]}' });
+        expect(commands.init(dir)).toMatchObject({ ok: false, err: [expect.stringMatching(/already exists/)] });
+        expect(fs.readFileSync(path.join(dir, 'unilog.json'), 'utf8')).toBe('{"roots":["src"],"check":["src"]}');
+    });
+
+    it('a fresh project says what to fill in, then checks once it is filled in', () => {
+        const dir = tmpDir();
+        commands.init(dir);
+        expect(commands.check(dir)).toMatchObject({ ok: false, err: [expect.stringMatching(/nothing to check yet/)] });
+        write(dir, { 'unilog.json': JSON.stringify({ roots: ['.'], check: ['Mine'] }), 'Mine/A.ul': 'a : p.' });
+        expect(commands.check(dir).ok).toBe(true);
     });
 });
 

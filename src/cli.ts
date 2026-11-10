@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { axioms, check, Output, restsOn, show, summary } from './commands';
+import { axioms, check, init, Output, restsOn, show, summary } from './commands';
 
 const emit = (o: Output) => {
     o.out.forEach((l) => console.log(l));
@@ -9,6 +9,12 @@ const emit = (o: Output) => {
 };
 
 const program = new Command().name('unilog').description('Check Unilog proofs, and list the beliefs a claim rests on');
+
+program
+    .command('init')
+    .description('Create a starting unilog.json')
+    .argument('[dir]', 'directory', '.')
+    .action((dir: string) => emit(init(dir)));
 
 program
     .command('check')

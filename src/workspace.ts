@@ -226,10 +226,13 @@ export interface Target {
 }
 
 function stringList(value: unknown, field: string, file: string): string[] {
-    if (!Array.isArray(value) || value.length === 0 || !value.every((v) => typeof v === 'string'))
-        throw new UnilogError(`${file}: '${field}' must be a non-empty array of paths`);
+    if (!Array.isArray(value) || !value.every((v) => typeof v === 'string'))
+        throw new UnilogError(`${file}: '${field}' must be an array of paths`);
     return value as string[];
 }
+
+/** The configuration `unilog init` writes: look up modules in the project directory, check nothing yet. */
+export const DEFAULT_CONFIG: ProjectConfig = { roots: ['.'], check: [] };
 
 /** Reads and validates a project file. */
 export function readProjectConfig(file: string): ProjectConfig {
@@ -267,5 +270,7 @@ export function targetOf(dir: string): Target {
         if (!p.endsWith(EXTENSION)) throw new UnilogError(`${file}: 'check' file is not a ${EXTENSION} file: ${c}`);
         return [p];
     });
+    if (config.check.length === 0)
+        throw new UnilogError(`${file}: nothing to check yet. Add folders or .ul files to 'check'.`);
     return { roots, files: [...new Set(files)].sort() };
 }
