@@ -16,8 +16,10 @@
         "node": ">=20"
     },
     "scripts": {
-        "build": "rm -rf dist && tsc -p tsconfig.build.json",
-        "typecheck": "tsc --noEmit",
+        "grammar": "antlr-ng -Dlanguage=TypeScript --generate-listener=false -o src/generated grammar/Unilog.g4",
+        "build": "npm run grammar && rm -rf dist && tsc -p tsconfig.build.json",
+        "typecheck": "npm run grammar && tsc --noEmit",
+        "pretest": "npm run grammar",
         "test": "vitest run",
         "test:watch": "vitest",
         "lint": "eslint src test",
@@ -25,11 +27,13 @@
         "prepublishOnly": "npm run build && npm run lint && npm test"
     },
     "dependencies": {
+        "antlr4ng": "^3.0.16",
         "commander": "^14.0.0"
     },
     "devDependencies": {
         "@eslint/js": "^9.32.0",
         "@types/node": "^22.15.30",
+        "antlr-ng": "^1.0.10",
         "eslint": "^9.32.0",
         "prettier": "^3.6.2",
         "typescript": "^5.9.3",

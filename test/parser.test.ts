@@ -1,32 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { parse, tokenize, UnilogError } from '../src';
+import { parse, UnilogError } from '../src';
 
-describe('tokenize', () => {
-    it('splits names, symbols and qualified names, skipping comments', () => {
-        const toks = tokenize('a : b => C. # comment\nx = Mod.Sub.y z.', 'f');
-        expect(toks.map((t) => (t.t === 'name' ? t.text : t.t))).toEqual([
-            'a',
-            'colon',
-            'b',
-            'arrow',
-            'C',
-            'dot',
-            'x',
-            'equals',
-            'Mod.Sub.y',
-            'z',
-            'dot',
-            'eof',
-        ]);
+describe('lexing (via parse)', () => {
+    it('joins dotted names without spaces into qualified names, and treats other dots as terminators', () => {
+        const decls = parse('a : b => C. # comment\nx = Mod.Sub.y z.', 'f');
+        expect(decls).toHaveLength(2);
+        expect(decls[1]).toMatchObject({
+            proof: { k: 'app', fn: { k: 'ref', path: ['Mod', 'Sub', 'y'] }, arg: { path: ['z'] } },
+        });
     });
 
-    it('tracks line and column', () => {
-        const toks = tokenize('a\n  bb', 'f');
-        expect(toks[1]?.loc).toEqual({ file: 'f', line: 2, col: 3 });
+    it('skips comments, including at the end of the file', () => {
+        expect(parse('# only a comment', 'f')).toEqual([]);
+        expect(parse('a : p. # trailing', 'f')).toHaveLength(1);
+    });
+
+    it('records line and column', () => {
+        const [, d] = parse('a : p.\n  bb : q.', 'f');
+        expect(d?.loc).toEqual({ file: 'f', line: 2, col: 3 });
     });
 
     it('rejects unknown characters with a location', () => {
-        expect(() => tokenize('a : b & c.', 'f.ul')).toThrow(/f\.ul:1:7: Unexpected character '&'/);
+        expect(() => parse('a : b & c.', 'f.ul')).toThrow(/f\.ul:1:7: Unexpected character '&'/);
     });
 });
 
@@ -68,13 +63,14 @@ describe('parse', () => {
     });
 
     it.each([
-        ['missing terminator', 'a : b', /Expected '\.'/],
-        ['neither : nor =', 'a.', /Expected ':' or '='/],
+        ['missing terminator', 'a : b', /1:6: Syntax error: .*end of file/],
+        ['neither : nor =', 'a.', /1:2: Syntax error/],
         ['uppercase declaration name', 'Foo : b.', /must start with a lowercase/],
         ['qualified symbol in a proposition', 'a : b.c.', /put a space or newline/],
         ['uppercase assumption', 't = X => X.', /Assumption names must start with a lowercase/],
-        ['unbalanced parens', 'a : (b c.', /Expected '\)'/],
-        ['empty proposition', 'a : .', /Expected a proposition/],
+        ['unbalanced parens', 'a : (b c.', /1:9: Syntax error: missing '\)'/],
+        ['empty proposition', 'a : .', /1:5: Syntax error: .*expecting \{'\(', a name\}/],
+        ['import without a module', 'import .', /1:8: Syntax error: missing a name/],
     ])('rejects %s', (_, src, msg) => {
         expect(() => parse(src, 'f')).toThrow(UnilogError);
         expect(() => parse(src, 'f')).toThrow(msg);

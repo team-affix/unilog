@@ -33,14 +33,17 @@ See the [language reference](docs/language.md) and [`examples/`](examples).
 
 ```bash
 npm ci
-npm test        # vitest
+npm test        # generates the parser from the grammar, then runs vitest
 npm run lint
 npm run build
 ```
 
+The parser is generated from [`grammar/Unilog.g4`](grammar/Unilog.g4) with [antlr-ng](https://github.com/mike-lischke/antlr-ng) (no Java needed) into `src/generated/`, which is not committed. `npm run grammar` regenerates it.
+
 ```
 src/term.ts       propositions, unification, generalization, printing
-src/parser.ts     tokenizer and parser
+grammar/Unilog.g4 the ANTLR grammar
+src/parser.ts     parse tree -> AST, and the rules about names
 src/check.ts      inference for each declaration (the trusted core)
 src/workspace.ts  modules, imports, search roots, axiom tracing
 src/commands.ts   check / axioms / show
