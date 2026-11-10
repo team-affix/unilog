@@ -2,7 +2,7 @@
     "name": "unilog",
     "displayName": "Unilog",
     "description": "Unilog language support: errors as you type, what each proof step proves on hover, inferred claims inline, go to definition.",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "publisher": "team-affix",
     "license": "MIT",
     "repository": {
@@ -27,6 +27,12 @@
                     ".ul"
                 ],
                 "configuration": "./language-configuration.json"
+            },
+            {
+                "id": "unilog-step",
+                "aliases": [
+                    "Unilog proof step"
+                ]
             }
         ],
         "grammars": [
@@ -34,11 +40,26 @@
                 "language": "unilog",
                 "scopeName": "source.unilog",
                 "path": "./syntaxes/unilog.tmLanguage.json"
+            },
+            {
+                "language": "unilog-step",
+                "scopeName": "source.unilog.step",
+                "path": "./syntaxes/unilog-step.tmLanguage.json"
             }
         ],
         "configurationDefaults": {
             "[unilog]": {
                 "editor.inlayHints.enabled": "on"
+            },
+            "editor.tokenColorCustomizations": {
+                "textMateRules": [
+                    {
+                        "scope": "support.function.proof.unilog",
+                        "settings": {
+                            "foreground": "#E6DB9A"
+                        }
+                    }
+                ]
             }
         }
     },

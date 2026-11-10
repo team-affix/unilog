@@ -14,10 +14,14 @@ const registry = new vsctm.Registry({
         createOnigScanner: (p) => new oniguruma.OnigScanner(p),
         createOnigString: (s) => new oniguruma.OnigString(s),
     }),
-    loadGrammar: async () =>
-        vsctm.parseRawGrammar(fs.readFileSync(new URL('../syntaxes/unilog.tmLanguage.json', import.meta.url), 'utf8'), 'g.json'),
+    loadGrammar: async (scope) => {
+        const file = { 'source.unilog': 'unilog.tmLanguage.json', 'source.unilog.step': 'unilog-step.tmLanguage.json' }[scope];
+        if (!file) return null;
+        return vsctm.parseRawGrammar(fs.readFileSync(new URL(`../syntaxes/${file}`, import.meta.url), 'utf8'), file);
+    },
 });
-const grammar = await registry.loadGrammar('source.unilog');
+let grammar = await registry.loadGrammar('source.unilog');
+const stepGrammar = await registry.loadGrammar('source.unilog.step');
 
 /**
  * The most specific scope of each non-blank token, over one or more lines tokenized in sequence (so a region
@@ -33,7 +37,7 @@ function scopes(...lines) {
             const text = line.slice(t.startIndex, t.endIndex).trim();
             if (text === '') continue;
             const scope = t.scopes.at(-1);
-            out.push([text, scope === 'source.unilog' || scope.startsWith('meta.') ? '' : scope]);
+            out.push([text, scope.startsWith('source.') || scope.startsWith('meta.') ? '' : scope]);
         }
     }
     return out;
@@ -41,6 +45,7 @@ function scopes(...lines) {
 
 const PROP_VAR = 'entity.name.type.parameter.unilog';
 const ASSUMPTION = 'variable.parameter.assumption.unilog';
+const PROOF = 'support.function.proof.unilog';
 
 const cases = [
     [
@@ -79,13 +84,13 @@ const cases = [
             ['=', 'keyword.operator.equals.unilog'],
             ['P', ASSUMPTION],
             ['=>', 'keyword.operator.arrow.unilog'],
-            ['pair', ''],
+            ['pair', PROOF],
             ['(', 'punctuation.parenthesis.unilog'],
-            ['snd', ''],
+            ['snd', PROOF],
             ['P', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
             ['(', 'punctuation.parenthesis.unilog'],
-            ['fst', ''],
+            ['fst', PROOF],
             ['P', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
             ['.', 'punctuation.terminator.unilog'],
@@ -97,7 +102,7 @@ const cases = [
             ['mine', 'entity.name.function.unilog'],
             ['=', 'keyword.operator.equals.unilog'],
             ['Kant.Ethics.', 'entity.name.namespace.unilog'],
-            ['duty', 'variable.other.unilog'],
+            ['duty', PROOF],
             ['(', 'punctuation.parenthesis.unilog'],
             ['P', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
@@ -125,7 +130,8 @@ const cases = [
             ['=', 'keyword.operator.equals.unilog'],
             ['Nnp', ASSUMPTION],
             ['=>', 'keyword.operator.arrow.unilog'],
-            ['case lem', ''],
+            ['case', PROOF],
+            ['lem', PROOF],
             ['(', 'punctuation.parenthesis.unilog'],
             ['P', ASSUMPTION],
             ['=>', 'keyword.operator.arrow.unilog'],
@@ -138,7 +144,63 @@ const cases = [
             ['.', 'punctuation.terminator.unilog'],
         ],
     ],
+    [
+        // route_more is a proof (colored) where it is used in a proof, and route is just a symbol in a proposition.
+        ['two_roads : road X Y => route X Z = Xy => route_more Xy (route_road Yz).'],
+        [
+            ['two_roads', 'entity.name.function.unilog'],
+            [':', 'keyword.operator.colon.unilog'],
+            ['road', ''],
+            ['X', PROP_VAR],
+            ['Y', PROP_VAR],
+            ['=>', 'keyword.operator.arrow.unilog'],
+            ['route', ''],
+            ['X', PROP_VAR],
+            ['Z', PROP_VAR],
+            ['=', 'keyword.operator.equals.unilog'],
+            ['Xy', ASSUMPTION],
+            ['=>', 'keyword.operator.arrow.unilog'],
+            ['route_more', PROOF],
+            ['Xy', ASSUMPTION],
+            ['(', 'punctuation.parenthesis.unilog'],
+            ['route_road', PROOF],
+            ['Yz', ASSUMPTION],
+            [')', 'punctuation.parenthesis.unilog'],
+            ['.', 'punctuation.terminator.unilog'],
+        ],
+    ],
 ];
 
 for (const [lines, expected] of cases) assert.deepEqual(scopes(...lines), expected, lines.join('\n'));
-console.log(`grammar: ${cases.length} cases passed`);
+
+// Hover steps (`proof : proposition`) use the step grammar: the proof part is colored as a proof.
+const stepCases = [
+    [
+        ['route_more Xy (route_road Yz) : route X Z'],
+        [
+            ['route_more', PROOF],
+            ['Xy', ASSUMPTION],
+            ['(', 'punctuation.parenthesis.unilog'],
+            ['route_road', PROOF],
+            ['Yz', ASSUMPTION],
+            [')', 'punctuation.parenthesis.unilog'],
+            [':', 'keyword.operator.colon.unilog'],
+            ['route', ''],
+            ['X', PROP_VAR],
+            ['Z', PROP_VAR],
+        ],
+    ],
+    [
+        ['P : and A B'],
+        [
+            ['P', ASSUMPTION],
+            [':', 'keyword.operator.colon.unilog'],
+            ['and', ''],
+            ['A', PROP_VAR],
+            ['B', PROP_VAR],
+        ],
+    ],
+];
+grammar = stepGrammar;
+for (const [lines, expected] of stepCases) assert.deepEqual(scopes(...lines), expected, lines.join('\n'));
+console.log(`grammar: ${cases.length + stepCases.length} cases passed`);
