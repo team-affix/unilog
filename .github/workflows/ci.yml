@@ -36,8 +36,15 @@ jobs:
         working-directory: editors/vscode
       - run: npm test
         working-directory: editors/vscode
-      - run: npx vsce package --no-dependencies
+      - run: npx vsce package --no-dependencies --out unilog-vscode-preview.vsix
         working-directory: editors/vscode
+      # Keep the built extension, so any PR or branch can be tried without a release: on the run's page,
+      # under Artifacts, download unilog-vscode-preview (a zip containing the .vsix).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unilog-vscode-preview
+          path: editors/vscode/unilog-vscode-preview.vsix
+          retention-days: 30
 
   # Publishes a GitHub Release with the CLI, the language server and the VS Code extension, after every
   # test job passes. Runs when:
