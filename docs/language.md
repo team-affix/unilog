@@ -48,6 +48,7 @@ Kant.Ethics.duty        # a qualified reference to an imported declaration
 ```
 
 - **Application** `b a` unifies `a`'s proposition with `b`'s premise, and proves `b`'s conclusion with the resulting substitution.
+- **Currying.** A rule with several premises takes them one at a time: given `gift : likes X Y => has Z Y => gives Z X Y`, `gift a` proves `has Z cake => gives Z jake cake`, an implication still waiting for its second premise. `gift a h` is the same as `(gift a) h`.
 - **Assumption** `p => body` proves `A => B` when `body` proves `B` using `p` as a proof of `A`. This is how you prove implications by hypothetical reasoning.
 - **Names** refer to, in order: an assumption in scope, an earlier declaration in the same module, or a declaration in exactly one imported module. Use a qualified name (`Mod.name`) when two imports define the same name.
 

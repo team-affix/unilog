@@ -84,6 +84,35 @@ describe('axioms and theorems', () => {
     });
 });
 
+describe('currying: applying one premise at a time', () => {
+    const src = `
+        gift : likes X Y => has Z Y => gives Z X Y.
+        a : likes jake cake.
+        h : has mom cake.
+        half = gift a.
+        half_stated : has Z cake => gives Z jake cake = gift a.
+        full = half h.
+        both = gift a h.
+    `;
+
+    it('partial application yields an implication over the remaining premises', () => {
+        const m = checkSource(src);
+        expect(proves(m, 'half')).toBe('has Z cake => gives Z jake cake');
+        expect(proves(m, 'half_stated')).toBe('has Z cake => gives Z jake cake');
+    });
+
+    it('finishing later is the same as applying everything at once', () => {
+        const m = checkSource(src);
+        expect(proves(m, 'full')).toBe('gives mom jake cake');
+        expect(proves(m, 'both')).toBe('gives mom jake cake');
+    });
+
+    it('a partially applied rule is reusable, with its remaining variables fresh at each use', () => {
+        const m = checkSource(src + 'p2 : A => B => both A B.\nh2 : has dad cake.\ntwo = p2 (half h) (half h2).');
+        expect(proves(m, 'two')).toBe('both (gives mom jake cake) (gives dad jake cake)');
+    });
+});
+
 describe('stated claims', () => {
     const base = `
         a : likes jake cake.
