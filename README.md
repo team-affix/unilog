@@ -20,8 +20,10 @@ npm i -g @team-affix/unilog
 
 unilog check           # check the project in this directory, as configured by unilog.json
 unilog check -v        # ...and print what every declaration proves
-unilog axioms Ethics.Main.keep_promises   # every axiom that claim rests on
+unilog check --max-axioms 0               # fail if this project's own code declares any axiom
+unilog axioms Ethics.Main.keep_promises   # every axiom that claim rests on (--json for tools)
 unilog show Ethics.Main.keep_promises     # what it proves
+unilog summary                            # axiom/theorem counts per module (--json: the full graph)
 ```
 
 A project's `unilog.json` says where modules are found and what to check:

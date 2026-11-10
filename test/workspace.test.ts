@@ -205,13 +205,17 @@ describe('commands', () => {
     it('check reports success with counts', () => {
         const dir = tmpDir();
         write(dir, { ...KANT, ...ETHICS });
-        expect(commands.check(dir)).toEqual({ ok: true, out: ['ok: 2 module(s), 1 theorem(s), 2 axiom(s)'], err: [] });
+        expect(commands.check(dir)).toEqual({
+            ok: true,
+            out: ['ok: 2 module(s) checked, declaring 1 theorem(s) and 2 axiom(s); 0 imported module(s)'],
+            err: [],
+        });
     });
 
     it('check --verbose lists every declaration', () => {
         const dir = tmpDir();
         write(dir, KANT);
-        expect(commands.check(dir, true).out.slice(0, 2)).toEqual([
+        expect(commands.check(dir, { verbose: true }).out.slice(0, 2)).toEqual([
             'axiom   Kant.Ethics.good_will : good will',
             'axiom   Kant.Ethics.duty : good X => ought (act_from X)',
         ]);

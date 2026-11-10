@@ -106,3 +106,19 @@ forall_intro : proves G P => notfree X G => proves G (forall X P).
 ```
 
 This is how Metamath builds mathematics from a core that does little more than substitution. Nothing in the core changes. It only makes proofs longer, which is a job for proof-search tools.
+
+## Analysis
+
+- `unilog check --max-axioms N` fails if the checked code (the project's own modules) declares more than N axioms.
+- `unilog axioms <Mod.name> [--json]` lists every axiom a declaration ultimately rests on, with its module.
+- `unilog summary [--json]` counts axioms and theorems per module, for checked and imported modules. The JSON includes every declaration, what it proves, what it uses directly, and every axiom it rests on: the graph needed for analysis and visualization.
+
+### Arguing from someone else's beliefs
+
+To show what follows from someone's beliefs, depend on their package and prove things using only their axioms. A verifier checks two things:
+
+1. `unilog check --max-axioms 0`: the argument itself states no new beliefs.
+2. `unilog axioms <conclusion> --json`: every axiom the conclusion rests on is from their package.
+
+The second check is the one that matters. The first alone can be evaded by putting extra axioms in a second package of your own and importing it. That package is imported, not checked, so `--max-axioms 0` passes, but the conclusion would rest on its axioms.
+

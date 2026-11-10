@@ -1,11 +1,4 @@
-import {
-    BaseErrorListener,
-    CharStream,
-    CommonTokenStream,
-    ParserRuleContext,
-    Recognizer,
-    Token,
-} from 'antlr4ng';
+import { BaseErrorListener, CharStream, CommonTokenStream, ParserRuleContext, Recognizer, Token } from 'antlr4ng';
 import { Loc, UnilogError } from './errors';
 import { UnilogLexer } from './generated/UnilogLexer';
 import {

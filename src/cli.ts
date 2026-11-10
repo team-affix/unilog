@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
-import { axioms, check, Output, show } from './commands';
+import { Command, InvalidArgumentError } from 'commander';
+import { axioms, check, Output, show, summary } from './commands';
 
 const emit = (o: Output) => {
     o.out.forEach((l) => console.log(l));
@@ -15,14 +15,24 @@ program
     .description('Check a project (configured by unilog.json), or every .ul file in a directory without one')
     .argument('[dir]', 'directory', '.')
     .option('-v, --verbose', 'print every declaration and what it proves')
-    .action((dir: string, opts: { verbose?: boolean }) => emit(check(dir, opts.verbose)));
+    .option(
+        '--max-axioms <n>',
+        'fail if the checked code declares more than n axioms (0: it may only use imported ones)',
+        (v: string) => {
+            const n = Number(v);
+            if (!Number.isInteger(n) || n < 0) throw new InvalidArgumentError('must be a whole number, 0 or more');
+            return n;
+        },
+    )
+    .action((dir: string, opts: { verbose?: boolean; maxAxioms?: number }) => emit(check(dir, opts)));
 
 program
     .command('axioms')
     .description('List every axiom a declaration rests on, through all imported modules')
     .argument('<name>', 'qualified declaration name, e.g. Ethics.Duty.keep_promises')
     .argument('[dir]', 'directory', '.')
-    .action((name: string, dir: string) => emit(axioms(name, dir)));
+    .option('--json', "output JSON, including each axiom's module")
+    .action((name: string, dir: string, opts: { json?: boolean }) => emit(axioms(name, dir, opts.json)));
 
 program
     .command('show')
@@ -30,6 +40,13 @@ program
     .argument('<name>', 'qualified declaration name')
     .argument('[dir]', 'directory', '.')
     .action((name: string, dir: string) => emit(show(name, dir)));
+
+program
+    .command('summary')
+    .description('Axiom and theorem counts for every module, checked and imported')
+    .argument('[dir]', 'directory', '.')
+    .option('--json', 'output the full declaration graph as JSON (uses, and the axioms each rests on)')
+    .action((dir: string, opts: { json?: boolean }) => emit(summary(dir, opts.json)));
 
 program.parseAsync().catch((e: unknown) => {
     console.error(e);

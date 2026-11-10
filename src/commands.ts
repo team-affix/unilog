@@ -1,4 +1,4 @@
-import { keyOf } from './check';
+import { Declaration, keyOf } from './check';
 import { UnilogError } from './errors';
 import { Printer } from './term';
 import { targetOf, Workspace } from './workspace';
@@ -23,43 +23,104 @@ function guarded(fn: (out: string[]) => void): Output {
 
 const prop = (t: Parameters<Printer['print']>[0]) => new Printer().print(t);
 
+/** A loaded project: its workspace, which modules are its own code (from `check`), and any errors. */
+interface Loaded {
+    ws: Workspace;
+    own: Set<string>;
+    errors: string[];
+}
+
+function load(dir: string): Loaded {
+    const target = targetOf(dir);
+    const ws = new Workspace(target.roots);
+    const own = new Set<string>();
+    const errors: string[] = [];
+    for (const file of target.files) {
+        try {
+            own.add(ws.moduleNameOf(file));
+            ws.loadFile(file);
+        } catch (e) {
+            if (!(e instanceof UnilogError)) throw e;
+            if (!errors.includes(e.message)) errors.push(e.message);
+        }
+    }
+    return { ws, own, errors };
+}
+
+const isOwn = (l: Loaded, d: Declaration) => l.own.has(d.module);
+const sorted = (l: Loaded) => l.ws.loaded().sort((a, b) => a.name.localeCompare(b.name));
+const locText = (d: Declaration) => `${d.loc.file}:${d.loc.line}:${d.loc.col}`;
+
+export interface CheckOptions {
+    /** Print every declaration and what it proves. */
+    verbose?: boolean;
+    /**
+     * Fail if the checked code (the project's own modules, not imported ones) declares more axioms than
+     * this. 0 means "this code may only prove things from axioms it imports".
+     */
+    maxAxioms?: number;
+}
+
 /**
  * `unilog check [dir]`: checks a project as configured by its `unilog.json` (see `targetOf`), or every `.ul`
  * file in a directory without one. Reports every failing module, not just the first.
  */
-export function check(dir: string, verbose = false): Output {
-    const result: Output = { ok: true, out: [], err: [] };
-    let target;
+export function check(dir: string, options: CheckOptions = {}): Output {
+    let l: Loaded;
     try {
-        target = targetOf(dir);
+        l = load(dir);
     } catch (e) {
         if (!(e instanceof UnilogError)) throw e;
         return { ok: false, out: [], err: [e.message] };
     }
-    const ws = new Workspace(target.roots);
-    for (const file of target.files) {
-        try {
-            ws.loadFile(file);
-        } catch (e) {
-            if (!(e instanceof UnilogError)) throw e;
-            if (!result.err.includes(e.message)) result.err.push(e.message);
-        }
-    }
-    const modules = ws.loaded().sort((a, b) => a.name.localeCompare(b.name));
+    const out: string[] = [];
+    const modules = sorted(l);
     const decls = modules.flatMap((m) => [...m.decls.values()]);
-    if (verbose)
+    if (options.verbose)
         for (const d of decls)
-            result.out.push(`${d.kind === 'axiom' ? 'axiom  ' : 'theorem'} ${keyOf(d)} : ${prop(d.scheme.body)}`);
-    if (result.err.length > 0) return { ...result, ok: false };
-    const axioms = decls.filter((d) => d.kind === 'axiom').length;
-    result.out.push(`ok: ${modules.length} module(s), ${decls.length - axioms} theorem(s), ${axioms} axiom(s)`);
-    return result;
+            out.push(`${d.kind === 'axiom' ? 'axiom  ' : 'theorem'} ${keyOf(d)} : ${prop(d.scheme.body)}`);
+    if (l.errors.length > 0) return { ok: false, out, err: l.errors };
+
+    const mine = decls.filter((d) => isOwn(l, d));
+    const myAxioms = mine.filter((d) => d.kind === 'axiom');
+    if (options.maxAxioms !== undefined && myAxioms.length > options.maxAxioms)
+        return {
+            ok: false,
+            out,
+            err: [
+                `The checked code declares ${myAxioms.length} axiom(s), more than the allowed ${options.maxAxioms}:`,
+                ...myAxioms.map((d) => `  ${locText(d)}: ${keyOf(d)} : ${prop(d.scheme.body)}`),
+            ],
+        };
+    const imported = modules.length - l.own.size;
+    out.push(
+        `ok: ${l.own.size} module(s) checked, declaring ${mine.length - myAxioms.length} theorem(s) and ` +
+            `${myAxioms.length} axiom(s); ${imported} imported module(s)`,
+    );
+    return { ok: true, out, err: [] };
 }
 
 /** `unilog axioms <Mod.name> [dir]`: every axiom the declaration rests on. */
-export function axioms(name: string, dir: string): Output {
+export function axioms(name: string, dir: string, json = false): Output {
     return guarded((out) => {
         const list = new Workspace(targetOf(dir).roots).axiomsOf(name);
+        if (json) {
+            out.push(
+                JSON.stringify(
+                    {
+                        declaration: name,
+                        axioms: list.map((a) => ({
+                            name: keyOf(a),
+                            module: a.module,
+                            proposition: prop(a.scheme.body),
+                        })),
+                    },
+                    null,
+                    2,
+                ),
+            );
+            return;
+        }
         if (list.length === 0) out.push(`${name} rests on no axioms`);
         for (const a of list) out.push(`${keyOf(a)} : ${prop(a.scheme.body)}`);
     });
@@ -71,4 +132,68 @@ export function show(name: string, dir: string): Output {
         const d = new Workspace(targetOf(dir).roots).declaration(name);
         out.push(`${d.kind} ${keyOf(d)} : ${prop(d.scheme.body)}`);
     });
+}
+
+/** One module in a summary. */
+export interface ModuleSummary {
+    name: string;
+    file: string;
+    /** True for the project's own (checked) modules, false for imported ones. */
+    own: boolean;
+    imports: string[];
+    axioms: number;
+    theorems: number;
+    declarations: {
+        name: string;
+        kind: 'axiom' | 'theorem';
+        proposition: string;
+        /** Declarations its proof refers to directly. */
+        uses: string[];
+        /** Every axiom it ultimately rests on. */
+        restsOn: string[];
+    }[];
+}
+
+/**
+ * `unilog summary [dir]`: every module in the project and everything it imports, with axiom and theorem
+ * counts. With --json, the full dependency graph between declarations, for analysis and visualization.
+ */
+export function summary(dir: string, json = false): Output {
+    let l: Loaded;
+    try {
+        l = load(dir);
+    } catch (e) {
+        if (!(e instanceof UnilogError)) throw e;
+        return { ok: false, out: [], err: [e.message] };
+    }
+    if (l.errors.length > 0) return { ok: false, out: [], err: l.errors };
+    const modules: ModuleSummary[] = sorted(l).map((m) => {
+        const decls = [...m.decls.values()];
+        return {
+            name: m.name,
+            file: m.file,
+            own: l.own.has(m.name),
+            imports: [...m.imports],
+            axioms: decls.filter((d) => d.kind === 'axiom').length,
+            theorems: decls.filter((d) => d.kind === 'theorem').length,
+            declarations: decls.map((d) => ({
+                name: keyOf(d),
+                kind: d.kind,
+                proposition: prop(d.scheme.body),
+                uses: [...d.uses],
+                restsOn: l.ws.axiomsOf(keyOf(d)).map(keyOf),
+            })),
+        };
+    });
+    if (json) return { ok: true, out: [JSON.stringify({ modules }, null, 2)], err: [] };
+
+    const width = Math.max(6, ...modules.map((m) => m.name.length));
+    const out = [`${'module'.padEnd(width)}  ${'source'.padEnd(8)}  axioms  theorems`];
+    for (const m of modules)
+        out.push(
+            `${m.name.padEnd(width)}  ${(m.own ? 'checked' : 'imported').padEnd(8)}  ${String(m.axioms).padStart(6)}  ${String(m.theorems).padStart(8)}`,
+        );
+    const total = (own: boolean) => modules.filter((m) => m.own === own).reduce((n, m) => n + m.axioms, 0);
+    out.push(`axioms: ${total(true)} in checked code, ${total(false)} in imported modules`);
+    return { ok: true, out, err: [] };
 }
