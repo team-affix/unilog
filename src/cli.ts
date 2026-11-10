@@ -65,8 +65,11 @@ program
     .argument('<proposition>', 'the proposition, quoted if it has spaces or parentheses: "wrong X"')
     .argument('[dir]', 'directory', '.')
     .option('-p, --pattern', "match any declaration of the query's shape, its variables standing for anything")
+    .option('-e, --exact', 'match only declarations of exactly the same generality (variable names may differ)')
     .option('--json', 'output JSON')
-    .action((query: string, dir: string, opts: { pattern?: boolean; json?: boolean }) => emit(find(query, dir, opts)));
+    .action((query: string, dir: string, opts: { pattern?: boolean; exact?: boolean; json?: boolean }) =>
+        emit(find(query, dir, opts)),
+    );
 
 program
     .command('show')

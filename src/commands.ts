@@ -3,7 +3,7 @@ import path from 'path';
 import { Declaration, keyOf, propositionTerm } from './check';
 import { UnilogError } from './errors';
 import { parseProposition } from './parser';
-import { instantiate, Printer, unify } from './term';
+import { instantiate, instantiateRigid, Printer, unify } from './term';
 import { DEFAULT_CONFIG, PROJECT_FILE, targetOf, Workspace } from './workspace';
 
 /** The outcome of a command: lines for stdout and stderr, and whether it succeeded. */
@@ -271,6 +271,12 @@ export interface FindOptions {
      * the query in full generality (e.g. `wrong X` only matches a proof that everything is wrong).
      */
     pattern?: boolean;
+    /**
+     * Match only declarations of exactly the query's generality: the declaration proves the query and the
+     * query proves the declaration. `likes Y cake => likes Y sugar` matches `likes X cake => likes X sugar`
+     * (only the variable names differ) but not its special case `likes jake cake => likes jake sugar`.
+     */
+    exact?: boolean;
     json?: boolean;
 }
 
@@ -280,6 +286,8 @@ export interface FindOptions {
  * declarations that exist; it does not search for new proofs. Fails (non-zero exit) if none is found.
  */
 export function find(query: string, dir: string, options: FindOptions = {}): Output {
+    if (options.pattern && options.exact)
+        return { ok: false, out: [], err: ['--pattern and --exact cannot be combined'] };
     let l: Loaded;
     let expr: ReturnType<typeof parseProposition>;
     try {
@@ -291,10 +299,20 @@ export function find(query: string, dir: string, options: FindOptions = {}): Out
     }
     if (l.errors.length > 0) return { ok: false, out: [], err: l.errors };
 
-    const rigidQuery = options.pattern ? undefined : propositionTerm(expr, true);
+    // Every check works on fresh copies: a declaration's variables are instantiated anew for each test,
+    // and the query is rebuilt whenever its variables are allowed to bind, so no test can affect another.
+    // "a proves b" = a's variables may bind, b's are rigid (fixed but arbitrary).
+    const declProvesQuery = (d: Declaration) => unify(instantiate(d.scheme), propositionTerm(expr, true)) === undefined;
+    const queryProvesDecl = (d: Declaration) => unify(propositionTerm(expr), instantiateRigid(d.scheme)) === undefined;
+    const shapeMatches = (d: Declaration) => unify(instantiate(d.scheme), propositionTerm(expr)) === undefined;
+    const matches = options.pattern
+        ? shapeMatches
+        : options.exact
+          ? (d: Declaration) => declProvesQuery(d) && queryProvesDecl(d)
+          : declProvesQuery;
     const found = sorted(l)
         .flatMap((m) => [...m.decls.values()])
-        .filter((d) => unify(instantiate(d.scheme), rigidQuery ?? propositionTerm(expr)) === undefined);
+        .filter(matches);
 
     const shown = new Printer().print(propositionTerm(expr));
     if (options.json)

@@ -31,6 +31,8 @@ import Kant.Ethics.                       # module import (before any declaratio
 
 Declaration names start with a lowercase letter or digit.
 
+**Variables are quantified once, around the whole declaration**, including variables that first appear in a later premise: `gift : likes X Y => has Z Y => gives Z X Y` means "for all X, Y and Z". A variable inside a premise that is itself an implication is bound by the declaration too: `(A => A) => b` means "for any particular A, given A => A, conclude b". A premise cannot have its own "for all".
+
 **Axioms** are beliefs you state without proof. Variables in an axiom are universally quantified, and each use gets fresh copies:
 
 ```
@@ -119,7 +121,7 @@ Unilog provides general tools. Deciding what their results mean, for example in 
 |---|---|---|
 | `unilog axioms <Module>` | Lists and counts the axioms declared in that module only. `--transitive` includes every module it imports, each counted once. `--count` prints just the number, `--json` the details. | No: it only parses, so it is fast and independent of `check` |
 | `unilog theorems <Module>` | Lists the theorems declared in a module and what each proves, without proofs. `--transitive`, `--count` and `--json` as for `axioms`. | Yes |
-| `unilog find <proposition>` | Lists the declarations, in the project and everything it imports, that prove a proposition. `unilog find false` finds contradictions. By default a declaration must prove the query in full generality (a proof of `wrong X` for every `X` also proves `wrong bob`). `--pattern` instead matches anything of the query's shape (`wrong X` finds `wrong bob`). Exits non-zero if nothing matches. It searches existing declarations; it does not search for new proofs. | Yes |
+| `unilog find <proposition>` | Lists the declarations, in the project and everything it imports, that prove a proposition. `unilog find false` finds contradictions. By default a declaration must prove the query in full generality (a proof of `wrong X` for every `X` also proves `wrong bob`). `--exact` matches only declarations of exactly the query's generality (variable names may differ). `--pattern` instead matches anything of the query's shape (`wrong X` finds `wrong bob`). Queries can be whole implications, e.g. `unilog find "likes X cake => likes X sugar"`. Exits non-zero if nothing matches. It searches existing declarations; it does not search for new proofs. | Yes |
 | `unilog rests-on <Mod.name>` | Every axiom a declaration ultimately rests on, following its proof through all modules, each with its module (`--json`). | Yes |
 | `unilog summary` | Axiom and theorem counts for every module, checked and imported. `--json` gives every declaration with what it proves, what it uses directly, and every axiom it rests on. | Yes |
 

@@ -168,6 +168,28 @@ export function instantiate(s: Scheme): Term {
 }
 
 /**
+ * A copy of a scheme's body with each quantified variable replaced by a rigid one: "an arbitrary, fixed
+ * value". Something that unifies with this proves the scheme in full generality.
+ */
+export function instantiateRigid(s: Scheme): Term {
+    const map = new Map<Var, Rigid>(s.vars.map((v) => [v, rigid(v.hint)]));
+    const copy = (t: Term): Term => {
+        t = prune(t);
+        switch (t.k) {
+            case 'var':
+                return map.get(t) ?? t;
+            case 'app':
+                return app(copy(t.fn), copy(t.arg));
+            case 'imp':
+                return imp(copy(t.from), copy(t.to));
+            default:
+                return t;
+        }
+    };
+    return copy(s.body);
+}
+
+/**
  * Prints terms, giving each distinct variable a distinct name. Variables keep their source names where
  * possible (X, X1, X2 ... when names collide). One printer per message, so names are consistent within it.
  */
