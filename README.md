@@ -11,21 +11,29 @@ c = b a.                              # a proof; the checker infers: likes jake 
 - **Constructive logic via Curry–Howard.** Propositions are types, proofs are programs, and checking is type inference. You never write types or quantifiers.
 - **Tiny, sound core.** Its only connective is `=>`. There is no recursion, and checking always terminates. `and`, `or`, `false` and even excluded middle are ordinary axioms in packages.
 - **Adversarial transparency.** Everything is public, and `unilog axioms` lists every belief a claim ultimately rests on.
-- **Built for [DPM](https://github.com/team-affix/apm).** Packages import each other by name, and a project checks against its installed `deps/`.
+- **Independent of any package manager.** Modules import each other by name, resolved through the search roots in the project's `unilog.json`. Whatever installs dependencies, point a root at the folder it uses.
 
 ## Usage
 
 ```bash
 npm i -g @team-affix/unilog
 
-dpm install            # fetch dependencies into deps/
-unilog check           # check this project's <name>/ files against deps/
+unilog check           # check the project in this directory, as configured by unilog.json
 unilog check -v        # ...and print what every declaration proves
 unilog axioms Ethics.Main.keep_promises   # every axiom that claim rests on
 unilog show Ethics.Main.keep_promises     # what it proves
 ```
 
-`unilog check <dir>` on a directory without `dpm.json` checks every `.ul` file in it, e.g. `unilog check examples`.
+A project's `unilog.json` says where modules are found and what to check:
+
+```json
+{
+    "roots": [".", "deps"],
+    "check": ["Ethics"]
+}
+```
+
+`unilog check <dir>` on a directory without one checks every `.ul` file in it, e.g. `unilog check examples`.
 
 See the [language reference](docs/language.md) and [`examples/`](examples).
 

@@ -9,10 +9,10 @@ export const EXTENSION = '.ul';
 /**
  * Loads and checks modules by name.
  *
- * Module `Pkg.Sub.File` is the file `Pkg/Sub/File.ul` under one of the search roots. For a DPM project
- * the roots are the project directory and its `deps/` directory. A package's files sit in a folder named
- * after the package in both places, so the same imports work whether a package is the project being
- * checked or a dependency of another one.
+ * Module `Pkg.Sub.File` is the file `Pkg/Sub/File.ul` under one of the search roots. Every import, from
+ * any module, is resolved against the same roots: those of the project being checked. A module never
+ * looks for its imports relative to its own location, so a package's files work unchanged wherever they
+ * sit (as the project itself, or alongside other packages in a dependency folder).
  */
 export class Workspace {
     private readonly modules = new Map<string, Module>();
@@ -124,27 +124,72 @@ export function findSources(dir: string): string[] {
     return out.sort();
 }
 
-/** What to check in a directory. */
+/** The project file. */
+export const PROJECT_FILE = 'unilog.json';
+
+/**
+ * A project's configuration (`unilog.json` in the project directory). Paths are relative to that directory.
+ *
+ *   {
+ *       "roots": [".", "deps"],     where modules are looked up, in order
+ *       "check": ["Ethics"]         folders or .ul files that `unilog check` checks
+ *   }
+ *
+ * Only the configuration of the project being checked applies. Modules it imports are found through its
+ * roots, wherever they came from; any project files they were published with are ignored.
+ */
+export interface ProjectConfig {
+    roots: string[];
+    check: string[];
+}
+
+/** What to check: the search roots and the files to check, as paths. */
 export interface Target {
     roots: string[];
     files: string[];
 }
 
+function stringList(value: unknown, field: string, file: string): string[] {
+    if (!Array.isArray(value) || value.length === 0 || !value.every((v) => typeof v === 'string'))
+        throw new UnilogError(`${file}: '${field}' must be a non-empty array of paths`);
+    return value as string[];
+}
+
+/** Reads and validates a project file. */
+export function readProjectConfig(file: string): ProjectConfig {
+    let raw: unknown;
+    try {
+        raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch (e) {
+        throw new UnilogError(`${file}: not valid JSON (${(e as Error).message})`);
+    }
+    if (typeof raw !== 'object' || raw === null || Array.isArray(raw))
+        throw new UnilogError(`${file}: must be a JSON object with 'roots' and 'check'`);
+    const obj = raw as Record<string, unknown>;
+    const unknown = Object.keys(obj).filter((k) => k !== 'roots' && k !== 'check');
+    if (unknown.length > 0) throw new UnilogError(`${file}: unknown field(s): ${unknown.join(', ')}`);
+    return { roots: stringList(obj.roots, 'roots', file), check: stringList(obj.check, 'check', file) };
+}
+
 /**
  * Works out what to check in a directory.
  *
- * - A DPM project (has `dpm.json`): the files under `<name>/`, with roots `.` and `deps/`.
- *   Dependencies are checked as far as the project's files import them.
- * - Anything else: every `.ul` file under the directory, with the directory as the root.
+ * - With a `unilog.json`: its `check` paths, with its `roots` as search roots. Roots that don't exist
+ *   (e.g. a dependency folder before anything is installed) are skipped.
+ * - Without one: every `.ul` file under the directory, with the directory as the only root.
  */
 export function targetOf(dir: string): Target {
-    const manifest = path.join(dir, 'dpm.json');
-    if (fs.existsSync(manifest)) {
-        const { name } = JSON.parse(fs.readFileSync(manifest, 'utf8')) as { name?: unknown };
-        if (typeof name !== 'string') throw new UnilogError(`${manifest}: 'name' must be a string`);
-        const source = path.join(dir, name);
-        if (!fs.existsSync(source)) throw new UnilogError(`Missing source directory ${source}`);
-        return { roots: [dir, path.join(dir, 'deps')], files: findSources(source) };
-    }
-    return { roots: [dir], files: findSources(dir) };
+    const file = path.join(dir, PROJECT_FILE);
+    if (!fs.existsSync(file)) return { roots: [dir], files: findSources(dir) };
+
+    const config = readProjectConfig(file);
+    const roots = config.roots.map((r) => path.join(dir, r)).filter((r) => fs.existsSync(r));
+    const files = config.check.flatMap((c) => {
+        const p = path.join(dir, c);
+        if (!fs.existsSync(p)) throw new UnilogError(`${file}: 'check' path does not exist: ${c}`);
+        if (fs.statSync(p).isDirectory()) return findSources(p);
+        if (!p.endsWith(EXTENSION)) throw new UnilogError(`${file}: 'check' file is not a ${EXTENSION} file: ${c}`);
+        return [p];
+    });
+    return { roots, files: [...new Set(files)].sort() };
 }

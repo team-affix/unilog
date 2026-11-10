@@ -24,8 +24,8 @@ function guarded(fn: (out: string[]) => void): Output {
 const prop = (t: Parameters<Printer['print']>[0]) => new Printer().print(t);
 
 /**
- * `unilog check [dir]`: checks a DPM project (its `<name>/` files, importing from `.` and `deps/`), or every
- * `.ul` file in a plain directory. Reports every failing module, not just the first.
+ * `unilog check [dir]`: checks a project as configured by its `unilog.json` (see `targetOf`), or every `.ul`
+ * file in a directory without one. Reports every failing module, not just the first.
  */
 export function check(dir: string, verbose = false): Output {
     const result: Output = { ok: true, out: [], err: [] };

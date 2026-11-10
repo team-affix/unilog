@@ -27,18 +27,25 @@ describe('Workspace', () => {
     });
 
     it('checks a package identically as a project and as a dependency', () => {
-        // As its own project: Ethics/ next to deps/Kant/
+        const config = (pkg: string) => JSON.stringify({ roots: ['.', 'deps'], check: [pkg] });
+
+        // As its own project: Ethics/ is in the project, its dependency Kant/ is under deps/.
         const project = tmpDir();
-        write(project, { 'dpm.json': JSON.stringify({ name: 'Ethics', deps: [] }), ...ETHICS });
+        write(project, { 'unilog.json': config('Ethics'), ...ETHICS });
         write(path.join(project, 'deps'), KANT);
 
-        // As a dependency of App: everything under deps/
+        // As a dependency of App: Ethics/ now sits beside its own dependency Kant/, not above it.
+        // It even carries a broken project file of its own, which is ignored: only App's roots apply.
         const app = tmpDir();
         write(app, {
-            'dpm.json': JSON.stringify({ name: 'App', deps: [] }),
+            'unilog.json': config('App'),
             'App/Main.ul': 'import Ethics.Main.\nmine = Ethics.Main.acting.',
         });
-        write(path.join(app, 'deps'), { ...KANT, ...ETHICS });
+        write(path.join(app, 'deps'), {
+            ...KANT,
+            ...ETHICS,
+            'Ethics/unilog.json': JSON.stringify({ roots: ['nowhere'], check: ['nothing'] }),
+        });
 
         // Same files, byte for byte, in both layouts
         expect(fs.readFileSync(path.join(project, 'Ethics/Main.ul'), 'utf8')).toBe(
@@ -135,18 +142,62 @@ describe('axiomsOf: everything a claim rests on', () => {
 });
 
 describe('targetOf', () => {
-    it('checks <name>/ of a DPM project against . and deps/', () => {
+    it('uses unilog.json: its check paths, with its roots as search roots', () => {
         const dir = tmpDir();
-        write(dir, { 'dpm.json': '{"name":"P","deps":[]}', 'P/A.ul': '', 'P/sub/B.ul': '', 'deps/Q/C.ul': '' });
+        write(dir, {
+            'unilog.json': JSON.stringify({ roots: ['.', 'deps'], check: ['P', 'Extra/One.ul'] }),
+            'P/A.ul': '',
+            'P/sub/B.ul': '',
+            'Extra/One.ul': '',
+            'Extra/Two.ul': '',
+            'deps/Q/C.ul': '',
+        });
         const t = targetOf(dir);
-        expect(t.roots).toEqual([dir, path.join(dir, 'deps')]);
-        expect(t.files.map((f) => path.relative(dir, f))).toEqual(['P/A.ul', 'P/sub/B.ul']);
+        expect(t.roots).toEqual([path.join(dir, '.'), path.join(dir, 'deps')]);
+        expect(t.files.map((f) => path.relative(dir, f))).toEqual(['Extra/One.ul', 'P/A.ul', 'P/sub/B.ul']);
     });
 
-    it('checks every .ul file in a plain directory', () => {
+    it('skips roots that do not exist yet (e.g. nothing installed)', () => {
+        const dir = tmpDir();
+        write(dir, { 'unilog.json': JSON.stringify({ roots: ['.', 'deps'], check: ['P'] }), 'P/A.ul': 'a : p.' });
+        expect(targetOf(dir).roots).toEqual([path.join(dir, '.')]);
+        expect(commands.check(dir).ok).toBe(true);
+    });
+
+    it('allows any layout: the roots are whatever the project says', () => {
+        const dir = tmpDir();
+        write(dir, {
+            'unilog.json': JSON.stringify({ roots: ['src', 'vendor/libs'], check: ['src'] }),
+            'src/Mine/M.ul': 'import Lib.L.\nt = l.',
+            'vendor/libs/Lib/L.ul': 'l : from_lib.',
+        });
+        expect(commands.check(dir)).toMatchObject({ ok: true });
+        expect(commands.show('Mine.M.t', dir).out).toEqual(['theorem Mine.M.t : from_lib']);
+    });
+
+    it('checks every .ul file in a directory without unilog.json', () => {
         const dir = tmpDir();
         write(dir, { 'X/A.ul': '', 'notes.txt': '' });
-        expect(targetOf(dir).files.map((f) => path.relative(dir, f))).toEqual(['X/A.ul']);
+        expect(targetOf(dir)).toEqual({ roots: [dir], files: [path.join(dir, 'X/A.ul')] });
+    });
+
+    it.each([
+        ['invalid JSON', '{', /not valid JSON/],
+        ['a non-object', '[]', /must be a JSON object/],
+        ['missing roots', JSON.stringify({ check: ['P'] }), /'roots' must be a non-empty array/],
+        ['empty check', JSON.stringify({ roots: ['.'], check: [] }), /'check' must be a non-empty array/],
+        ['an unknown field', JSON.stringify({ roots: ['.'], check: ['P'], name: 'x' }), /unknown field\(s\): name/],
+        [
+            'a missing check path',
+            JSON.stringify({ roots: ['.'], check: ['Nope'] }),
+            /'check' path does not exist: Nope/,
+        ],
+        ['a check file that is not .ul', JSON.stringify({ roots: ['.'], check: ['P/readme.md'] }), /not a \.ul file/],
+    ])('rejects a unilog.json with %s', (_, config, msg) => {
+        const dir = tmpDir();
+        write(dir, { 'unilog.json': config, 'P/A.ul': '', 'P/readme.md': '' });
+        expect(() => targetOf(dir)).toThrow(msg);
+        expect(commands.check(dir)).toMatchObject({ ok: false, err: [expect.stringMatching(msg)] });
     });
 });
 
@@ -189,13 +240,7 @@ describe('commands', () => {
         ]);
     });
 
-    it('reports a missing source directory or declaration', () => {
-        const dir = tmpDir();
-        write(dir, { 'dpm.json': '{"name":"P"}' });
-        expect(commands.check(dir)).toMatchObject({
-            ok: false,
-            err: [expect.stringMatching(/Missing source directory/)],
-        });
+    it('reports a missing declaration', () => {
         const d2 = tmpDir();
         write(d2, KANT);
         expect(commands.show('Kant.Ethics.nope', d2)).toMatchObject({

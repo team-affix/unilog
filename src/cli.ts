@@ -12,7 +12,7 @@ const program = new Command().name('unilog').description('Check Unilog proofs, a
 
 program
     .command('check')
-    .description('Check a DPM project (its <name>/ files, against deps/), or every .ul file in a directory')
+    .description('Check a project (configured by unilog.json), or every .ul file in a directory without one')
     .argument('[dir]', 'directory', '.')
     .option('-v, --verbose', 'print every declaration and what it proves')
     .action((dir: string, opts: { verbose?: boolean }) => emit(check(dir, opts.verbose)));

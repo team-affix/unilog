@@ -58,24 +58,28 @@ Kant.Ethics.duty        # a qualified reference to an imported declaration
 - **Nothing private.** Every declaration in every module is public, so everything a claim rests on can be inspected and cited. `unilog axioms` lists the full set of axioms behind any declaration.
 - **Logic lives in packages.** The core knows only `=>`. `and`, `or` and `false` are axioms in a package ([`examples/Logic/Prelude.ul`](../examples/Logic/Prelude.ul)). Excluded middle is not built in: a classical thinker states it as an axiom, and it then appears in the axiom list of everything that relies on it.
 
-## Modules and packages
+## Modules and projects
 
-The module `Kant.Ethics` is the file `Kant/Ethics.ul` under a search root. In a [DPM](https://github.com/team-affix/apm) project the search roots are the project directory and `deps/`:
+The module `Kant.Ethics` is the file `Kant/Ethics.ul` under a **search root**. An import is a module name, never a path, and every import (in every module, including dependencies) is looked up in the search roots of the project being checked. So a package's files work unchanged wherever they end up: as the project itself, or next to their own dependencies in a dependency folder.
 
+A project is configured by a `unilog.json` file in its directory (like Agda's `.agda-lib`):
+
+```json
+{
+    "roots": [".", "deps"],
+    "check": ["Ethics"]
+}
 ```
-MyProject/
-├── dpm.json          { "name": "MyProject", "deps": [...] }
-├── MyProject/
-│   └── Main.ul       import Kant.Ethics.
-└── deps/             written by `dpm install`
-    └── Kant/
-        └── Ethics.ul
-```
 
-Each package sits in a folder named after itself, whether it is the project or a dependency. So the same imports work in both cases, and package files never contain paths.
+- `roots`: where modules are looked up, in order, relative to the project. Put your own source's parent directory here, along with wherever your dependencies are installed. Roots that don't exist yet are skipped.
+- `check`: the folders (or `.ul` files) that `unilog check` checks. Modules they import are checked as far as they're used.
+
+Only the checked project's `unilog.json` applies. One that comes with a dependency is ignored.
+
+A directory without a `unilog.json` checks every `.ul` file in it, with the directory as its only root.
 
 - Imports are not re-exported: a module sees only what it imports itself.
-- Import cycles are errors.
+- Import cycles are errors, and so is a module found in more than one root.
 
 ## Relations, not functions
 
