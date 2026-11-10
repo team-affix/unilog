@@ -15,6 +15,7 @@ import {
     TextDocumentSyncKind,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { VERSION } from '../version';
 import { diskSources, EXTENSION, SourceProvider } from '../workspace';
 import { analyze, Analysis, definition, findProjectDir, hover, inlayHints, outline, problems } from './features';
 
@@ -104,7 +105,7 @@ export function listen(connection: Connection): void {
                 documentSymbolProvider: true,
                 inlayHintProvider: true,
             },
-            serverInfo: { name: 'unilog' },
+            serverInfo: { name: 'unilog', version: VERSION },
         };
     });
 

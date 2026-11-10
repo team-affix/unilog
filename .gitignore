@@ -5,3 +5,5 @@ coverage/
 *.tsbuildinfo
 .vscode
 src/generated/
+release/
+dist-release/

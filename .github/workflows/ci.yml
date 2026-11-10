@@ -38,3 +38,58 @@ jobs:
         working-directory: editors/vscode
       - run: npx vsce package --no-dependencies
         working-directory: editors/vscode
+
+  # On a version tag (e.g. v0.2.0), after every test job passes: build the CLI, the language server and
+  # the VS Code extension, and attach them to a GitHub Release. Nothing built is committed to the repo.
+  release:
+    needs: [test, vscode-extension]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check the tag matches the package versions
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          cli=$(node -p "require('./package.json').version")
+          ext=$(node -p "require('./editors/vscode/package.json').version")
+          echo "tag $tag, package.json $cli, editors/vscode/package.json $ext"
+          if [ "$tag" != "$cli" ] || [ "$tag" != "$ext" ]; then
+            echo "::error::Tag v$tag does not match the package versions ($cli, $ext). Bump both versions first."
+            exit 1
+          fi
+          echo "VERSION=$tag" >> "$GITHUB_ENV"
+
+      - name: Build the CLI and language server as single files
+        run: |
+          npm ci
+          npm run bundle
+          mkdir -p dist-release
+          cp release/unilog.cjs "dist-release/unilog-$VERSION.cjs"
+          cp release/unilog-lsp.cjs "dist-release/unilog-lsp-$VERSION.cjs"
+          node "dist-release/unilog-$VERSION.cjs" --version
+
+      - name: Build the npm package
+        run: |
+          npm run build
+          npm pack --pack-destination dist-release
+
+      - name: Build the VS Code extension
+        working-directory: editors/vscode
+        run: |
+          npm ci
+          npm run build
+          npx vsce package --no-dependencies --out "../../dist-release/unilog-vscode-$VERSION.vsix"
+
+      - name: Create the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist-release/*
+

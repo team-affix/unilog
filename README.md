@@ -47,6 +47,19 @@ See the [language reference](docs/language.md) and [`examples/`](examples).
 
 A VS Code extension lives in [`editors/vscode`](editors/vscode): errors as you type, hover to see what any declaration or proof step proves, inferred claims shown inline, go to definition and an outline. It is a client for the Unilog language server (`unilog-lsp`, in [`src/lsp`](src/lsp)), which uses the same checker as `unilog check`. Other editors that speak the Language Server Protocol can run `unilog-lsp --stdio`.
 
+## Releases
+
+Built files are never committed. They are attached to [GitHub Releases](https://github.com/team-affix/unilog/releases) by CI:
+
+| File | What it is |
+|---|---|
+| `unilog-<version>.cjs` | the CLI as a single file: `node unilog-<version>.cjs check` |
+| `unilog-lsp-<version>.cjs` | the language server as a single file, for any LSP editor: `node unilog-lsp-<version>.cjs --stdio` |
+| `unilog-vscode-<version>.vsix` | the VS Code extension: `code --install-extension unilog-vscode-<version>.vsix` |
+| `team-affix-unilog-<version>.tgz` | the npm package (both commands and the library): `npm i -g ./team-affix-unilog-<version>.tgz` |
+
+To release: set the same version in `package.json` and `editors/vscode/package.json`, merge, then push a matching tag (`git tag v0.2.0 && git push origin v0.2.0`). The release job runs only after every test job passes, and fails if the tag and the versions disagree.
+
 ## Development
 
 ```bash
