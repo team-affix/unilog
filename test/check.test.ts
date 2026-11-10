@@ -175,12 +175,17 @@ describe('soundness', () => {
     });
 
     it('allows no recursion: a declaration cannot use itself', () => {
-        expect(() => checkSource('loop = loop.')).toThrow(/'loop' is not declared/);
-        expect(() => checkSource('loop : X = loop.')).toThrow(/'loop' is not declared/);
+        expect(() => checkSource('loop = loop.')).toThrow(/'loop' cannot be used in its own proof \(no recursion\)/);
+        expect(() => checkSource('loop : X = loop.')).toThrow(/cannot be used in its own proof/);
     });
 
     it('allows no forward references', () => {
-        expect(() => checkSource('c = b a.\na : p.\nb : p => q.')).toThrow(/'b' is not declared/);
+        expect(() => checkSource('c = b a.\na : p.\nb : p => q.')).toThrow(
+            /'b' is declared later in this module; declarations can only use earlier ones/,
+        );
+        expect(() => checkSource('c = nowhere.')).toThrow(
+            /'nowhere' is not declared in this module or in any module it imports/,
+        );
     });
 
     it('cannot prove an arbitrary proposition from no axioms', () => {

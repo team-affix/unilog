@@ -24,6 +24,14 @@ export interface Module {
 
 export const keyOf = (d: { module: string; name: string }) => `${d.module}.${d.name}`;
 
+/**
+ * Turns proposition syntax into a term. Variables with the same name are the same variable.
+ * `rigid`: variables may not be instantiated (the proposition must hold for every value of them).
+ */
+export function propositionTerm(e: PropExpr, rigidVars = false): Term {
+    return toTerm(e, new Map(), (n) => (rigidVars ? rigid(n) : fresh(n)));
+}
+
 /** Turns proposition syntax into a term. Variables with the same name in one declaration are the same variable. */
 function toTerm(e: PropExpr, vars: Map<string, Term>, makeVar: (name: string) => Term): Term {
     switch (e.k) {
@@ -74,6 +82,10 @@ export function checkModule(
 ): Module {
     const local = new Map<string, Declaration>();
     const imports: string[] = [];
+    /** All names this module declares, for clearer errors on forward references. */
+    const declaredHere = new Set(decls.flatMap((d) => (d.k === 'import' ? [] : [d.name])));
+    /** The declaration being checked, for a clearer error on self-reference. */
+    let current = '';
 
     for (const decl of decls) {
         if (decl.k === 'import') {
@@ -84,6 +96,7 @@ export function checkModule(
             continue;
         }
         if (local.has(decl.name)) throw new UnilogError(`'${decl.name}' is already declared in this module`, decl.loc);
+        current = decl.name;
 
         const vars = new Map<string, Term>();
         if (decl.k === 'axiom') {
@@ -151,7 +164,16 @@ export function checkModule(
                     e.loc,
                 );
             const [d] = found;
-            if (!d) throw new UnilogError(`'${id}' is not declared (declarations can only use earlier ones)`, e.loc);
+            if (!d) {
+                if (id === current)
+                    throw new UnilogError(`'${id}' cannot be used in its own proof (no recursion)`, e.loc);
+                if (declaredHere.has(id))
+                    throw new UnilogError(
+                        `'${id}' is declared later in this module; declarations can only use earlier ones`,
+                        e.loc,
+                    );
+                throw new UnilogError(`'${id}' is not declared in this module or in any module it imports`, e.loc);
+            }
             uses.add(keyOf(d));
             return instantiate(d.scheme);
         }

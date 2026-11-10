@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { axioms, check, init, Output, restsOn, show, summary } from './commands';
+import { axioms, check, find, init, Output, restsOn, show, summary, theorems } from './commands';
 
 const emit = (o: Output) => {
     o.out.forEach((l) => console.log(l));
@@ -12,9 +12,11 @@ const program = new Command().name('unilog').description('Check Unilog proofs, a
 
 program
     .command('init')
-    .description('Create a starting unilog.json')
+    .description('Create a unilog.json')
     .argument('[dir]', 'directory', '.')
-    .action((dir: string) => emit(init(dir)));
+    .option('--roots <paths...>', 'search roots (default: .)')
+    .option('--check <paths...>', 'folders or .ul files to check')
+    .action((dir: string, opts: { roots?: string[]; check?: string[] }) => emit(init(dir, opts)));
 
 program
     .command('check')
@@ -42,6 +44,29 @@ program
     .argument('[dir]', 'directory', '.')
     .option('--json', "output JSON, including each axiom's module")
     .action((name: string, dir: string, opts: { json?: boolean }) => emit(restsOn(name, dir, opts.json)));
+
+program
+    .command('theorems')
+    .description('List the theorems declared in a module, with what each proves')
+    .argument('<module>', 'module name, e.g. Ethics.Main')
+    .argument('[dir]', 'directory', '.')
+    .option('-t, --transitive', 'include every module it imports, transitively')
+    .option('-c, --count', 'print only the number')
+    .option('--json', 'output JSON')
+    .action((module: string, dir: string, opts: { transitive?: boolean; count?: boolean; json?: boolean }) =>
+        emit(theorems(module, dir, opts)),
+    );
+
+program
+    .command('find')
+    .description(
+        'List the declarations that prove a proposition, e.g. `unilog find false`. Exits non-zero if there are none.',
+    )
+    .argument('<proposition>', 'the proposition, quoted if it has spaces or parentheses: "wrong X"')
+    .argument('[dir]', 'directory', '.')
+    .option('-p, --pattern', "match any declaration of the query's shape, its variables standing for anything")
+    .option('--json', 'output JSON')
+    .action((query: string, dir: string, opts: { pattern?: boolean; json?: boolean }) => emit(find(query, dir, opts)));
 
 program
     .command('show')

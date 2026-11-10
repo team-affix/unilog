@@ -53,6 +53,8 @@ export function showProp(e: PropExpr): string {
 
 export class Workspace {
     private readonly modules = new Map<string, Module>();
+    /** Modules that failed, so each failure is reported once however many modules import it. */
+    private readonly failed = new Map<string, UnilogError>();
     private readonly outlines = new Map<string, ModuleOutline>();
     private readonly loading: string[] = [];
 
@@ -86,6 +88,8 @@ export class Workspace {
     load(name: string, from?: Loc): Module {
         const done = this.modules.get(name);
         if (done) return done;
+        const failure = this.failed.get(name);
+        if (failure) throw failure;
         if (this.loading.includes(name))
             throw new UnilogError(
                 `Import cycle: ${[...this.loading.slice(this.loading.indexOf(name)), name].join(' -> ')}`,
@@ -104,6 +108,12 @@ export class Workspace {
             const mod = checkModule(name, file, decls, imported);
             this.modules.set(name, mod);
             return mod;
+        } catch (e) {
+            if (!(e instanceof UnilogError)) throw e;
+            // The innermost failing module adds how it was reached; modules further out pass it on unchanged.
+            const err = e.context || this.loading.length < 2 ? e : new UnilogError(e.reason, e.loc, this.chain());
+            this.failed.set(name, err);
+            throw err;
         } finally {
             this.loading.pop();
         }
@@ -145,6 +155,12 @@ export class Workspace {
         };
         visit(name);
         return [...seen.values()];
+    }
+
+    /** The current import chain, innermost first: "in A, imported by B, imported by C". */
+    private chain(): string {
+        const [inner, ...outer] = [...this.loading].reverse();
+        return [`in ${inner}`, ...outer.map((m) => `imported by ${m}`)].join(', ');
     }
 
     /** Loads the module in a file. */

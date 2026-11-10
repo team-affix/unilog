@@ -18,10 +18,12 @@ c = b a.                              # a proof; the checker infers: likes jake 
 ```bash
 npm i -g @team-affix/unilog
 
-unilog init            # create a starting unilog.json in this directory
+unilog init            # create a unilog.json here (--roots . deps --check MyPkg to fill it in)
 unilog check           # check the project in this directory, as configured by unilog.json
 unilog check -v        # ...and print what every declaration proves
 unilog axioms Ethics.Main                 # axioms declared in a module (--transitive: and all it imports)
+unilog theorems Ethics.Main               # theorems in a module and what they prove (--transitive)
+unilog find false                         # which declarations prove a proposition (exit 1 if none)
 unilog rests-on Ethics.Main.keep_promises # every axiom that claim rests on
 unilog show Ethics.Main.keep_promises     # what it proves
 unilog summary                            # axiom/theorem counts per module (--json: the full graph)

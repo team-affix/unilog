@@ -8,6 +8,11 @@ file
     : decl* EOF
     ;
 
+// A single proposition on its own, e.g. a query: `unilog find "wrong X"`.
+query
+    : prop EOF
+    ;
+
 decl
     : IMPORT NAME DOT                       # importDecl
     | NAME COLON prop (EQUALS proof)? DOT   # claimDecl     // axiom, or theorem with a stated claim

@@ -75,7 +75,7 @@ A project is configured by a `unilog.json` file in its directory (like Agda's `.
 - `roots`: where modules are looked up, in order, relative to the project. Put your own source's parent directory here, along with wherever your dependencies are installed. Roots that don't exist yet are skipped.
 - `check`: the folders (or `.ul` files) that `unilog check` checks. Modules they import are checked as far as they're used.
 
-`unilog init` writes a starting one (`"roots": ["."]`, `"check": []`) for you to fill in. `unilog check` refuses to run while `check` is empty.
+`unilog init` writes one: `unilog init --roots . deps --check Ethics`, or with no options a starting one (`"roots": ["."]`, `"check": []`) to fill in. `unilog check` refuses to run while `check` is empty.
 
 Only the `unilog.json` of the project you run `unilog` in applies. One that comes with a dependency is ignored.
 
@@ -83,6 +83,7 @@ A directory without a `unilog.json` checks every `.ul` file in it, with the dire
 
 - Imports are not re-exported: a module sees only what it imports itself.
 - Import cycles are errors, and so is a module found in more than one root.
+- An error in an imported module says how it was reached, e.g. `(in Alice.Beliefs, imported by Bob.Rebuttal)`, and is reported once however many modules import it.
 
 ## Relations, not functions
 
@@ -117,6 +118,8 @@ Unilog provides general tools. Deciding what their results mean, for example in 
 | Command | What it does | Checks? |
 |---|---|---|
 | `unilog axioms <Module>` | Lists and counts the axioms declared in that module only. `--transitive` includes every module it imports, each counted once. `--count` prints just the number, `--json` the details. | No: it only parses, so it is fast and independent of `check` |
+| `unilog theorems <Module>` | Lists the theorems declared in a module and what each proves, without proofs. `--transitive`, `--count` and `--json` as for `axioms`. | Yes |
+| `unilog find <proposition>` | Lists the declarations, in the project and everything it imports, that prove a proposition. `unilog find false` finds contradictions. By default a declaration must prove the query in full generality (a proof of `wrong X` for every `X` also proves `wrong bob`). `--pattern` instead matches anything of the query's shape (`wrong X` finds `wrong bob`). Exits non-zero if nothing matches. It searches existing declarations; it does not search for new proofs. | Yes |
 | `unilog rests-on <Mod.name>` | Every axiom a declaration ultimately rests on, following its proof through all modules, each with its module (`--json`). | Yes |
 | `unilog summary` | Axiom and theorem counts for every module, checked and imported. `--json` gives every declaration with what it proves, what it uses directly, and every axiom it rests on. | Yes |
 

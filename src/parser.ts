@@ -6,6 +6,7 @@ import {
     AssumeContext,
     ClaimDeclContext,
     DeclContext,
+    FileContext,
     ImportDeclContext,
     PropContext,
     PropAtomContext,
@@ -52,7 +53,7 @@ class ThrowingErrorListener extends BaseErrorListener {
     }
 }
 
-export function parse(src: string, file: string): Decl[] {
+function makeParser(src: string, file: string): UnilogParser {
     const errors = new ThrowingErrorListener(file);
     const lexer = new UnilogLexer(CharStream.fromString(src));
     lexer.removeErrorListeners();
@@ -60,8 +61,21 @@ export function parse(src: string, file: string): Decl[] {
     const parser = new UnilogParser(new CommonTokenStream(lexer));
     parser.removeErrorListeners();
     parser.addErrorListener(errors);
-    const tree = parser.file();
+    return parser;
+}
 
+/** Parses a file of declarations. */
+export function parse(src: string, file: string): Decl[] {
+    return converters(file).file(makeParser(src, file).file());
+}
+
+/** Parses a single proposition, e.g. a query. */
+export function parseProposition(src: string, file = '<query>'): PropExpr {
+    return converters(file).prop(makeParser(src, file).query().prop());
+}
+
+/** Functions turning parse-tree nodes into AST nodes, reporting locations in `file`. */
+function converters(file: string) {
     const locOf = (ctx: ParserRuleContext | Token): Loc => {
         const start = ctx instanceof ParserRuleContext ? ctx.start : ctx;
         return { file, line: start?.line ?? 0, col: (start?.column ?? 0) + 1 };
@@ -133,5 +147,5 @@ export function parse(src: string, file: string): Decl[] {
             : { k: 'axiom', name, prop: p, loc: locOf(ctx) };
     }
 
-    return tree.decl().map(decl);
+    return { prop, file: (tree: FileContext) => tree.decl().map(decl) };
 }

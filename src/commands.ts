@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { Declaration, keyOf } from './check';
+import { Declaration, keyOf, propositionTerm } from './check';
 import { UnilogError } from './errors';
-import { Printer } from './term';
+import { parseProposition } from './parser';
+import { instantiate, Printer, unify } from './term';
 import { DEFAULT_CONFIG, PROJECT_FILE, targetOf, Workspace } from './workspace';
 
 /** The outcome of a command: lines for stdout and stderr, and whether it succeeded. */
@@ -240,15 +241,138 @@ export function summary(dir: string, json = false): Output {
     return { ok: true, out, err: [] };
 }
 
+export interface InitOptions {
+    /** Search roots to write (default: ["."]). */
+    roots?: string[];
+    /** Paths to check (default: none yet). */
+    check?: string[];
+}
+
 /** `unilog init [dir]`: writes a starting `unilog.json`. Never overwrites an existing one. */
-export function init(dir: string): Output {
+export function init(dir: string, options: InitOptions = {}): Output {
     return guarded((out) => {
         const file = path.join(dir, PROJECT_FILE);
         if (fs.existsSync(file)) throw new UnilogError(`${file} already exists`);
+        const config = { roots: options.roots ?? DEFAULT_CONFIG.roots, check: options.check ?? DEFAULT_CONFIG.check };
         fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(file, JSON.stringify(DEFAULT_CONFIG, null, 4) + '\n');
+        fs.writeFileSync(file, JSON.stringify(config, null, 4) + '\n');
         out.push(
-            `Created ${file}. List the folders to check under "check", and add any dependency folders to "roots".`,
+            config.check.length === 0
+                ? `Created ${file}. List the folders to check under "check", and add any dependency folders to "roots".`
+                : `Created ${file}.`,
         );
+    });
+}
+
+export interface FindOptions {
+    /**
+     * Match declarations whose proposition merely fits the query's shape, with the query's variables
+     * standing for anything (e.g. `wrong X` finds `wrong bob_party`). Without it, a declaration must prove
+     * the query in full generality (e.g. `wrong X` only matches a proof that everything is wrong).
+     */
+    pattern?: boolean;
+    json?: boolean;
+}
+
+/**
+ * `unilog find <proposition> [dir]`: which declarations, in the project and everything it imports, prove
+ * the proposition. For example `unilog find false` finds any proof of a contradiction. Searches the
+ * declarations that exist; it does not search for new proofs. Fails (non-zero exit) if none is found.
+ */
+export function find(query: string, dir: string, options: FindOptions = {}): Output {
+    let l: Loaded;
+    let expr: ReturnType<typeof parseProposition>;
+    try {
+        expr = parseProposition(query);
+        l = load(dir);
+    } catch (e) {
+        if (!(e instanceof UnilogError)) throw e;
+        return { ok: false, out: [], err: [e.message] };
+    }
+    if (l.errors.length > 0) return { ok: false, out: [], err: l.errors };
+
+    const rigidQuery = options.pattern ? undefined : propositionTerm(expr, true);
+    const found = sorted(l)
+        .flatMap((m) => [...m.decls.values()])
+        .filter((d) => unify(instantiate(d.scheme), rigidQuery ?? propositionTerm(expr)) === undefined);
+
+    const shown = new Printer().print(propositionTerm(expr));
+    if (options.json)
+        return {
+            ok: found.length > 0,
+            out: [
+                JSON.stringify(
+                    {
+                        query: shown,
+                        found: found.map((d) => ({
+                            name: keyOf(d),
+                            kind: d.kind,
+                            module: d.module,
+                            own: l.own.has(d.module),
+                            proposition: prop(d.scheme.body),
+                        })),
+                    },
+                    null,
+                    2,
+                ),
+            ],
+            err: [],
+        };
+    if (found.length === 0) return { ok: false, out: [], err: [`No declaration proves ${shown}`] };
+    return {
+        ok: true,
+        out: found.map((d) => `${d.kind === 'axiom' ? 'axiom  ' : 'theorem'} ${keyOf(d)} : ${prop(d.scheme.body)}`),
+        err: [],
+    };
+}
+
+export interface TheoremsOptions {
+    /** Include every module it imports, transitively. */
+    transitive?: boolean;
+    count?: boolean;
+    json?: boolean;
+}
+
+/**
+ * `unilog theorems <Module> [dir]`: the theorems declared in a module (or with `transitive`, in it and
+ * everything it imports), with what each proves. Proofs are not shown. Checks the modules involved,
+ * since what a theorem proves is inferred.
+ */
+export function theorems(module: string, dir: string, options: TheoremsOptions = {}): Output {
+    return guarded((out) => {
+        const ws = new Workspace(targetOf(dir).roots);
+        const modules = [ws.load(module)];
+        if (options.transitive)
+            // Visits modules appended during the loop too, so this walks the whole import graph.
+            for (const mod of modules)
+                for (const imp of mod.imports) if (!modules.some((m) => m.name === imp)) modules.push(ws.load(imp));
+        const list = modules.flatMap((m) => [...m.decls.values()].filter((d) => d.kind === 'theorem'));
+        if (options.count) {
+            out.push(String(list.length));
+        } else if (options.json) {
+            out.push(
+                JSON.stringify(
+                    {
+                        module,
+                        transitive: !!options.transitive,
+                        count: list.length,
+                        theorems: list.map((d) => ({
+                            name: keyOf(d),
+                            module: d.module,
+                            proposition: prop(d.scheme.body),
+                        })),
+                    },
+                    null,
+                    2,
+                ),
+            );
+        } else {
+            for (const d of list) out.push(`${keyOf(d)} : ${prop(d.scheme.body)}`);
+            out.push(
+                options.transitive
+                    ? `${list.length} theorem(s) in ${module} and the ${modules.length - 1} module(s) it imports`
+                    : `${list.length} theorem(s) in ${module}`,
+            );
+        }
     });
 }
