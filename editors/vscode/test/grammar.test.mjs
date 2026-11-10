@@ -45,7 +45,8 @@ function scopes(...lines) {
 
 const PROP_VAR = 'entity.name.type.parameter.unilog';
 const ASSUMPTION = 'variable.parameter.assumption.unilog';
-const PROOF = 'support.function.proof.unilog';
+// Proof names, used or declared, share the theme's declaration color (entity.name.function).
+const PROOF = 'entity.name.function.proof.unilog';
 
 const cases = [
     [

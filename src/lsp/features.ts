@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { Declaration, Derivation, keyOf, Module } from '../check';
 import { Loc, UnilogError } from '../errors';
+import { parse } from '../parser';
 import { Printer, prune } from '../term';
 import { PROJECT_FILE, SourceProvider, targetOf, Workspace } from '../workspace';
 
@@ -252,4 +253,27 @@ export function outline(a: Analysis, file: string): OutlineEntry[] {
         range: rangeOf(d.loc),
         selectionRange: rangeOf(d.nameLoc),
     }));
+}
+
+/** Where a declaration starts, and whether it is an axiom or a theorem. */
+export interface DeclarationMarker {
+    name: string;
+    kind: 'axiom' | 'theorem';
+    /** The 0-based line of the declaration's name. */
+    line: number;
+}
+
+/**
+ * The axioms and theorems declared in some source text, for gutter markers. Only parses, so it also works
+ * while the file has checking errors (a file that doesn't parse has no markers).
+ */
+export function declarationMarkers(text: string, file: string): DeclarationMarker[] {
+    let decls;
+    try {
+        decls = parse(text, file);
+    } catch (e) {
+        if (e instanceof UnilogError) return [];
+        throw e;
+    }
+    return decls.flatMap((d) => (d.k === 'import' ? [] : [{ name: d.name, kind: d.k, line: d.nameLoc.line - 1 }]));
 }

@@ -1,7 +1,16 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 import { diskSources, SourceProvider } from '../src';
-import { analyze, definition, findProjectDir, hover, inlayHints, outline, problems } from '../src/lsp/features';
+import {
+    analyze,
+    declarationMarkers,
+    definition,
+    findProjectDir,
+    hover,
+    inlayHints,
+    outline,
+    problems,
+} from '../src/lsp/features';
 import { tmpDir, write } from './helpers';
 
 function project() {
@@ -182,6 +191,20 @@ describe('language server features', () => {
             file: kant,
             range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
         });
+    });
+
+    it('declaration markers: which lines start axioms and which start theorems, from parsing alone', () => {
+        const text = 'import Kant.Ethics.\n\na : p.\nb : p => q.\nc =\n    b a.\nd : q = c.\n';
+        expect(declarationMarkers(text, 'f.ul')).toEqual([
+            { name: 'a', kind: 'axiom', line: 2 },
+            { name: 'b', kind: 'axiom', line: 3 },
+            { name: 'c', kind: 'theorem', line: 4 },
+            { name: 'd', kind: 'theorem', line: 6 },
+        ]);
+        // Still there when the file has checking errors (nothing here is declared or imported) ...
+        expect(declarationMarkers('t = nope nope.', 'f.ul')).toEqual([{ name: 't', kind: 'theorem', line: 0 }]);
+        // ... and none while it doesn't parse.
+        expect(declarationMarkers('a : (p.', 'f.ul')).toEqual([]);
     });
 
     it('outline lists declarations with what they prove', () => {
