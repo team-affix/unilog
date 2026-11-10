@@ -78,9 +78,10 @@ describe('language server features', () => {
             expect(at(2, 2)).toBe('```unilog\ntheorem Mine.Main.stated : ought truthful\n```');
         });
 
-        it('on a rule used in a proof: what it proves there, then its general statement', () => {
+        it('on a rule applied to arguments: each step of applying it, then its general statement', () => {
             expect(at(1, 8)).toBe(
-                '```unilog\nduty : good truthful => ought truthful\n```\n\n```unilog\naxiom Kant.Ethics.duty : good X => ought X\n```',
+                '```unilog\nduty : good truthful => ought truthful\nduty honesty : ought truthful\n```' +
+                    '\n\n```unilog\naxiom Kant.Ethics.duty : good X => ought X\n```',
             );
         });
 
@@ -88,16 +89,50 @@ describe('language server features', () => {
             expect(at(0, 10)).toMatch(/^module \*\*Kant\.Ethics\*\*: 2 axiom\(s\), 1 theorem\(s\)/);
         });
 
-        it('on an assumption and on a whole sub-proof', () => {
-            const dir = tmpDir();
-            write(dir, {
-                'M/A.ul': 'b : likes X cake => likes X sugar.\nb2 : q => likes jake cake.\nlift = p => b (b2 p).',
+        describe('inside a curried proof, without needing parentheses', () => {
+            // and_comm = p => pair (snd p) (fst p).
+            // 0         1         2         3
+            // 0123456789012345678901234567890123456
+            const dir = () => {
+                const d = tmpDir();
+                write(d, {
+                    'M/P.ul':
+                        'pair : A => B => and A B.\nfst : and A B => A.\nsnd : and A B => B.\nand_comm = p => pair (snd p) (fst p).',
+                });
+                return d;
+            };
+            const on = (character: number) => {
+                const d = dir();
+                return hover(analyze(d), path.join(d, 'M/P.ul'), { line: 3, character });
+            };
+
+            it('the rule name shows it taking each argument in turn, named as in the statement', () => {
+                expect(on(17)).toBe(
+                    '```unilog\npair : B => A => and B A\npair (snd p) : A => and B A\npair (snd p) (fst p) : and B A\n```' +
+                        '\n\n```unilog\naxiom M.P.pair : A => B => and A B\n```',
+                );
             });
-            const a = analyze(dir);
-            const file = path.join(dir, 'M/A.ul');
-            // lift = p => b (b2 p).   p is at column 18; the '(' at 14 is inside only the application b (b2 p)
-            expect(hover(a, file, { line: 2, character: 18 })).toBe('```unilog\np : q\n```\n\nassumption');
-            expect(hover(a, file, { line: 2, character: 14 })).toBe('```unilog\nb (b2 p) : likes jake sugar\n```');
+
+            it('an assumption where it is introduced shows what it is assumed to prove', () => {
+                expect(on(11)).toBe('```unilog\np : and A B\n```\n\nassumption');
+                expect(on(26)).toBe('```unilog\np : and A B\n```\n\nassumption');
+            });
+
+            it('parentheses belong to the step they enclose, at both ends', () => {
+                expect(on(21)).toBe('```unilog\nsnd p : B\n```');
+                expect(on(27)).toBe('```unilog\nsnd p : B\n```');
+                expect(on(29)).toBe('```unilog\nfst p : A\n```');
+            });
+
+            it('a rule taking one argument shows both steps', () => {
+                expect(on(22)).toBe(
+                    '```unilog\nsnd : and A B => B\nsnd p : B\n```\n\n```unilog\naxiom M.P.snd : and A B => B\n```',
+                );
+            });
+
+            it('whitespace between steps belongs to the enclosing application', () => {
+                expect(on(28)).toBe('```unilog\npair (snd p) (fst p) : and B A\n```');
+            });
         });
 
         it('on nothing in particular: nothing', () => {

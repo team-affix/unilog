@@ -43,6 +43,8 @@ export type Derivation =
           readonly term: Term;
           readonly loc: Loc;
           readonly param: string;
+          /** Where the assumption's name is written. */
+          readonly paramLoc: Loc;
           readonly body: Derivation;
       };
 
@@ -240,7 +242,15 @@ export function checkModule(
             case 'lam': {
                 const assumed = fresh();
                 const body = infer(e.body, new Map([...env, [e.param, assumed]]), uses);
-                return { k: 'assume', text, term: imp(assumed, body.term), loc: e.loc, param: e.param, body };
+                return {
+                    k: 'assume',
+                    text,
+                    term: imp(assumed, body.term),
+                    loc: e.loc,
+                    param: e.param,
+                    paramLoc: e.paramLoc,
+                    body,
+                };
             }
             case 'app': {
                 const fnD = infer(e.fn, env, uses);

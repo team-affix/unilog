@@ -27,8 +27,9 @@ describe('lexing (via parse)', () => {
         // ((b (f a)) x): the whole application runs from b to x
         expect(proof?.loc).toEqual({ file: 'f', line: 1, col: 5, end: { line: 1, col: 14 } });
         expect(proof?.k === 'app' && proof.arg.loc).toEqual({ file: 'f', line: 1, col: 13, end: { line: 1, col: 14 } });
+        // A parenthesized step's range includes its parentheses: (f a) runs from column 7 to 11.
         const inner = proof?.k === 'app' && proof.fn.k === 'app' ? proof.fn.arg : undefined;
-        expect(inner?.loc).toEqual({ file: 'f', line: 1, col: 8, end: { line: 1, col: 11 } });
+        expect(inner?.loc).toEqual({ file: 'f', line: 1, col: 7, end: { line: 1, col: 12 } });
     });
 
     it('rejects unknown characters with a location', () => {
