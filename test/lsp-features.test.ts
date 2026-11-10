@@ -74,14 +74,14 @@ describe('language server features', () => {
         };
 
         it('on a declaration name: what it proves, and that it was inferred', () => {
-            expect(at(1, 1)).toBe('```unilog\ntheorem Mine.Main.mine : ought truthful\n```\n\n(inferred)');
-            expect(at(2, 2)).toBe('```unilog\ntheorem Mine.Main.stated : ought truthful\n```');
+            expect(at(1, 1)).toBe('```unilog-step\nMine.Main.mine : ought truthful\n```\n\ntheorem (claim inferred)');
+            expect(at(2, 2)).toBe('```unilog-step\nMine.Main.stated : ought truthful\n```\n\ntheorem');
         });
 
         it('on a rule applied to arguments: each step of applying it, then its general statement', () => {
             expect(at(1, 8)).toBe(
-                '```unilog\nduty : good truthful => ought truthful\nduty honesty : ought truthful\n```' +
-                    '\n\n```unilog\naxiom Kant.Ethics.duty : good X => ought X\n```',
+                '```unilog-step\nduty : good truthful => ought truthful\nduty honesty : ought truthful\n```' +
+                    '\n\n```unilog-step\nKant.Ethics.duty : good X => ought X\n```\n\naxiom',
             );
         });
 
@@ -108,32 +108,32 @@ describe('language server features', () => {
 
             it('the rule name shows it taking each argument in turn, named as in the statement', () => {
                 expect(on(17)).toBe(
-                    '```unilog\npair : B => A => and B A\npair (snd P) : A => and B A\npair (snd P) (fst P) : and B A\n```' +
-                        '\n\n```unilog\naxiom M.P.pair : A => B => and A B\n```',
+                    '```unilog-step\npair : B => A => and B A\npair (snd P) : A => and B A\npair (snd P) (fst P) : and B A\n```' +
+                        '\n\n```unilog-step\nM.P.pair : A => B => and A B\n```\n\naxiom',
                 );
             });
 
             it('an assumption where it is introduced shows what it is assumed to prove', () => {
-                expect(on(11)).toBe('```unilog\nP : and A B\n```\n\nassumption');
-                expect(on(26)).toBe('```unilog\nP : and A B\n```\n\nassumption');
+                expect(on(11)).toBe('```unilog-step\nP : and A B\n```\n\nassumption');
+                expect(on(26)).toBe('```unilog-step\nP : and A B\n```\n\nassumption');
             });
 
             it('parentheses belong to the step they enclose, at both ends', () => {
-                expect(on(21)).toBe('```unilog\nsnd P : B\n```');
-                expect(on(27)).toBe('```unilog\nsnd P : B\n```');
-                expect(on(29)).toBe('```unilog\nfst P : A\n```');
+                expect(on(21)).toBe('```unilog-step\nsnd P : B\n```');
+                expect(on(27)).toBe('```unilog-step\nsnd P : B\n```');
+                expect(on(29)).toBe('```unilog-step\nfst P : A\n```');
             });
 
             it('a rule taking one argument shows both steps', () => {
                 expect(on(22)).toBe(
-                    '```unilog\nsnd : and A B => B\nsnd P : B\n```\n\n```unilog\naxiom M.P.snd : and A B => B\n```',
+                    '```unilog-step\nsnd : and A B => B\nsnd P : B\n```\n\n```unilog-step\nM.P.snd : and A B => B\n```\n\naxiom',
                 );
             });
 
             it('the gap after a rule name is its first application only; the last gap is the whole', () => {
                 // and_comm = P => pair (snd P) (fst P).   gap at 20 is after `pair`, gap at 28 after `(snd P)`
-                expect(on(20)).toBe('```unilog\npair (snd P) : A => and B A\n```');
-                expect(on(28)).toBe('```unilog\npair (snd P) (fst P) : and B A\n```');
+                expect(on(20)).toBe('```unilog-step\npair (snd P) : A => and B A\n```');
+                expect(on(28)).toBe('```unilog-step\npair (snd P) (fst P) : and B A\n```');
             });
 
             it('reports the exact range it describes, for the editor to highlight', () => {
@@ -153,7 +153,7 @@ describe('language server features', () => {
             });
 
             it('whitespace between steps belongs to the enclosing application', () => {
-                expect(on(28)).toBe('```unilog\npair (snd P) (fst P) : and B A\n```');
+                expect(on(28)).toBe('```unilog-step\npair (snd P) (fst P) : and B A\n```');
             });
         });
 

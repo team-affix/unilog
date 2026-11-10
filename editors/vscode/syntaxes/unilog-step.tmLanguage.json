@@ -1,0 +1,32 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Unilog proof step",
+    "scopeName": "source.unilog.step",
+    "comment": "Lines of the form `proof : proposition`, as shown in hovers: the part before ' : ' is colored as a proof, the rest as a proposition.",
+    "patterns": [
+        {
+            "begin": "^(?=\\S)",
+            "end": "(?=\\s:\\s)|$",
+            "name": "meta.proof.unilog",
+            "patterns": [
+                {
+                    "include": "source.unilog#proofBody"
+                }
+            ]
+        },
+        {
+            "begin": "\\s(:)\\s",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.operator.colon.unilog"
+                }
+            },
+            "end": "$",
+            "patterns": [
+                {
+                    "include": "source.unilog#proposition"
+                }
+            ]
+        }
+    ]
+}

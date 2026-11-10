@@ -115,8 +115,10 @@ function stepsAt(d: Derivation, pos: Position, cursor: boolean): Derivation[] {
     return [d];
 }
 
-const code = (lines: string[]) => '```unilog\n' + lines.join('\n') + '\n```';
-const describe = (d: Declaration, p: Printer) => `${d.kind} ${keyOf(d)} : ${p.print(d.scheme.body)}`;
+/** Proof steps (`proof : proposition`), in the editor's step grammar, which colors the proof part as a proof. */
+const steps = (lines: string[]) => '```unilog-step\n' + lines.join('\n') + '\n```';
+/** A declaration as a step line (its name is a proof), then whether it is an axiom or a theorem. */
+const describe = (d: Declaration, p: Printer) => `${steps([`${keyOf(d)} : ${p.print(d.scheme.body)}`])}\n\n${d.kind}`;
 
 /** What a hover shows, and the range of source it describes (which the editor highlights). */
 export interface HoverInfo {
@@ -154,7 +156,7 @@ export function hover(a: Analysis, file: string, pos: Position): HoverInfo | und
     for (const d of mod.decls.values()) {
         if (contains(d.nameLoc, pos))
             return {
-                markdown: code([describe(d, p)]) + (d.kind === 'theorem' && !d.stated ? '\n\n(inferred)' : ''),
+                markdown: describe(d, p) + (d.kind === 'theorem' && !d.stated ? ' (claim inferred)' : ''),
                 range: rangeOf(d.nameLoc),
             };
         if (!d.proof || !contains(d.loc, pos)) continue;
@@ -167,11 +169,11 @@ export function hover(a: Analysis, file: string, pos: Position): HoverInfo | und
         if (step.k === 'assume' && contains(step.paramLoc, pos)) {
             const assumed = prune(step.term);
             const proves = assumed.k === 'imp' ? p.print(assumed.from) : '?';
-            return { markdown: code([`${step.param} : ${proves}`]) + '\n\nassumption', range: rangeOf(step.paramLoc) };
+            return { markdown: steps([`${step.param} : ${proves}`]) + '\n\nassumption', range: rangeOf(step.paramLoc) };
         }
         const range = rangeOf(step.loc);
-        if (step.k !== 'use') return { markdown: code([`${step.text} : ${p.print(step.term)}`]), range };
-        if (!step.decl) return { markdown: code([`${step.text} : ${p.print(step.term)}`]) + '\n\nassumption', range };
+        if (step.k !== 'use') return { markdown: steps([`${step.text} : ${p.print(step.term)}`]), range };
+        if (!step.decl) return { markdown: steps([`${step.text} : ${p.print(step.term)}`]) + '\n\nassumption', range };
 
         // A rule's name: climb while it is the function being applied, to show it taking each argument in turn.
         const spine: Derivation[] = [step];
@@ -180,9 +182,9 @@ export function hover(a: Analysis, file: string, pos: Position): HoverInfo | und
             if (parent.k !== 'apply' || parent.fn !== spine[spine.length - 1]) break;
             spine.push(parent);
         }
-        const steps = code(spine.map((s) => `${s.text} : ${p.print(s.term)}`));
+        const applied = steps(spine.map((s) => `${s.text} : ${p.print(s.term)}`));
         // The rule's general statement has its own variables: name them independently.
-        return { markdown: `${steps}\n\n${code([describe(step.decl, new Printer())])}`, range };
+        return { markdown: `${applied}\n\n${describe(step.decl, new Printer())}`, range };
     }
     return undefined;
 }
