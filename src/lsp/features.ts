@@ -118,16 +118,23 @@ function stepsAt(d: Derivation, pos: Position, cursor: boolean): Derivation[] {
 const code = (lines: string[]) => '```unilog\n' + lines.join('\n') + '\n```';
 const describe = (d: Declaration, p: Printer) => `${d.kind} ${keyOf(d)} : ${p.print(d.scheme.body)}`;
 
+/** What a hover shows, and the range of source it describes (which the editor highlights). */
+export interface HoverInfo {
+    markdown: string;
+    range: Range;
+}
+
 /**
- * Markdown describing what is under the cursor:
+ * What is under the mouse, and the exact range it covers:
  * - a declaration's name: what it proves;
- * - a rule applied to arguments, e.g. `pair` in `pair (snd p) (fst p)`: every step of applying it, one
- *   argument at a time, so partial applications can be seen without parentheses; then its general statement;
- * - an assumption where it is introduced (`p` in `p => ...`): what it is assumed to prove;
- * - any other proof step (a parenthesized one includes its parentheses): what it proves there;
+ * - a rule's name applied to arguments, e.g. `pair` in `pair (snd P) (fst P)`: every step of applying it, one
+ *   argument at a time, then its general statement;
+ * - an assumption where it is introduced (`P` in `P => ...`): what it is assumed to prove;
+ * - any other proof step: what that step alone proves. The gap after `pair` is the step `pair (snd P)`; the
+ *   gap after `(snd P)` is the whole `pair (snd P) (fst P)`. A parenthesized step includes its parentheses;
  * - an import: the module.
  */
-export function hover(a: Analysis, file: string, pos: Position): string | undefined {
+export function hover(a: Analysis, file: string, pos: Position): HoverInfo | undefined {
     const mod = a.ws.moduleAt(file);
     if (!mod) return undefined;
     const p = new Printer();
@@ -138,12 +145,18 @@ export function hover(a: Analysis, file: string, pos: Position): string | undefi
         if (!m) return undefined;
         const decls = [...m.decls.values()];
         const axioms = decls.filter((d) => d.kind === 'axiom').length;
-        return `module **${m.name}**: ${axioms} axiom(s), ${decls.length - axioms} theorem(s)\n\n${m.file}`;
+        return {
+            markdown: `module **${m.name}**: ${axioms} axiom(s), ${decls.length - axioms} theorem(s)\n\n${m.file}`,
+            range: rangeOf(mod.importLocs[imported] as Loc),
+        };
     }
 
     for (const d of mod.decls.values()) {
         if (contains(d.nameLoc, pos))
-            return code([describe(d, p)]) + (d.kind === 'theorem' && !d.stated ? '\n\n(inferred)' : '');
+            return {
+                markdown: code([describe(d, p)]) + (d.kind === 'theorem' && !d.stated ? '\n\n(inferred)' : ''),
+                range: rangeOf(d.nameLoc),
+            };
         if (!d.proof || !contains(d.loc, pos)) continue;
         const path = stepsAt(d.proof, pos, false);
         const step = path.at(-1);
@@ -154,21 +167,22 @@ export function hover(a: Analysis, file: string, pos: Position): string | undefi
         if (step.k === 'assume' && contains(step.paramLoc, pos)) {
             const assumed = prune(step.term);
             const proves = assumed.k === 'imp' ? p.print(assumed.from) : '?';
-            return code([`${step.param} : ${proves}`]) + '\n\nassumption';
+            return { markdown: code([`${step.param} : ${proves}`]) + '\n\nassumption', range: rangeOf(step.paramLoc) };
         }
+        const range = rangeOf(step.loc);
+        if (step.k !== 'use') return { markdown: code([`${step.text} : ${p.print(step.term)}`]), range };
+        if (!step.decl) return { markdown: code([`${step.text} : ${p.print(step.term)}`]) + '\n\nassumption', range };
 
-        // Climb while this step is the function being applied: that chain is the rule taking its arguments.
-        const spine = [step];
+        // A rule's name: climb while it is the function being applied, to show it taking each argument in turn.
+        const spine: Derivation[] = [step];
         for (let i = path.length - 2; i >= 0; i--) {
             const parent = path[i] as Derivation;
             if (parent.k !== 'apply' || parent.fn !== spine[spine.length - 1]) break;
             spine.push(parent);
         }
-        const here = code(spine.map((s) => `${s.text} : ${p.print(s.term)}`));
-        if (step.k !== 'use') return here;
-        if (!step.decl) return `${here}\n\nassumption`;
+        const steps = code(spine.map((s) => `${s.text} : ${p.print(s.term)}`));
         // The rule's general statement has its own variables: name them independently.
-        return `${here}\n\n${code([describe(step.decl, new Printer())])}`;
+        return { markdown: `${steps}\n\n${code([describe(step.decl, new Printer())])}`, range };
     }
     return undefined;
 }

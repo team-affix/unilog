@@ -120,8 +120,9 @@ export function listen(connection: Connection): void {
     });
 
     connection.onHover(({ textDocument, position }) => {
-        const value = hover(analysisFor(textDocument.uri), toPath(textDocument.uri), position);
-        return value ? { contents: { kind: MarkupKind.Markdown, value } } : null;
+        const info = hover(analysisFor(textDocument.uri), toPath(textDocument.uri), position);
+        // The range tells the editor what the hover describes, so it highlights exactly that.
+        return info ? { contents: { kind: MarkupKind.Markdown, value: info.markdown }, range: info.range } : null;
     });
 
     connection.onDefinition(({ textDocument, position }) => {
