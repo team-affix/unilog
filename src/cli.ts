@@ -77,8 +77,8 @@ program
     .argument('<name>', 'qualified declaration name, e.g. Ethics.Main.keep_promises')
     .argument('[dir]', 'directory', '.')
     .option('-s, --shallow', "don't expand the theorems it uses into their own proofs")
-    .option('-f, --flat', 'numbered steps without indentation, each after the steps it uses')
-    .option('--json', 'output the tree (or with --flat, the steps) as JSON')
+    .option('-f, --flat', 'list the declarations it relies on, each once, in the order needed to reach it')
+    .option('--json', 'output the tree (or with --flat, the list) as JSON')
     .action((name: string, dir: string, opts: { shallow?: boolean; flat?: boolean; json?: boolean }) =>
         emit(proof(name, dir, opts)),
     );

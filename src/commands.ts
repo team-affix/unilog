@@ -430,69 +430,45 @@ export interface ProofOptions {
     /** Don't expand the theorems this proof uses into their own proofs. */
     shallow?: boolean;
     /**
-     * List the steps without indentation, numbered, each after the steps it uses, with references to them
-     * ("from 1, 2"). The same tree, written out as a proof.
+     * Instead of a tree, list every declaration the proof relies on, each once, in the order needed to
+     * reach it. Lines refer to each other by name, as in the source.
      */
     flat?: boolean;
     json?: boolean;
 }
 
-/** One numbered step of a flat proof. */
-export interface ProofStep {
-    step: number;
-    expr: string;
+/** One declaration in a flat proof listing. */
+export interface ProofLine {
+    name: string;
+    kind: 'axiom' | 'theorem';
+    /** The declaration's own (general) statement. */
     proposition: string;
-    kind: ProofNode['kind'];
-    name?: string;
+    /** For theorems: the proof expression, which refers to earlier lines by name. */
     proof?: string;
-    /** Steps this one is derived from. */
-    from: number[];
-    /** How it follows from them (see ProofNode.rule). */
-    rule?: ProofNode['rule'];
-    assumption?: string;
-    /** For a theorem used again: the step where it was first proved. */
-    sameAs?: number;
 }
 
-/** Numbers a proof tree's steps so each comes after the steps it uses. */
-function flatten(root: ProofNode): ProofStep[] {
-    const steps: ProofStep[] = [];
-    const provedAt = new Map<string, number>();
-    const visit = (n: ProofNode): number => {
-        const from = n.children.map(visit);
-        const step: ProofStep = {
-            step: steps.length + 1,
-            expr: n.expr,
-            proposition: n.proposition,
-            kind: n.kind,
-            from,
-        };
-        if (n.name) step.name = n.name;
-        if (n.proof) step.proof = n.proof;
-        if (n.rule) step.rule = n.rule;
-        if (n.assumption) step.assumption = n.assumption;
-        if (n.shownAbove && n.name) step.sameAs = provedAt.get(n.name);
-        else if (n.kind === 'theorem' && n.name && n.proof) provedAt.set(n.name, step.step);
-        steps.push(step);
-        return step.step;
+/**
+ * Every declaration a proof relies on, each once, in the order needed to reach it: each line comes after
+ * the declarations its proof uses (in the order they appear in the proof), and the declaration itself is
+ * last. With `shallow`, only the declarations its own proof uses directly.
+ */
+function proofLines(d: Declaration, ws: Workspace, shallow: boolean): ProofLine[] {
+    const lines: ProofLine[] = [];
+    const seen = new Set<string>();
+    const line = (x: Declaration, withProof: boolean): ProofLine => {
+        const l: ProofLine = { name: keyOf(x), kind: x.kind, proposition: prop(x.scheme.body) };
+        if (withProof && x.proof) l.proof = x.proof.text;
+        return l;
     };
-    visit(root);
-    return steps;
-}
-
-function stepText(s: ProofStep, isLast: boolean): string {
-    const notes: string[] = [];
-    if (s.kind === 'axiom') notes.push(`axiom ${s.name}`);
-    else if (s.kind === 'assumption') notes.push('assumption');
-    else if (s.kind === 'theorem' && !isLast) {
-        if (s.sameAs) notes.push(`theorem ${s.name}, as in step ${s.sameAs}`);
-        else notes.push(s.proof ? `theorem ${s.name} = ${s.proof}` : `theorem ${s.name}`);
-    }
-    if (s.rule === 'apply') notes.push(`step ${s.from[0]} applied to step ${s.from[1]}`);
-    else if (s.rule === 'assume') notes.push(`step ${s.from[0]}, assuming ${s.assumption}`);
-    else if (s.rule === 'same') notes.push(`same as step ${s.from[0]}`);
-    const head = isLast && s.proof ? `${s.name} = ${s.proof}` : s.expr;
-    return `${s.step}. ${head} : ${s.proposition}${notes.length > 0 ? `   [${notes.join('; ')}]` : ''}`;
+    const visit = (x: Declaration, depth: number) => {
+        const key = keyOf(x);
+        if (seen.has(key)) return;
+        seen.add(key);
+        if (!shallow || depth === 0) for (const use of x.uses) visit(ws.declaration(use), depth + 1);
+        lines.push(line(x, !shallow || depth === 0));
+    };
+    visit(d, 0);
+    return lines;
 }
 
 /**
@@ -502,7 +478,8 @@ function stepText(s: ProofStep, isLast: boolean): string {
  */
 export function proof(name: string, dir: string, options: ProofOptions = {}): Output {
     return guarded((out) => {
-        const d = new Workspace(targetOf(dir).roots).declaration(name);
+        const ws = new Workspace(targetOf(dir).roots);
+        const d = ws.declaration(name);
         const p = new Printer();
         const expanded = new Set<string>([keyOf(d)]);
 
@@ -545,9 +522,15 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
             : { expr: keyOf(d), proposition: p.print(d.scheme.body), kind: 'axiom', name: keyOf(d), children: [] };
 
         if (options.flat) {
-            const steps = flatten(root);
-            if (options.json) out.push(JSON.stringify(steps, null, 2));
-            else steps.forEach((s, i) => out.push(stepText(s, i === steps.length - 1)));
+            const lines = proofLines(d, ws, !!options.shallow);
+            if (options.json) out.push(JSON.stringify(lines, null, 2));
+            else
+                for (const l of lines)
+                    out.push(
+                        l.proof
+                            ? `${l.name} = ${l.proof} : ${l.proposition}`
+                            : `${l.name} : ${l.proposition}   [${l.kind}]`,
+                    );
             return;
         }
         if (options.json) {

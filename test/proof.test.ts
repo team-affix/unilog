@@ -103,61 +103,53 @@ describe('proof', () => {
         });
     });
 
-    it('--flat numbers the steps, each after the steps it uses, without indentation', () => {
+    it('--flat lists every declaration the proof relies on, once each, dependencies first', () => {
         expect(commands.proof('M.T.twice', project(T), { flat: true }).out).toEqual([
-            '1. pair : likes jake sugar => likes jake sugar => both (likes jake sugar) (likes jake sugar)   [axiom M.T.pair]',
-            '2. b : likes jake cake => likes jake sugar   [axiom M.T.b]',
-            '3. a : likes jake cake   [axiom M.T.a]',
-            '4. lemma : likes jake sugar   [theorem M.T.lemma = b a; step 2 applied to step 3]',
-            '5. pair lemma : likes jake sugar => both (likes jake sugar) (likes jake sugar)   [step 1 applied to step 4]',
-            '6. lemma : likes jake sugar   [theorem M.T.lemma, as in step 4]',
-            '7. M.T.twice = pair lemma lemma : both (likes jake sugar) (likes jake sugar)   [step 5 applied to step 6]',
+            'M.T.pair : A => B => both A B   [axiom]',
+            'M.T.b : likes X cake => likes X sugar   [axiom]',
+            'M.T.a : likes jake cake   [axiom]',
+            'M.T.lemma = b a : likes jake sugar',
+            'M.T.twice = pair lemma lemma : both (likes jake sugar) (likes jake sugar)',
         ]);
     });
 
-    it('--flat says how each step follows: applying an implication, or assuming a premise', () => {
+    it('--flat follows theorems through their own proofs, across modules', () => {
         const dir = project({
-            'M/N.ul': 'pair : A => B => both A B.\nself_pair = p => pair p p.\nalias = self_pair.',
+            'Kant/Ethics.ul': 'duty : good X => ought X.\nhonesty : good truthful.\ntell_truth = duty honesty.',
+            'Mine/Main.ul': 'import Kant.Ethics.\nmine = tell_truth.\nboth_ways = p => duty p.',
         });
-        expect(commands.proof('M.N.self_pair', dir, { flat: true }).out).toEqual([
-            '1. pair : A => A => both A A   [axiom M.N.pair]',
-            '2. p : A   [assumption]',
-            '3. pair p : A => both A A   [step 1 applied to step 2]',
-            '4. p : A   [assumption]',
-            '5. pair p p : both A A   [step 3 applied to step 4]',
-            '6. M.N.self_pair = p => pair p p : A => both A A   [step 5, assuming p]',
+        expect(commands.proof('Mine.Main.mine', dir, { flat: true }).out).toEqual([
+            'Kant.Ethics.duty : good X => ought X   [axiom]',
+            'Kant.Ethics.honesty : good truthful   [axiom]',
+            'Kant.Ethics.tell_truth = duty honesty : ought truthful',
+            'Mine.Main.mine = tell_truth : ought truthful',
         ]);
-        expect(commands.proof('M.N.alias', dir, { flat: true }).out.at(-1)).toBe(
-            '7. M.N.alias = self_pair : A => both A A   [same as step 6]',
-        );
+        expect(commands.proof('Mine.Main.both_ways', dir, { flat: true }).out).toEqual([
+            'Kant.Ethics.duty : good X => ought X   [axiom]',
+            'Mine.Main.both_ways = p => duty p : good X => ought X',
+        ]);
     });
 
-    it('--flat works with --shallow, and for axioms', () => {
+    it('--flat --shallow lists only what the proof uses directly', () => {
         expect(commands.proof('M.T.use_lift', project(T), { flat: true, shallow: true }).out).toEqual([
-            '1. lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [theorem M.T.lift]',
-            '2. a : likes jake cake   [axiom M.T.a]',
-            '3. M.T.use_lift = lift a : both (likes jake cake) (likes jake sugar)   [step 1 applied to step 2]',
-        ]);
-        expect(commands.proof('M.T.a', project(T), { flat: true }).out).toEqual([
-            '1. M.T.a : likes jake cake   [axiom M.T.a]',
+            'M.T.lift : A => both A (likes jake sugar)   [theorem]',
+            'M.T.a : likes jake cake   [axiom]',
+            'M.T.use_lift = lift a : both (likes jake cake) (likes jake sugar)',
         ]);
     });
 
-    it('--flat --json gives the numbered steps as data', () => {
-        const steps = JSON.parse(commands.proof('M.T.twice', project(T), { flat: true, json: true }).out[0] as string);
-        expect(steps).toHaveLength(7);
-        expect(steps[3]).toEqual({
-            step: 4,
-            expr: 'lemma',
-            proposition: 'likes jake sugar',
-            kind: 'theorem',
-            name: 'M.T.lemma',
-            proof: 'b a',
-            from: [2, 3],
-            rule: 'apply',
-        });
-        expect(steps[5]).toMatchObject({ step: 6, name: 'M.T.lemma', sameAs: 4, from: [] });
-        expect(steps[6]).toMatchObject({ step: 7, from: [5, 6] });
+    it('--flat of an axiom is just the axiom', () => {
+        expect(commands.proof('M.T.a', project(T), { flat: true }).out).toEqual(['M.T.a : likes jake cake   [axiom]']);
+    });
+
+    it('--flat --json gives the list as data', () => {
+        expect(
+            JSON.parse(commands.proof('M.T.lemma', project(T), { flat: true, json: true }).out[0] as string),
+        ).toEqual([
+            { name: 'M.T.b', kind: 'axiom', proposition: 'likes X cake => likes X sugar' },
+            { name: 'M.T.a', kind: 'axiom', proposition: 'likes jake cake' },
+            { name: 'M.T.lemma', kind: 'theorem', proposition: 'likes jake sugar', proof: 'b a' },
+        ]);
     });
 
     it('reports an unknown declaration', () => {
