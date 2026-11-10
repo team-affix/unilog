@@ -121,8 +121,11 @@ function converters(file: string) {
     function proof(ctx: ProofContext): ProofExpr {
         if (ctx instanceof AssumeContext) {
             const param = simpleName(ctx.NAME().symbol, 'An assumption');
-            if (isVariableName(param))
-                throw new UnilogError(`Assumption names must start with a lowercase letter: '${param}'`, locOf(ctx));
+            if (!isVariableName(param))
+                throw new UnilogError(
+                    `Assumptions are variables, so their names start with an uppercase letter or '_': '${param}'`,
+                    locOf(ctx),
+                );
             return { k: 'lam', param, body: proof(ctx.proof()), loc: locOf(ctx), paramLoc: locOf(ctx.NAME().symbol) };
         }
         const atoms = (ctx as ApplyContext).proofAtom().map(proofAtom);

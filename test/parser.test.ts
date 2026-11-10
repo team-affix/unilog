@@ -68,9 +68,9 @@ describe('parse', () => {
     });
 
     it('parses assumptions in proofs', () => {
-        const [d] = parse('t = f => x => f (g x).', 'f');
+        const [d] = parse('t = F => X => F (g X).', 'f');
         expect(d).toMatchObject({
-            proof: { k: 'lam', param: 'f', body: { k: 'lam', param: 'x', body: { k: 'app' } } },
+            proof: { k: 'lam', param: 'F', body: { k: 'lam', param: 'X', body: { k: 'app' } } },
         });
     });
 
@@ -79,7 +79,11 @@ describe('parse', () => {
         ['neither : nor =', 'a.', /1:2: Syntax error/],
         ['uppercase declaration name', 'Foo : b.', /must start with a lowercase/],
         ['qualified symbol in a proposition', 'a : b.c.', /put a space or newline/],
-        ['uppercase assumption', 't = X => X.', /Assumption names must start with a lowercase/],
+        [
+            'lowercase assumption',
+            't = x => x.',
+            /Assumptions are variables, so their names start with an uppercase letter/,
+        ],
         ['unbalanced parens', 'a : (b c.', /1:9: Syntax error: missing '\)'/],
         ['empty proposition', 'a : .', /1:5: Syntax error: .*expecting \{'\(', a name\}/],
         ['import without a module', 'import .', /1:8: Syntax error: missing a name/],

@@ -62,10 +62,10 @@ const cases = [
         ],
     ],
     [
-        // A continuation line starting with an assumption must not be colored as a declaration name.
-        '    nnp => case lem.',
+        // A continuation line starting with an assumption is a variable, not a declaration name.
+        '    Nnp => case lem.',
         [
-            ['nnp', ''],
+            ['Nnp', 'variable.parameter.unilog'],
             ['=>', 'keyword.operator.arrow.unilog'],
             ['case lem', ''],
             ['.', 'punctuation.terminator.unilog'],

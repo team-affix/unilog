@@ -90,14 +90,14 @@ describe('language server features', () => {
         });
 
         describe('inside a curried proof, without needing parentheses', () => {
-            // and_comm = p => pair (snd p) (fst p).
+            // and_comm = P => pair (snd P) (fst P).
             // 0         1         2         3
             // 0123456789012345678901234567890123456
             const dir = () => {
                 const d = tmpDir();
                 write(d, {
                     'M/P.ul':
-                        'pair : A => B => and A B.\nfst : and A B => A.\nsnd : and A B => B.\nand_comm = p => pair (snd p) (fst p).',
+                        'pair : A => B => and A B.\nfst : and A B => A.\nsnd : and A B => B.\nand_comm = P => pair (snd P) (fst P).',
                 });
                 return d;
             };
@@ -108,30 +108,30 @@ describe('language server features', () => {
 
             it('the rule name shows it taking each argument in turn, named as in the statement', () => {
                 expect(on(17)).toBe(
-                    '```unilog\npair : B => A => and B A\npair (snd p) : A => and B A\npair (snd p) (fst p) : and B A\n```' +
+                    '```unilog\npair : B => A => and B A\npair (snd P) : A => and B A\npair (snd P) (fst P) : and B A\n```' +
                         '\n\n```unilog\naxiom M.P.pair : A => B => and A B\n```',
                 );
             });
 
             it('an assumption where it is introduced shows what it is assumed to prove', () => {
-                expect(on(11)).toBe('```unilog\np : and A B\n```\n\nassumption');
-                expect(on(26)).toBe('```unilog\np : and A B\n```\n\nassumption');
+                expect(on(11)).toBe('```unilog\nP : and A B\n```\n\nassumption');
+                expect(on(26)).toBe('```unilog\nP : and A B\n```\n\nassumption');
             });
 
             it('parentheses belong to the step they enclose, at both ends', () => {
-                expect(on(21)).toBe('```unilog\nsnd p : B\n```');
-                expect(on(27)).toBe('```unilog\nsnd p : B\n```');
-                expect(on(29)).toBe('```unilog\nfst p : A\n```');
+                expect(on(21)).toBe('```unilog\nsnd P : B\n```');
+                expect(on(27)).toBe('```unilog\nsnd P : B\n```');
+                expect(on(29)).toBe('```unilog\nfst P : A\n```');
             });
 
             it('a rule taking one argument shows both steps', () => {
                 expect(on(22)).toBe(
-                    '```unilog\nsnd : and A B => B\nsnd p : B\n```\n\n```unilog\naxiom M.P.snd : and A B => B\n```',
+                    '```unilog\nsnd : and A B => B\nsnd P : B\n```\n\n```unilog\naxiom M.P.snd : and A B => B\n```',
                 );
             });
 
             it('whitespace between steps belongs to the enclosing application', () => {
-                expect(on(28)).toBe('```unilog\npair (snd p) (fst p) : and B A\n```');
+                expect(on(28)).toBe('```unilog\npair (snd P) (fst P) : and B A\n```');
             });
         });
 
