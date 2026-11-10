@@ -43,6 +43,10 @@ A project's `unilog.json` says where modules are found and what to check:
 
 See the [language reference](docs/language.md) and [`examples/`](examples).
 
+## Editor support
+
+A VS Code extension lives in [`editors/vscode`](editors/vscode): errors as you type, hover to see what any declaration or proof step proves, inferred claims shown inline, go to definition and an outline. It is a client for the Unilog language server (`unilog-lsp`, in [`src/lsp`](src/lsp)), which uses the same checker as `unilog check`. Other editors that speak the Language Server Protocol can run `unilog-lsp --stdio`.
+
 ## Development
 
 ```bash
@@ -62,5 +66,7 @@ src/check.ts      inference for each declaration (the trusted core)
 src/workspace.ts  modules, imports, search roots, axiom tracing
 src/commands.ts   check / axioms / show
 src/cli.ts        command-line entry point
+src/lsp/          language server: editor features (features.ts) and protocol wiring (server.ts)
+editors/vscode/   VS Code extension (client, syntax highlighting, packaging)
 examples/         a Logic prelude and the design examples; checked by the tests
 ```

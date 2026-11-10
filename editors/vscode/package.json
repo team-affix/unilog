@@ -1,0 +1,60 @@
+{
+    "name": "unilog",
+    "displayName": "Unilog",
+    "description": "Unilog language support: errors as you type, what each proof step proves on hover, inferred claims inline, go to definition.",
+    "version": "0.1.0",
+    "publisher": "team-affix",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/team-affix/unilog"
+    },
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "unilog",
+                "aliases": [
+                    "Unilog"
+                ],
+                "extensions": [
+                    ".ul"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "unilog",
+                "scopeName": "source.unilog",
+                "path": "./syntaxes/unilog.tmLanguage.json"
+            }
+        ],
+        "configurationDefaults": {
+            "[unilog]": {
+                "editor.inlayHints.enabled": "on"
+            }
+        }
+    },
+    "scripts": {
+        "grammar": "npm --prefix ../.. run grammar",
+        "build": "npm run grammar && node build.mjs",
+        "test": "node test/grammar.test.mjs",
+        "package": "npm run build && vsce package --no-dependencies"
+    },
+    "devDependencies": {
+        "@types/node": "^22.15.30",
+        "@types/vscode": "~1.85.0",
+        "@vscode/vsce": "^3.6.0",
+        "esbuild": "^0.25.0",
+        "vscode-languageclient": "^9.0.1",
+        "vscode-oniguruma": "^2.0.1",
+        "vscode-textmate": "^9.2.0"
+    }
+}

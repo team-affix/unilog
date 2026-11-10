@@ -17,7 +17,18 @@ describe('lexing (via parse)', () => {
 
     it('records line and column', () => {
         const [, d] = parse('a : p.\n  bb : q.', 'f');
-        expect(d?.loc).toEqual({ file: 'f', line: 2, col: 3 });
+        expect(d?.loc).toEqual({ file: 'f', line: 2, col: 3, end: { line: 2, col: 10 } });
+        expect(d?.k !== 'import' && d?.nameLoc).toEqual({ file: 'f', line: 2, col: 3, end: { line: 2, col: 5 } });
+    });
+
+    it('records ranges for proof steps, spanning applications', () => {
+        const [d] = parse('c = b (f a) x.', 'f');
+        const proof = d?.k === 'theorem' ? d.proof : undefined;
+        // ((b (f a)) x): the whole application runs from b to x
+        expect(proof?.loc).toEqual({ file: 'f', line: 1, col: 5, end: { line: 1, col: 14 } });
+        expect(proof?.k === 'app' && proof.arg.loc).toEqual({ file: 'f', line: 1, col: 13, end: { line: 1, col: 14 } });
+        const inner = proof?.k === 'app' && proof.fn.k === 'app' ? proof.fn.arg : undefined;
+        expect(inner?.loc).toEqual({ file: 'f', line: 1, col: 8, end: { line: 1, col: 11 } });
     });
 
     it('rejects unknown characters with a location', () => {

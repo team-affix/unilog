@@ -1,0 +1,54 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Unilog",
+    "scopeName": "source.unilog",
+    "patterns": [
+        { "include": "#comment" },
+        { "include": "#import" },
+        { "include": "#declaration" },
+        { "include": "#expression" }
+    ],
+    "repository": {
+        "comment": {
+            "name": "comment.line.number-sign.unilog",
+            "match": "#.*$"
+        },
+        "import": {
+            "match": "^\\s*(import)\\s+([A-Za-z0-9_']+(?:\\.[A-Za-z0-9_']+)*)",
+            "captures": {
+                "1": { "name": "keyword.control.import.unilog" },
+                "2": { "name": "entity.name.namespace.unilog" }
+            }
+        },
+        "declaration": {
+            "comment": "A declaration's name: at the start of a line, followed by ':' or '=' (but not '=>').",
+            "match": "^\\s*([a-z0-9][A-Za-z0-9_']*)\\s*(?=:|=(?!>))",
+            "captures": {
+                "1": { "name": "entity.name.function.unilog" }
+            }
+        },
+        "expression": {
+            "patterns": [
+                { "include": "#comment" },
+                { "name": "keyword.operator.arrow.unilog", "match": "=>" },
+                { "name": "keyword.operator.colon.unilog", "match": ":" },
+                { "name": "keyword.operator.equals.unilog", "match": "=" },
+                {
+                    "comment": "A qualified reference, e.g. Kant.Ethics.duty",
+                    "match": "\\b((?:[A-Za-z0-9_']+\\.)+)([A-Za-z0-9_']+)",
+                    "captures": {
+                        "1": { "name": "entity.name.namespace.unilog" },
+                        "2": { "name": "variable.other.unilog" }
+                    }
+                },
+                {
+                    "comment": "Variables: uppercase or '_' first",
+                    "name": "variable.parameter.unilog",
+                    "match": "\\b[A-Z_][A-Za-z0-9_']*"
+                },
+                { "name": "punctuation.terminator.unilog", "match": "\\.(?=\\s|$)" },
+                { "name": "punctuation.parenthesis.unilog", "match": "[()]" }
+            ]
+        }
+    }
+}

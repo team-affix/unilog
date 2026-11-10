@@ -51,6 +51,20 @@ export function showProp(e: PropExpr): string {
     }
 }
 
+/**
+ * Where module source text comes from. The default reads the disk; an editor passes one that returns
+ * the text of open (possibly unsaved) documents and falls back to the disk otherwise.
+ */
+export interface SourceProvider {
+    exists(file: string): boolean;
+    read(file: string): string;
+}
+
+export const diskSources: SourceProvider = {
+    exists: (file) => fs.existsSync(file),
+    read: (file) => fs.readFileSync(file, 'utf8'),
+};
+
 export class Workspace {
     private readonly modules = new Map<string, Module>();
     /**
@@ -63,12 +77,15 @@ export class Workspace {
     private readonly outlines = new Map<string, ModuleOutline>();
     private readonly loading: string[] = [];
 
-    constructor(public readonly roots: readonly string[]) {}
+    constructor(
+        public readonly roots: readonly string[],
+        private readonly sources: SourceProvider = diskSources,
+    ) {}
 
     /** The file for a module name, or undefined if no root has it. */
     locate(name: string): string | undefined {
         const rel = path.join(...name.split('.')) + EXTENSION;
-        const found = this.roots.map((r) => path.join(r, rel)).filter((f) => fs.existsSync(f));
+        const found = this.roots.map((r) => path.join(r, rel)).filter((f) => this.sources.exists(f));
         if (found.length > 1) throw new UnilogError(`Module ${name} is ambiguous: it exists at ${found.join(' and ')}`);
         return found[0];
     }
@@ -106,7 +123,7 @@ export class Workspace {
 
         this.loading.push(name);
         try {
-            const decls = parse(fs.readFileSync(file, 'utf8'), file);
+            const decls = parse(this.sources.read(file), file);
             const imported = new Map<string, Module>();
             for (const d of decls)
                 if (d.k === 'import') imported.set(d.path.join('.'), this.load(d.path.join('.'), d.loc));
@@ -134,7 +151,7 @@ export class Workspace {
         if (cached) return cached;
         const file = this.locate(name);
         if (!file) throw new UnilogError(`Module ${name} not found (looked in ${this.roots.join(', ')})`, from);
-        const decls = parse(fs.readFileSync(file, 'utf8'), file);
+        const decls = parse(this.sources.read(file), file);
         const outline: ModuleOutline = {
             name,
             file,
@@ -172,6 +189,12 @@ export class Workspace {
     /** Loads the module in a file. */
     loadFile(file: string): Module {
         return this.load(this.moduleNameOf(file));
+    }
+
+    /** The checked module whose source is `file`, if any. */
+    moduleAt(file: string): Module | undefined {
+        const abs = path.resolve(file);
+        return [...this.modules.values()].find((m) => path.resolve(m.file) === abs);
     }
 
     /** Every module checked so far. */

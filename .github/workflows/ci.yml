@@ -19,3 +19,22 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+  vscode-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: editors/vscode
+      - run: npx tsc -p tsconfig.json
+        working-directory: editors/vscode
+      - run: npm run build
+        working-directory: editors/vscode
+      - run: npm test
+        working-directory: editors/vscode
+      - run: npx vsce package --no-dependencies
+        working-directory: editors/vscode

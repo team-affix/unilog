@@ -17,8 +17,9 @@ export type ProofExpr =
     | { k: 'lam'; param: string; body: ProofExpr; loc: Loc };
 
 export type Decl =
-    | { k: 'import'; path: string[]; loc: Loc }
-    /** `name : P.` A stated belief. */
-    | { k: 'axiom'; name: string; prop: PropExpr; loc: Loc }
+    /** `pathLoc` is the module name's location. */
+    | { k: 'import'; path: string[]; loc: Loc; pathLoc: Loc }
+    /** `name : P.` A stated belief. `nameLoc` is the name's location. */
+    | { k: 'axiom'; name: string; prop: PropExpr; loc: Loc; nameLoc: Loc }
     /** `name = proof.` or `name : P = proof.` */
-    | { k: 'theorem'; name: string; prop?: PropExpr; proof: ProofExpr; loc: Loc };
+    | { k: 'theorem'; name: string; prop?: PropExpr; proof: ProofExpr; loc: Loc; nameLoc: Loc };
