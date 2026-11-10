@@ -408,7 +408,22 @@ export interface ProofNode {
     proof?: string;
     /** A theorem already expanded earlier in this tree, not expanded again. */
     shownAbove?: boolean;
+    /**
+     * How this step follows from its children: `apply` (the first child, an implication, applied to the
+     * second, its premise), `assume` (the child was proved with `assumption` assumed, giving an
+     * implication), or `same` (a theorem defined as the child).
+     */
+    rule?: 'apply' | 'assume' | 'same';
+    /** For `assume`: the name of the assumption. */
+    assumption?: string;
     children: ProofNode[];
+}
+
+/** How a derivation's root follows from its children. */
+function ruleOf(dv: Derivation): Pick<ProofNode, 'rule' | 'assumption'> {
+    if (dv.k === 'apply') return { rule: 'apply' };
+    if (dv.k === 'assume') return { rule: 'assume', assumption: dv.param };
+    return { rule: 'same' };
 }
 
 export interface ProofOptions {
@@ -432,6 +447,9 @@ export interface ProofStep {
     proof?: string;
     /** Steps this one is derived from. */
     from: number[];
+    /** How it follows from them (see ProofNode.rule). */
+    rule?: ProofNode['rule'];
+    assumption?: string;
     /** For a theorem used again: the step where it was first proved. */
     sameAs?: number;
 }
@@ -451,6 +469,8 @@ function flatten(root: ProofNode): ProofStep[] {
         };
         if (n.name) step.name = n.name;
         if (n.proof) step.proof = n.proof;
+        if (n.rule) step.rule = n.rule;
+        if (n.assumption) step.assumption = n.assumption;
         if (n.shownAbove && n.name) step.sameAs = provedAt.get(n.name);
         else if (n.kind === 'theorem' && n.name && n.proof) provedAt.set(n.name, step.step);
         steps.push(step);
@@ -468,7 +488,9 @@ function stepText(s: ProofStep, isLast: boolean): string {
         if (s.sameAs) notes.push(`theorem ${s.name}, as in step ${s.sameAs}`);
         else notes.push(s.proof ? `theorem ${s.name} = ${s.proof}` : `theorem ${s.name}`);
     }
-    if (s.from.length > 0) notes.push(`from ${s.from.join(', ')}`);
+    if (s.rule === 'apply') notes.push(`step ${s.from[0]} applied to step ${s.from[1]}`);
+    else if (s.rule === 'assume') notes.push(`step ${s.from[0]}, assuming ${s.assumption}`);
+    else if (s.rule === 'same') notes.push(`same as step ${s.from[0]}`);
     const head = isLast && s.proof ? `${s.name} = ${s.proof}` : s.expr;
     return `${s.step}. ${head} : ${s.proposition}${notes.length > 0 ? `   [${notes.join('; ')}]` : ''}`;
 }
@@ -489,8 +511,9 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
 
         const node = (dv: Derivation): ProofNode => {
             const base = { expr: dv.text, proposition: p.print(dv.term) };
-            if (dv.k === 'apply') return { ...base, kind: 'apply', children: [node(dv.fn), node(dv.arg)] };
-            if (dv.k === 'assume') return { ...base, kind: 'assume', children: [node(dv.body)] };
+            if (dv.k === 'apply')
+                return { ...base, kind: 'apply', ...ruleOf(dv), children: [node(dv.fn), node(dv.arg)] };
+            if (dv.k === 'assume') return { ...base, kind: 'assume', ...ruleOf(dv), children: [node(dv.body)] };
             const target = dv.decl;
             if (!target) return { ...base, kind: 'assumption', children: [] };
             const key = keyOf(target);
@@ -503,6 +526,7 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
                 kind: 'theorem',
                 name: key,
                 proof: target.proof.text,
+                ...ruleOf(target.proof),
                 children: childrenOf(target.proof),
             };
         };
@@ -515,6 +539,7 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
                   kind: 'theorem',
                   name: keyOf(d),
                   proof: d.proof.text,
+                  ...ruleOf(d.proof),
                   children: childrenOf(d.proof),
               }
             : { expr: keyOf(d), proposition: p.print(d.scheme.body), kind: 'axiom', name: keyOf(d), children: [] };
