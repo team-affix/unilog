@@ -430,10 +430,12 @@ export interface ProofOptions {
     /** Don't expand the theorems this proof uses into their own proofs. */
     shallow?: boolean;
     /**
-     * Instead of a tree, list every declaration the proof relies on, each once, in the order needed to
-     * reach it. Lines refer to each other by name, as in the source.
+     * Instead of a tree, list every declaration the proof relies on, each once, in declaration order (as
+     * written, each module after those it imports). Lines refer to each other by name, as in the source.
      */
     flat?: boolean;
+    /** With `flat`: list axioms before theorems (each group still in declaration order). */
+    axiomsFirst?: boolean;
     json?: boolean;
 }
 
@@ -448,27 +450,27 @@ export interface ProofLine {
 }
 
 /**
- * Every declaration a proof relies on, each once, in the order needed to reach it: each line comes after
- * the declarations its proof uses (in the order they appear in the proof), and the declaration itself is
- * last. With `shallow`, only the declarations its own proof uses directly.
+ * Every declaration a proof relies on (with `shallow`: only those its own proof uses directly), plus the
+ * declaration itself, in declaration order: as written in each module, each module after those it imports.
+ * With `axiomsFirst`, axioms come first, each group still in declaration order.
  */
-function proofLines(d: Declaration, ws: Workspace, shallow: boolean): ProofLine[] {
-    const lines: ProofLine[] = [];
-    const seen = new Set<string>();
-    const line = (x: Declaration, withProof: boolean): ProofLine => {
+function proofLines(d: Declaration, ws: Workspace, shallow: boolean, axiomsFirst: boolean): ProofLine[] {
+    const included = new Map<string, Declaration>();
+    const visit = (x: Declaration) => {
+        if (included.has(keyOf(x))) return;
+        included.set(keyOf(x), x);
+        for (const use of x.uses) if (!shallow || x === d) visit(ws.declaration(use));
+    };
+    visit(d);
+    const ordered = [...included.values()].sort((a, b) => ws.orderOf(keyOf(a)) - ws.orderOf(keyOf(b)));
+    const final = axiomsFirst
+        ? [...ordered.filter((x) => x.kind === 'axiom'), ...ordered.filter((x) => x.kind === 'theorem')]
+        : ordered;
+    return final.map((x) => {
         const l: ProofLine = { name: keyOf(x), kind: x.kind, proposition: prop(x.scheme.body) };
-        if (withProof && x.proof) l.proof = x.proof.text;
+        if (x.proof && (!shallow || x === d)) l.proof = x.proof.text;
         return l;
-    };
-    const visit = (x: Declaration, depth: number) => {
-        const key = keyOf(x);
-        if (seen.has(key)) return;
-        seen.add(key);
-        if (!shallow || depth === 0) for (const use of x.uses) visit(ws.declaration(use), depth + 1);
-        lines.push(line(x, !shallow || depth === 0));
-    };
-    visit(d, 0);
-    return lines;
+    });
 }
 
 /**
@@ -522,7 +524,7 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
             : { expr: keyOf(d), proposition: p.print(d.scheme.body), kind: 'axiom', name: keyOf(d), children: [] };
 
         if (options.flat) {
-            const lines = proofLines(d, ws, !!options.shallow);
+            const lines = proofLines(d, ws, !!options.shallow, !!options.axiomsFirst);
             if (options.json) out.push(JSON.stringify(lines, null, 2));
             else
                 for (const l of lines)

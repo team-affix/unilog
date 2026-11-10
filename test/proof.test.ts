@@ -103,13 +103,40 @@ describe('proof', () => {
         });
     });
 
-    it('--flat lists every declaration the proof relies on, once each, dependencies first', () => {
+    it('--flat lists every declaration the proof relies on, once each, in declaration order', () => {
         expect(commands.proof('M.T.twice', project(T), { flat: true }).out).toEqual([
-            'M.T.pair : A => B => both A B   [axiom]',
             'M.T.b : likes X cake => likes X sugar   [axiom]',
             'M.T.a : likes jake cake   [axiom]',
+            'M.T.pair : A => B => both A B   [axiom]',
             'M.T.lemma = b a : likes jake sugar',
             'M.T.twice = pair lemma lemma : both (likes jake sugar) (likes jake sugar)',
+        ]);
+    });
+
+    it('--flat keeps declarations in source order even when axioms and theorems alternate; --axioms-first groups them', () => {
+        const dir = project({
+            'M/I.ul': `
+                a : p.
+                ab : p => q.
+                b = ab a.
+                bc : q => r.
+                unused : s.
+                c = bc b.
+            `,
+        });
+        expect(commands.proof('M.I.c', dir, { flat: true }).out).toEqual([
+            'M.I.a : p   [axiom]',
+            'M.I.ab : p => q   [axiom]',
+            'M.I.b = ab a : q',
+            'M.I.bc : q => r   [axiom]',
+            'M.I.c = bc b : r',
+        ]);
+        expect(commands.proof('M.I.c', dir, { flat: true, axiomsFirst: true }).out).toEqual([
+            'M.I.a : p   [axiom]',
+            'M.I.ab : p => q   [axiom]',
+            'M.I.bc : q => r   [axiom]',
+            'M.I.b = ab a : q',
+            'M.I.c = bc b : r',
         ]);
     });
 
@@ -132,8 +159,8 @@ describe('proof', () => {
 
     it('--flat --shallow lists only what the proof uses directly', () => {
         expect(commands.proof('M.T.use_lift', project(T), { flat: true, shallow: true }).out).toEqual([
-            'M.T.lift : A => both A (likes jake sugar)   [theorem]',
             'M.T.a : likes jake cake   [axiom]',
+            'M.T.lift : A => both A (likes jake sugar)   [theorem]',
             'M.T.use_lift = lift a : both (likes jake cake) (likes jake sugar)',
         ]);
     });

@@ -53,6 +53,11 @@ export function showProp(e: PropExpr): string {
 
 export class Workspace {
     private readonly modules = new Map<string, Module>();
+    /**
+     * Every checked declaration's key, in the order checked: each module's declarations in source order,
+     * after the modules it imports. This is "declaration order" across modules.
+     */
+    private readonly declOrder = new Map<string, number>();
     /** Modules that failed, so each failure is reported once however many modules import it. */
     private readonly failed = new Map<string, UnilogError>();
     private readonly outlines = new Map<string, ModuleOutline>();
@@ -107,6 +112,7 @@ export class Workspace {
                 if (d.k === 'import') imported.set(d.path.join('.'), this.load(d.path.join('.'), d.loc));
             const mod = checkModule(name, file, decls, imported);
             this.modules.set(name, mod);
+            for (const d of mod.decls.values()) this.declOrder.set(keyOf(d), this.declOrder.size);
             return mod;
         } catch (e) {
             if (!(e instanceof UnilogError)) throw e;
@@ -171,6 +177,13 @@ export class Workspace {
     /** Every module checked so far. */
     loaded(): Module[] {
         return [...this.modules.values()];
+    }
+
+    /** A loaded declaration's position in declaration order (see `declOrder`). */
+    orderOf(key: string): number {
+        const n = this.declOrder.get(key);
+        if (n === undefined) throw new UnilogError(`Declaration ${key} is not loaded`);
+        return n;
     }
 
     /** Looks up `Mod.name` among loaded modules, loading `Mod` if needed. */
