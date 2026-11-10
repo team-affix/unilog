@@ -1,0 +1,38 @@
+# Natural numbers as z, s z, s (s z), ... Addition and multiplication are relations: rules that say when
+# "add M N K" (M + N = K) holds. A proof of a sum is a step-by-step calculation, checked by Unilog.
+
+zero_nat : nat z.
+succ_nat : nat N => nat (s N).
+
+add_zero : nat N => add z N N.
+add_succ : add M N K => add (s M) N (s K).
+
+mul_zero : mul z N z.
+mul_succ : mul M N P => add N P Q => mul (s M) N Q.
+
+even_zero : even z.
+even_next : even N => even (s (s N)).
+
+lt_zero : nat N => lt z (s N).
+lt_succ : lt M N => lt (s M) (s N).
+
+two_nat : nat (s (s z)) = succ_nat (succ_nat zero_nat).
+
+# 2 + 2 = 4
+two_plus_two : add (s (s z)) (s (s z)) (s (s (s (s z)))) = add_succ (add_succ (add_zero two_nat)).
+
+# 2 + 0 = 2
+two_plus_zero : add (s (s z)) z (s (s z)) = add_succ (add_succ (add_zero zero_nat)).
+
+# 2 * 2 = 4, built from the two sums above
+two_times_two : mul (s (s z)) (s (s z)) (s (s (s (s z)))) =
+    mul_succ (mul_succ mul_zero two_plus_zero) two_plus_two.
+
+# 4 is even
+four_even : even (s (s (s (s z)))) = even_next (even_next even_zero).
+
+# 1 < 3
+one_lt_three : lt (s z) (s (s (s z))) = lt_succ (lt_zero (succ_nat zero_nat)).
+
+# A general rule, not a calculation: adding 1 on the left adds 1 to the sum, whatever the numbers are.
+plus_one : add M N K => add (s M) N (s K) = add_succ.

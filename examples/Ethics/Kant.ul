@@ -1,0 +1,2 @@
+# A Kantian belief: lying is always wrong, whatever its consequences.
+lying_is_wrong : lies X => wrong X.

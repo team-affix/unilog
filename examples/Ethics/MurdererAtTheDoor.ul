@@ -1,0 +1,3 @@
+# Kant's own example: a murderer asks where your friend is hiding, and you answer with a lie.
+lie_to_murderer : lies answering_the_murderer.
+lie_saves_friend : saves_lives answering_the_murderer.

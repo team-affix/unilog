@@ -1,0 +1,16 @@
+# Aristotle's syllogisms. The famous one is a single application:
+men_are_mortal : man X => mortal X.
+socrates_is_a_man : man socrates.
+socrates_is_mortal : mortal socrates = men_are_mortal socrates_is_a_man.
+
+# The syllogism form "Barbara" (all M are P; all S are M; so all S are P) is not an axiom here.
+# It is a theorem of logic, with no axioms at all: `unilog rests-on Aristotle.Syllogisms.barbara`.
+barbara : (M => P) => (S => M) => S => P = Mp => Sm => X => Mp (Sm X).
+
+greeks_are_men : greek X => man X.
+plato_is_greek : greek plato.
+
+# Barbara applied to two general rules gives a new general rule...
+greeks_are_mortal : greek X => mortal X = barbara men_are_mortal greeks_are_men.
+# ...which applies to Plato like any other rule.
+plato_is_mortal : mortal plato = greeks_are_mortal plato_is_greek.
