@@ -39,11 +39,15 @@ jobs:
       - run: npx vsce package --no-dependencies
         working-directory: editors/vscode
 
-  # On a version tag (e.g. v0.2.0), after every test job passes: build the CLI, the language server and
-  # the VS Code extension, and attach them to a GitHub Release. Nothing built is committed to the repo.
+  # Publishes a GitHub Release with the CLI, the language server and the VS Code extension, after every
+  # test job passes. Runs when:
+  # - main is pushed (e.g. a PR is merged) and its package version has no release yet: tags that commit
+  #   v<version> and releases it. If that version is already released, it does nothing.
+  # - a v* tag is pushed by hand: releases that tag, if it matches the package version.
+  # Nothing built is committed to the repo.
   release:
     needs: [test, vscode-extension]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -54,19 +58,32 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Check the tag matches the package versions
+      - name: Decide whether to release
+        id: decide
         run: |
-          tag="${GITHUB_REF_NAME#v}"
           cli=$(node -p "require('./package.json').version")
           ext=$(node -p "require('./editors/vscode/package.json').version")
-          echo "tag $tag, package.json $cli, editors/vscode/package.json $ext"
-          if [ "$tag" != "$cli" ] || [ "$tag" != "$ext" ]; then
-            echo "::error::Tag v$tag does not match the package versions ($cli, $ext). Bump both versions first."
+          if [ "$cli" != "$ext" ]; then
+            echo "::error::package.json ($cli) and editors/vscode/package.json ($ext) must have the same version."
             exit 1
           fi
-          echo "VERSION=$tag" >> "$GITHUB_ENV"
+          echo "VERSION=$cli" >> "$GITHUB_ENV"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            if [ "${GITHUB_REF_NAME#v}" != "$cli" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match the package version $cli."
+              exit 1
+            fi
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --exit-code --tags origin "refs/tags/v$cli" > /dev/null; then
+            echo "v$cli is already released; nothing to do. Bump the version to release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "v$cli has no release yet: releasing."
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build the CLI and language server as single files
+        if: steps.decide.outputs.release == 'true'
         run: |
           npm ci
           npm run bundle
@@ -76,11 +93,13 @@ jobs:
           node "dist-release/unilog-$VERSION.cjs" --version
 
       - name: Build the npm package
+        if: steps.decide.outputs.release == 'true'
         run: |
           npm run build
           npm pack --pack-destination dist-release
 
       - name: Build the VS Code extension
+        if: steps.decide.outputs.release == 'true'
         working-directory: editors/vscode
         run: |
           npm ci
@@ -88,8 +107,10 @@ jobs:
           npx vsce package --no-dependencies --out "../../dist-release/unilog-vscode-$VERSION.vsix"
 
       - name: Create the GitHub Release
+        if: steps.decide.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: dist-release/*
-

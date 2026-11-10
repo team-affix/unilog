@@ -58,7 +58,7 @@ Built files are never committed. They are attached to [GitHub Releases](https://
 | `unilog-vscode-<version>.vsix` | the VS Code extension: `code --install-extension unilog-vscode-<version>.vsix` |
 | `team-affix-unilog-<version>.tgz` | the npm package (both commands and the library): `npm i -g ./team-affix-unilog-<version>.tgz` |
 
-To release: set the same version in `package.json` and `editors/vscode/package.json`, merge, then push a matching tag (`git tag v0.2.0 && git push origin v0.2.0`). The release job runs only after every test job passes, and fails if the tag and the versions disagree.
+To release: set the same new version in `package.json` and `editors/vscode/package.json`, and merge to `main`. After every test job passes, CI tags the merge commit `v<version>` and publishes the release. Merges that don't change the version publish nothing. (Pushing a matching `v*` tag by hand also releases.)
 
 ## Development
 
