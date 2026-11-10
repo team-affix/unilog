@@ -70,7 +70,7 @@ describe('language server features', () => {
     describe('hover', () => {
         const at = (line: number, character: number) => {
             const dir = project();
-            return hover(analyze(dir), path.join(dir, 'Mine/Main.ul'), { line, character });
+            return hover(analyze(dir), path.join(dir, 'Mine/Main.ul'), { line, character })?.markdown;
         };
 
         it('on a declaration name: what it proves, and that it was inferred', () => {
@@ -103,7 +103,7 @@ describe('language server features', () => {
             };
             const on = (character: number) => {
                 const d = dir();
-                return hover(analyze(d), path.join(d, 'M/P.ul'), { line: 3, character });
+                return hover(analyze(d), path.join(d, 'M/P.ul'), { line: 3, character })?.markdown;
             };
 
             it('the rule name shows it taking each argument in turn, named as in the statement', () => {
@@ -128,6 +128,28 @@ describe('language server features', () => {
                 expect(on(22)).toBe(
                     '```unilog\nsnd : and A B => B\nsnd P : B\n```\n\n```unilog\naxiom M.P.snd : and A B => B\n```',
                 );
+            });
+
+            it('the gap after a rule name is its first application only; the last gap is the whole', () => {
+                // and_comm = P => pair (snd P) (fst P).   gap at 20 is after `pair`, gap at 28 after `(snd P)`
+                expect(on(20)).toBe('```unilog\npair (snd P) : A => and B A\n```');
+                expect(on(28)).toBe('```unilog\npair (snd P) (fst P) : and B A\n```');
+            });
+
+            it('reports the exact range it describes, for the editor to highlight', () => {
+                const d = dir();
+                const range = (character: number) =>
+                    hover(analyze(d), path.join(d, 'M/P.ul'), { line: 3, character })?.range;
+                const span = (from: number, to: number) => ({
+                    start: { line: 3, character: from },
+                    end: { line: 3, character: to },
+                });
+                expect(range(17)).toEqual(span(16, 20)); // the name pair
+                expect(range(20)).toEqual(span(16, 28)); // pair (snd P)
+                expect(range(28)).toEqual(span(16, 36)); // pair (snd P) (fst P)
+                expect(range(21)).toEqual(span(21, 28)); // (snd P), parentheses included
+                expect(range(11)).toEqual(span(11, 12)); // the assumption P
+                expect(range(2)).toEqual(span(0, 8)); // the declaration name and_comm
             });
 
             it('whitespace between steps belongs to the enclosing application', () => {

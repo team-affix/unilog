@@ -112,8 +112,11 @@ describe('language server (over the protocol)', () => {
             position: { line: 2, character: 4 },
         })) as {
             contents: { value: string };
+            range: unknown;
         };
         expect(h.contents.value).toContain('b : likes jake cake => likes jake sugar');
+        // The hover says which range it describes, so the editor can highlight it: here the name b.
+        expect(h.range).toEqual({ start: { line: 2, character: 4 }, end: { line: 2, character: 5 } });
 
         const hints = (await client.sendRequest('textDocument/inlayHint', {
             textDocument: { uri },
