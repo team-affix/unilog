@@ -6,7 +6,8 @@
         { "include": "#comment" },
         { "include": "#import" },
         { "include": "#declaration" },
-        { "include": "#expression" }
+        { "include": "#proof" },
+        { "include": "#proposition" }
     ],
     "repository": {
         "comment": {
@@ -27,28 +28,49 @@
                 "1": { "name": "entity.name.function.unilog" }
             }
         },
-        "expression": {
+        "proof": {
+            "comment": "A declaration's proof: from its '=' (not '=>') up to the '.' that ends the declaration, possibly over several lines. Uppercase names here are assumptions.",
+            "begin": "(?<![=!<>:])=(?![=>])",
+            "beginCaptures": { "0": { "name": "keyword.operator.equals.unilog" } },
+            "end": "(?=\\.(?![A-Za-z0-9_']))",
+            "name": "meta.proof.unilog",
+            "patterns": [
+                { "include": "#comment" },
+                { "name": "keyword.operator.arrow.unilog", "match": "=>" },
+                { "include": "#qualified" },
+                {
+                    "comment": "Assumptions: variables standing for proofs",
+                    "name": "variable.parameter.assumption.unilog",
+                    "match": "\\b[A-Z_][A-Za-z0-9_']*"
+                },
+                { "include": "#parens" }
+            ]
+        },
+        "proposition": {
             "patterns": [
                 { "include": "#comment" },
                 { "name": "keyword.operator.arrow.unilog", "match": "=>" },
                 { "name": "keyword.operator.colon.unilog", "match": ":" },
-                { "name": "keyword.operator.equals.unilog", "match": "=" },
                 {
-                    "comment": "A qualified reference, e.g. Kant.Ethics.duty",
-                    "match": "\\b((?:[A-Za-z0-9_']+\\.)+)([A-Za-z0-9_']+)",
-                    "captures": {
-                        "1": { "name": "entity.name.namespace.unilog" },
-                        "2": { "name": "variable.other.unilog" }
-                    }
-                },
-                {
-                    "comment": "Variables: uppercase or '_' first",
-                    "name": "variable.parameter.unilog",
+                    "comment": "Variables in propositions (under Curry-Howard, propositions are types, so these are type parameters)",
+                    "name": "entity.name.type.parameter.unilog",
                     "match": "\\b[A-Z_][A-Za-z0-9_']*"
                 },
-                { "name": "punctuation.terminator.unilog", "match": "\\.(?=\\s|$)" },
-                { "name": "punctuation.parenthesis.unilog", "match": "[()]" }
+                { "name": "punctuation.terminator.unilog", "match": "\\.(?![A-Za-z0-9_'])" },
+                { "include": "#parens" }
             ]
+        },
+        "qualified": {
+            "comment": "A qualified reference, e.g. Kant.Ethics.duty",
+            "match": "\\b((?:[A-Za-z0-9_']+\\.)+)([A-Za-z0-9_']+)",
+            "captures": {
+                "1": { "name": "entity.name.namespace.unilog" },
+                "2": { "name": "variable.other.unilog" }
+            }
+        },
+        "parens": {
+            "name": "punctuation.parenthesis.unilog",
+            "match": "[()]"
         }
     }
 }
