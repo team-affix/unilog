@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Declaration, keyOf, propositionTerm } from './check';
+import { Declaration, Derivation, keyOf, propositionTerm } from './check';
 import { UnilogError } from './errors';
 import { parseProposition } from './parser';
 import { instantiate, instantiateRigid, Printer, unify } from './term';
@@ -392,5 +392,105 @@ export function theorems(module: string, dir: string, options: TheoremsOptions =
                     : `${list.length} theorem(s) in ${module}`,
             );
         }
+    });
+}
+
+/** One step of a proof, as shown by `unilog proof`. */
+export interface ProofNode {
+    /** The proof expression at this step, as written. */
+    expr: string;
+    /** What this step proves, with variables as the proof filled them in. */
+    proposition: string;
+    kind: 'axiom' | 'theorem' | 'assumption' | 'apply' | 'assume';
+    /** For axioms and theorems: the qualified name. */
+    name?: string;
+    /** For an expanded theorem: its own proof expression. */
+    proof?: string;
+    /** A theorem already expanded earlier in this tree, not expanded again. */
+    shownAbove?: boolean;
+    children: ProofNode[];
+}
+
+export interface ProofOptions {
+    /** Don't expand the theorems this proof uses into their own proofs. */
+    shallow?: boolean;
+    json?: boolean;
+}
+
+/**
+ * `unilog proof <Mod.name> [dir]`: a declaration's whole proof as a tree. Each step shows its expression and
+ * what it proves at that point; leaves are axioms and assumptions. Theorems the proof uses are expanded
+ * into their own proofs (each once; later uses say "shown above"), unless `shallow`.
+ */
+export function proof(name: string, dir: string, options: ProofOptions = {}): Output {
+    return guarded((out) => {
+        const d = new Workspace(targetOf(dir).roots).declaration(name);
+        const p = new Printer();
+        const expanded = new Set<string>([keyOf(d)]);
+
+        const childrenOf = (dv: Derivation): ProofNode[] =>
+            dv.k === 'apply' ? [node(dv.fn), node(dv.arg)] : dv.k === 'assume' ? [node(dv.body)] : [node(dv)];
+
+        const node = (dv: Derivation): ProofNode => {
+            const base = { expr: dv.text, proposition: p.print(dv.term) };
+            if (dv.k === 'apply') return { ...base, kind: 'apply', children: [node(dv.fn), node(dv.arg)] };
+            if (dv.k === 'assume') return { ...base, kind: 'assume', children: [node(dv.body)] };
+            const target = dv.decl;
+            if (!target) return { ...base, kind: 'assumption', children: [] };
+            const key = keyOf(target);
+            if (target.kind === 'axiom') return { ...base, kind: 'axiom', name: key, children: [] };
+            if (options.shallow || !target.proof) return { ...base, kind: 'theorem', name: key, children: [] };
+            if (expanded.has(key)) return { ...base, kind: 'theorem', name: key, shownAbove: true, children: [] };
+            expanded.add(key);
+            return {
+                ...base,
+                kind: 'theorem',
+                name: key,
+                proof: target.proof.text,
+                children: childrenOf(target.proof),
+            };
+        };
+
+        const root: ProofNode = d.proof
+            ? {
+                  expr: keyOf(d),
+                  // From the proof itself (not the generalized statement), so variable names match the steps below.
+                  proposition: p.print(d.proof.term),
+                  kind: 'theorem',
+                  name: keyOf(d),
+                  proof: d.proof.text,
+                  children: childrenOf(d.proof),
+              }
+            : { expr: keyOf(d), proposition: p.print(d.scheme.body), kind: 'axiom', name: keyOf(d), children: [] };
+
+        if (options.json) {
+            out.push(JSON.stringify(root, null, 2));
+            return;
+        }
+        const tag = (n: ProofNode): string => {
+            switch (n.kind) {
+                case 'axiom':
+                    return `   [axiom ${n.name}]`;
+                case 'assumption':
+                    return '   [assumption]';
+                case 'theorem':
+                    if (n.shownAbove) return `   [theorem ${n.name}, shown above]`;
+                    return n.proof ? `   [theorem ${n.name} = ${n.proof}]` : `   [theorem ${n.name}]`;
+                default:
+                    return '';
+            }
+        };
+        out.push(
+            root.kind === 'axiom'
+                ? `${root.name} : ${root.proposition}   [axiom]`
+                : `${root.name} = ${root.proof} : ${root.proposition}`,
+        );
+        const draw = (nodes: ProofNode[], prefix: string) =>
+            nodes.forEach((n, i) => {
+                const last = i === nodes.length - 1;
+                out.push(`${prefix}${last ? '└── ' : '├── '}${n.expr} : ${n.proposition}${tag(n)}`);
+                draw(n.children, prefix + (last ? '    ' : '│   '));
+            });
+        draw(root.children, '');
     });
 }

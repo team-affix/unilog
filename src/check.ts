@@ -11,8 +11,34 @@ export interface Declaration {
     readonly scheme: Scheme;
     /** Declarations its proof refers to directly (empty for axioms), as `Module.name` keys. */
     readonly uses: readonly string[];
+    /** For theorems: how the proof was checked, step by step. */
+    readonly proof?: Derivation;
     readonly loc: Loc;
 }
+
+/**
+ * A checked proof, step by step. Every node records what it proves at that point in the proof, with
+ * variables as the proof filled them in (read them with `prune`/`Printer` once checking is done).
+ */
+export type Derivation =
+    /** A reference to a declaration, or to an assumption when `decl` is undefined. */
+    | { readonly k: 'use'; readonly text: string; readonly term: Term; readonly decl?: Declaration }
+    /** `fn arg` */
+    | {
+          readonly k: 'apply';
+          readonly text: string;
+          readonly term: Term;
+          readonly fn: Derivation;
+          readonly arg: Derivation;
+      }
+    /** `param => body` */
+    | {
+          readonly k: 'assume';
+          readonly text: string;
+          readonly term: Term;
+          readonly param: string;
+          readonly body: Derivation;
+      };
 
 /** A checked module: its declarations, all public. */
 export interface Module {
@@ -113,7 +139,8 @@ export function checkModule(
         }
 
         const uses = new Set<string>();
-        const inferred = infer(decl.proof, new Map(), uses);
+        const derivation = infer(decl.proof, new Map(), uses);
+        const inferred = derivation.term;
         let proves: Term = inferred;
         if (decl.prop) {
             // The stated claim's variables are rigid: the proof must prove the claim for *every* value of them.
@@ -137,22 +164,29 @@ export function checkModule(
             kind: 'theorem',
             scheme: generalize(proves),
             uses: [...uses],
+            proof: derivation,
             loc: decl.loc,
         });
     }
 
     return { name, file, imports, decls: local };
 
-    function lookup(e: ProofExpr & { k: 'ref' }, env: ReadonlyMap<string, Var>, uses: Set<string>): Term {
+    /** Resolves a name to an assumption (undefined) or a declaration. */
+    function lookup(
+        e: ProofExpr & { k: 'ref' },
+        env: ReadonlyMap<string, Var>,
+        uses: Set<string>,
+    ): { term: Term; decl?: Declaration } {
+        const use = (d: Declaration) => {
+            uses.add(keyOf(d));
+            return { term: instantiate(d.scheme), decl: d };
+        };
         if (e.path.length === 1) {
             const id = e.path[0] as string;
             const assumed = env.get(id);
-            if (assumed) return assumed;
+            if (assumed) return { term: assumed };
             const mine = local.get(id);
-            if (mine) {
-                uses.add(keyOf(mine));
-                return instantiate(mine.scheme);
-            }
+            if (mine) return use(mine);
             const found = imports.flatMap((m) => {
                 const d = imported.get(m)?.decls.get(id);
                 return d ? [d] : [];
@@ -174,31 +208,32 @@ export function checkModule(
                     );
                 throw new UnilogError(`'${id}' is not declared in this module or in any module it imports`, e.loc);
             }
-            uses.add(keyOf(d));
-            return instantiate(d.scheme);
+            return use(d);
         }
         const mod = e.path.slice(0, -1).join('.');
         const id = e.path[e.path.length - 1] as string;
         if (!imports.includes(mod)) throw new UnilogError(`Module ${mod} is not imported`, e.loc);
         const d = imported.get(mod)?.decls.get(id);
         if (!d) throw new UnilogError(`Module ${mod} has no declaration '${id}'`, e.loc);
-        uses.add(keyOf(d));
-        return instantiate(d.scheme);
+        return use(d);
     }
 
     /** Infers what a proof proves. */
-    function infer(e: ProofExpr, env: ReadonlyMap<string, Var>, uses: Set<string>): Term {
+    function infer(e: ProofExpr, env: ReadonlyMap<string, Var>, uses: Set<string>): Derivation {
+        const text = showProof(e);
         switch (e.k) {
             case 'ref':
-                return lookup(e, env, uses);
+                return { k: 'use', text, ...lookup(e, env, uses) };
             case 'lam': {
                 const assumed = fresh();
                 const body = infer(e.body, new Map([...env, [e.param, assumed]]), uses);
-                return imp(assumed, body);
+                return { k: 'assume', text, term: imp(assumed, body.term), param: e.param, body };
             }
             case 'app': {
-                const fn = infer(e.fn, env, uses);
-                const arg = infer(e.arg, env, uses);
+                const fnD = infer(e.fn, env, uses);
+                const argD = infer(e.arg, env, uses);
+                const fn = fnD.term;
+                const arg = argD.term;
                 const result = fresh();
                 const p = new Printer();
                 // Print before unifying, so the message shows the propositions as they were.
@@ -212,7 +247,7 @@ export function checkModule(
                             explainMismatch(p, mismatch.a, mismatch.b, mismatch.occurs),
                         e.loc,
                     );
-                return result;
+                return { k: 'apply', text, term: result, fn: fnD, arg: argD };
             }
         }
     }

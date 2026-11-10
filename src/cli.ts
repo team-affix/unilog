@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { axioms, check, find, init, Output, restsOn, show, summary, theorems } from './commands';
+import { axioms, check, find, init, Output, proof, restsOn, show, summary, theorems } from './commands';
 
 const emit = (o: Output) => {
     o.out.forEach((l) => console.log(l));
@@ -70,6 +70,15 @@ program
     .action((query: string, dir: string, opts: { pattern?: boolean; exact?: boolean; json?: boolean }) =>
         emit(find(query, dir, opts)),
     );
+
+program
+    .command('proof')
+    .description("Show a declaration's whole proof as a tree, down to axioms and assumptions")
+    .argument('<name>', 'qualified declaration name, e.g. Ethics.Main.keep_promises')
+    .argument('[dir]', 'directory', '.')
+    .option('-s, --shallow', "don't expand the theorems it uses into their own proofs")
+    .option('--json', 'output the tree as JSON')
+    .action((name: string, dir: string, opts: { shallow?: boolean; json?: boolean }) => emit(proof(name, dir, opts)));
 
 program
     .command('show')

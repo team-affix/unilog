@@ -25,6 +25,7 @@ unilog axioms Ethics.Main                 # axioms declared in a module (--trans
 unilog theorems Ethics.Main               # theorems in a module and what they prove (--transitive)
 unilog find false                         # which declarations prove a proposition (exit 1 if none)
 unilog rests-on Ethics.Main.keep_promises # every axiom that claim rests on
+unilog proof Ethics.Main.keep_promises    # the whole proof as a tree, down to the axioms
 unilog show Ethics.Main.keep_promises     # what it proves
 unilog summary                            # axiom/theorem counts per module (--json: the full graph)
 ```
