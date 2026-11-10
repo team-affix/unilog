@@ -1,1 +1,7 @@
-build
+node_modules/
+dist/
+coverage/
+*.tgz
+*.tsbuildinfo
+.vscode
+src/generated/

@@ -1,0 +1,21 @@
+# The logical connectives, as ordinary axioms. The core only knows "=>".
+# These are constructive: excluded middle is deliberately absent (see Classical.ul).
+
+# and
+pair : A => B => and A B.
+fst : and A B => A.
+snd : and A B => B.
+
+# or
+left : A => or A B.
+right : B => or A B.
+case : or A B => (A => C) => (B => C) => C.
+
+# false, and "not P" written as P => false
+explode : false => C.
+
+# Some consequences
+and_comm = p => pair (snd p) (fst p).
+or_comm = p => case p right left.
+contradiction : A => (A => false) => B = a => na => explode (na a).
+tollens : (P => Q) => (Q => false) => P => false = f => nq => p => nq (f p).

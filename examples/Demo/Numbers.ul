@@ -1,0 +1,9 @@
+# Relations instead of functions: "less than" as rules about natural numbers.
+znat : nat z.
+snat : nat X => nat (s X).
+
+ltz : nat Y => lt z (s Y).
+lts : lt X Y => lt (s X) (s Y).
+
+zero_lt_one : lt z (s z) = ltz znat.
+one_lt_two : lt (s z) (s (s z)) = lts zero_lt_one.
