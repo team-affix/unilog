@@ -120,7 +120,7 @@
                             "name": "entity.name.namespace.unilog"
                         },
                         "2": {
-                            "name": "support.function.proof.unilog"
+                            "name": "entity.name.function.proof.unilog"
                         }
                     }
                 },
@@ -131,7 +131,7 @@
                 },
                 {
                     "comment": "Lowercase names in a proof refer to axioms and theorems: proofs",
-                    "name": "support.function.proof.unilog",
+                    "name": "entity.name.function.proof.unilog",
                     "match": "\\b[a-z0-9][A-Za-z0-9_']*"
                 },
                 {

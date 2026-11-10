@@ -134,6 +134,13 @@ describe('language server (over the protocol)', () => {
             name: string;
         }[];
         expect(symbols.map((s) => s.name)).toEqual(['a', 'b', 'c']);
+
+        // The extension's gutter markers come from this Unilog-specific request.
+        expect(await client.sendRequest('unilog/declarationMarkers', { uri })).toEqual([
+            { name: 'a', kind: 'axiom', line: 0 },
+            { name: 'b', kind: 'axiom', line: 1 },
+            { name: 'c', kind: 'theorem', line: 2 },
+        ]);
     });
 
     it('goes to the definition in another file', async () => {

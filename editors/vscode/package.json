@@ -50,16 +50,6 @@
         "configurationDefaults": {
             "[unilog]": {
                 "editor.inlayHints.enabled": "on"
-            },
-            "editor.tokenColorCustomizations": {
-                "textMateRules": [
-                    {
-                        "scope": "support.function.proof.unilog",
-                        "settings": {
-                            "foreground": "#E6DB9A"
-                        }
-                    }
-                ]
             }
         }
     },

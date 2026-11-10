@@ -17,7 +17,17 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { VERSION } from '../version';
 import { diskSources, EXTENSION, SourceProvider } from '../workspace';
-import { analyze, Analysis, definition, findProjectDir, hover, inlayHints, outline, problems } from './features';
+import {
+    analyze,
+    Analysis,
+    declarationMarkers,
+    definition,
+    findProjectDir,
+    hover,
+    inlayHints,
+    outline,
+    problems,
+} from './features';
 
 const toPath = (uri: string) => path.resolve(fileURLToPath(uri));
 const toUri = (file: string) => pathToFileURL(file).toString();
@@ -150,6 +160,14 @@ export function listen(connection: Connection): void {
             textEdits: [{ range: { start: h.position, end: h.position }, newText: h.insert }],
         })),
     );
+
+    // Unilog-specific request, used by the VS Code extension for gutter markers: which lines start axioms
+    // and which start theorems. Parse-only, so markers stay while the file has checking errors.
+    connection.onRequest('unilog/declarationMarkers', ({ uri }: { uri: string }) => {
+        const doc = documents.get(uri);
+        const text = doc ? doc.getText() : sources.read(toPath(uri));
+        return declarationMarkers(text, toPath(uri));
+    });
 
     documents.listen(connection);
     connection.listen();
