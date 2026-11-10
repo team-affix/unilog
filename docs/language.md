@@ -109,16 +109,12 @@ This is how Metamath builds mathematics from a core that does little more than s
 
 ## Analysis
 
-- `unilog check --max-axioms N` fails if the checked code (the project's own modules) declares more than N axioms.
-- `unilog axioms <Mod.name> [--json]` lists every axiom a declaration ultimately rests on, with its module.
-- `unilog summary [--json]` counts axioms and theorems per module, for checked and imported modules. The JSON includes every declaration, what it proves, what it uses directly, and every axiom it rests on: the graph needed for analysis and visualization.
+Unilog provides general tools. Deciding what their results mean, for example in a debate, is up to whatever uses them.
 
-### Arguing from someone else's beliefs
+| Command | What it does | Checks? |
+|---|---|---|
+| `unilog axioms <Module>` | Lists and counts the axioms declared in that module only. `--transitive` includes every module it imports, each counted once. `--count` prints just the number, `--json` the details. | No: it only parses, so it is fast and independent of `check` |
+| `unilog rests-on <Mod.name>` | Every axiom a declaration ultimately rests on, following its proof through all modules, each with its module (`--json`). | Yes |
+| `unilog summary` | Axiom and theorem counts for every module, checked and imported. `--json` gives every declaration with what it proves, what it uses directly, and every axiom it rests on. | Yes |
 
-To show what follows from someone's beliefs, depend on their package and prove things using only their axioms. A verifier checks two things:
-
-1. `unilog check --max-axioms 0`: the argument itself states no new beliefs.
-2. `unilog axioms <conclusion> --json`: every axiom the conclusion rests on is from their package.
-
-The second check is the one that matters. The first alone can be evaded by putting extra axioms in a second package of your own and importing it. That package is imported, not checked, so `--max-axioms 0` passes, but the conclusion would rest on its axioms.
-
+Counting axioms and tracing them answer different questions. For example, an argument that adds no beliefs of its own has 0 axioms in its module, but `rests-on` is what shows whose axioms its conclusion actually relies on. That's the right check if the argument also imports some other module of its own.

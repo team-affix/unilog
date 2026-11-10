@@ -49,16 +49,10 @@ function load(dir: string): Loaded {
 
 const isOwn = (l: Loaded, d: Declaration) => l.own.has(d.module);
 const sorted = (l: Loaded) => l.ws.loaded().sort((a, b) => a.name.localeCompare(b.name));
-const locText = (d: Declaration) => `${d.loc.file}:${d.loc.line}:${d.loc.col}`;
 
 export interface CheckOptions {
     /** Print every declaration and what it proves. */
     verbose?: boolean;
-    /**
-     * Fail if the checked code (the project's own modules, not imported ones) declares more axioms than
-     * this. 0 means "this code may only prove things from axioms it imports".
-     */
-    maxAxioms?: number;
 }
 
 /**
@@ -83,15 +77,6 @@ export function check(dir: string, options: CheckOptions = {}): Output {
 
     const mine = decls.filter((d) => isOwn(l, d));
     const myAxioms = mine.filter((d) => d.kind === 'axiom');
-    if (options.maxAxioms !== undefined && myAxioms.length > options.maxAxioms)
-        return {
-            ok: false,
-            out,
-            err: [
-                `The checked code declares ${myAxioms.length} axiom(s), more than the allowed ${options.maxAxioms}:`,
-                ...myAxioms.map((d) => `  ${locText(d)}: ${keyOf(d)} : ${prop(d.scheme.body)}`),
-            ],
-        };
     const imported = modules.length - l.own.size;
     out.push(
         `ok: ${l.own.size} module(s) checked, declaring ${mine.length - myAxioms.length} theorem(s) and ` +
@@ -100,8 +85,63 @@ export function check(dir: string, options: CheckOptions = {}): Output {
     return { ok: true, out, err: [] };
 }
 
-/** `unilog axioms <Mod.name> [dir]`: every axiom the declaration rests on. */
-export function axioms(name: string, dir: string, json = false): Output {
+export interface AxiomsOptions {
+    /** Include every module the module imports, transitively (each module counted once). */
+    transitive?: boolean;
+    /** Print only the number. */
+    count?: boolean;
+    /** Print JSON. */
+    json?: boolean;
+}
+
+/**
+ * `unilog axioms <Module> [dir]`: the axioms declared in a module, or with `transitive`, in the module and
+ * everything it imports. Only parses: nothing is checked, so it is cheap and works independently of
+ * `check`.
+ */
+export function axioms(module: string, dir: string, options: AxiomsOptions = {}): Output {
+    return guarded((out) => {
+        const ws = new Workspace(targetOf(dir).roots);
+        const modules = options.transitive ? ws.outlineClosure(module) : [ws.outline(module)];
+        const list = modules.flatMap((m) => m.axioms);
+        if (options.count) {
+            out.push(String(list.length));
+        } else if (options.json) {
+            out.push(
+                JSON.stringify(
+                    {
+                        module,
+                        transitive: !!options.transitive,
+                        count: list.length,
+                        modules: modules.map((m) => ({ name: m.name, axioms: m.axioms.length })),
+                        axioms: list.map((a) => ({
+                            name: a.name,
+                            module: a.module,
+                            proposition: a.proposition,
+                            file: a.loc.file,
+                            line: a.loc.line,
+                        })),
+                    },
+                    null,
+                    2,
+                ),
+            );
+        } else {
+            for (const a of list) out.push(`${a.name} : ${a.proposition}`);
+            out.push(
+                options.transitive
+                    ? `${list.length} axiom(s) in ${module} and the ${modules.length - 1} module(s) it imports`
+                    : `${list.length} axiom(s) in ${module}`,
+            );
+        }
+    });
+}
+
+/**
+ * `unilog rests-on <Mod.name> [dir]`: every axiom a declaration ultimately rests on, following its proof
+ * through all modules. Unlike `axioms`, this checks the modules involved, since it follows proofs.
+ */
+export function restsOn(name: string, dir: string, json = false): Output {
     return guarded((out) => {
         const list = new Workspace(targetOf(dir).roots).axiomsOf(name);
         if (json) {

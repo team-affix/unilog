@@ -26,55 +26,94 @@ function debate(bobsCode: string, extraDeps: Record<string, string> = {}) {
     return dir;
 }
 
-describe('check --max-axioms', () => {
-    it('passes when the checked code declares no axioms, even though its imports do', () => {
-        const dir = debate(`
+describe('axioms: counting', () => {
+    const dir = () =>
+        debate(
+            `
             import Alice.Beliefs.
+            import Shared.Common.
+            mine : believes bob things.
             party_wrong = lying_wrong (surprise_lies party).
-        `);
-        expect(commands.check(dir, { maxAxioms: 0 })).toEqual({
-            ok: true,
-            out: ['ok: 1 module(s) checked, declaring 1 theorem(s) and 0 axiom(s); 1 imported module(s)'],
-            err: [],
-        });
-        expect(commands.show('Bob.Rebuttal.party_wrong', dir).out).toEqual([
-            'theorem Bob.Rebuttal.party_wrong : wrong bob_party',
+        `,
+            {
+                // Alice's module also imports Shared.Common: a diamond, so Shared.Common must be counted once.
+                'Alice/Beliefs.ul': 'import Shared.Common.\n' + (ALICE['Alice/Beliefs.ul'] as string),
+                'Shared/Common.ul': 'common : everyone (agrees X).',
+            },
+        );
+
+    it('counts only the axioms declared in the module itself', () => {
+        expect(commands.axioms('Bob.Rebuttal', dir()).out).toEqual([
+            'Bob.Rebuttal.mine : believes bob things',
+            '1 axiom(s) in Bob.Rebuttal',
         ]);
+        expect(commands.axioms('Alice.Beliefs', dir(), { count: true }).out).toEqual(['3']);
     });
 
-    it('fails, listing each axiom with its location, when the checked code declares one', () => {
-        const dir = debate(`
-            import Alice.Beliefs.
-            convenient : wrong alice.
-        `);
-        const r = commands.check(dir, { maxAxioms: 0 });
-        expect(r.ok).toBe(false);
-        expect(r.err[0]).toBe('The checked code declares 1 axiom(s), more than the allowed 0:');
-        expect(r.err[1]).toMatch(/Bob\/Rebuttal\.ul:3:13: Bob\.Rebuttal\.convenient : wrong alice$/);
+    it('--transitive counts the module and everything it imports, each module once', () => {
+        expect(commands.axioms('Bob.Rebuttal', dir(), { transitive: true, count: true }).out).toEqual(['5']);
+        expect(commands.axioms('Bob.Rebuttal', dir(), { transitive: true }).out.at(-1)).toBe(
+            '5 axiom(s) in Bob.Rebuttal and the 2 module(s) it imports',
+        );
     });
 
-    it('allows up to the given number', () => {
-        const dir = debate('a : p.\nb : q.');
-        expect(commands.check(dir, { maxAxioms: 2 }).ok).toBe(true);
-        expect(commands.check(dir, { maxAxioms: 1 }).ok).toBe(false);
-    });
-
-    it('still reports ordinary check errors first', () => {
-        const dir = debate('x = nope.');
-        expect(commands.check(dir, { maxAxioms: 0 })).toMatchObject({
-            ok: false,
-            err: [expect.stringMatching(/'nope' is not declared/)],
+    it('--json gives each axiom with its module and location', () => {
+        const r = JSON.parse(commands.axioms('Bob.Rebuttal', dir(), { transitive: true, json: true }).out[0] as string);
+        expect(r).toMatchObject({
+            module: 'Bob.Rebuttal',
+            transitive: true,
+            count: 5,
+            modules: [
+                { name: 'Bob.Rebuttal', axioms: 1 },
+                { name: 'Alice.Beliefs', axioms: 3 },
+                { name: 'Shared.Common', axioms: 1 },
+            ],
         });
+        expect(r.axioms[0]).toMatchObject({
+            name: 'Bob.Rebuttal.mine',
+            module: 'Bob.Rebuttal',
+            proposition: 'believes bob things',
+            line: 4,
+        });
+    });
+
+    it('prints propositions as written, including variables and nested implications', () => {
+        const d = debate('r : (a X => b) => f (g X) => c.');
+        expect(commands.axioms('Bob.Rebuttal', d).out[0]).toBe('Bob.Rebuttal.r : (a X => b) => f (g X) => c');
+    });
+
+    it('only parses: it counts axioms in code that would fail to check', () => {
+        const d = debate('a : p.\nbroken = nope.\nb : q.');
+        expect(commands.check(d).ok).toBe(false);
+        expect(commands.axioms('Bob.Rebuttal', d, { count: true })).toEqual({ ok: true, out: ['2'], err: [] });
+    });
+
+    it('reports a missing module, and a missing import when transitive', () => {
+        expect(commands.axioms('Nope.Gone', dir())).toMatchObject({
+            ok: false,
+            err: [expect.stringMatching(/Module Nope\.Gone not found/)],
+        });
+        const d = debate('import Missing.Thing.\na : p.');
+        expect(commands.axioms('Bob.Rebuttal', d, { count: true }).out).toEqual(['1']);
+        expect(commands.axioms('Bob.Rebuttal', d, { transitive: true })).toMatchObject({
+            ok: false,
+            err: [expect.stringMatching(/Rebuttal\.ul:1:1: Module Missing\.Thing not found/)],
+        });
+    });
+
+    it('is independent of check: check reports validity only', () => {
+        const d = debate('import Alice.Beliefs.\nconvenient : wrong alice.');
+        expect(commands.check(d)).toMatchObject({ ok: true });
     });
 });
 
-describe('axioms --json: closing the "second package" loophole', () => {
-    it('lists each axiom a conclusion rests on with its module', () => {
+describe('rests-on: what a conclusion depends on', () => {
+    it('lists each axiom a conclusion rests on, with its module', () => {
         const dir = debate(`
             import Alice.Beliefs.
             party_wrong = lying_wrong (surprise_lies party).
         `);
-        expect(JSON.parse(commands.axioms('Bob.Rebuttal.party_wrong', dir, true).out[0] as string)).toEqual({
+        expect(JSON.parse(commands.restsOn('Bob.Rebuttal.party_wrong', dir, true).out[0] as string)).toEqual({
             declaration: 'Bob.Rebuttal.party_wrong',
             axioms: [
                 { name: 'Alice.Beliefs.lying_wrong', module: 'Alice.Beliefs', proposition: 'lies X => wrong X' },
@@ -84,7 +123,7 @@ describe('axioms --json: closing the "second package" loophole', () => {
         });
     });
 
-    it('exposes axioms smuggled in through another dependency, which --max-axioms 0 alone would miss', () => {
+    it('sees axioms coming from any imported module, not just the checked one', () => {
         const dir = debate(
             `
             import Alice.Beliefs.
@@ -93,14 +132,11 @@ describe('axioms --json: closing the "second package" loophole', () => {
         `,
             { 'Bob/Helpers.ul': 'alice_lies : lies alice.' },
         );
-        // Bob's checked module declares no axioms...
-        // (Bob/Helpers.ul sits in deps/, so it is imported, not checked.)
-        expect(commands.check(dir, { maxAxioms: 0 }).ok).toBe(true);
-        // ...but his conclusion rests on one that isn't Alice's, and a verifier can see it.
-        const { axioms } = JSON.parse(commands.axioms('Bob.Rebuttal.alice_wrong', dir, true).out[0] as string) as {
+        expect(commands.axioms('Bob.Rebuttal', dir, { count: true }).out).toEqual(['0']);
+        const { axioms } = JSON.parse(commands.restsOn('Bob.Rebuttal.alice_wrong', dir, true).out[0] as string) as {
             axioms: { module: string }[];
         };
-        expect(axioms.filter((a) => !a.module.startsWith('Alice.')).map((a) => a.module)).toEqual(['Bob.Helpers']);
+        expect(axioms.map((a) => a.module)).toEqual(['Alice.Beliefs', 'Bob.Helpers']);
     });
 });
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { Command, InvalidArgumentError } from 'commander';
-import { axioms, check, Output, show, summary } from './commands';
+import { Command } from 'commander';
+import { axioms, check, Output, restsOn, show, summary } from './commands';
 
 const emit = (o: Output) => {
     o.out.forEach((l) => console.log(l));
@@ -15,24 +15,27 @@ program
     .description('Check a project (configured by unilog.json), or every .ul file in a directory without one')
     .argument('[dir]', 'directory', '.')
     .option('-v, --verbose', 'print every declaration and what it proves')
-    .option(
-        '--max-axioms <n>',
-        'fail if the checked code declares more than n axioms (0: it may only use imported ones)',
-        (v: string) => {
-            const n = Number(v);
-            if (!Number.isInteger(n) || n < 0) throw new InvalidArgumentError('must be a whole number, 0 or more');
-            return n;
-        },
-    )
-    .action((dir: string, opts: { verbose?: boolean; maxAxioms?: number }) => emit(check(dir, opts)));
+    .action((dir: string, opts: { verbose?: boolean }) => emit(check(dir, opts)));
 
 program
     .command('axioms')
-    .description('List every axiom a declaration rests on, through all imported modules')
-    .argument('<name>', 'qualified declaration name, e.g. Ethics.Duty.keep_promises')
+    .description('Count the axioms declared in a module (only parses; does not check)')
+    .argument('<module>', 'module name, e.g. Ethics.Main')
+    .argument('[dir]', 'directory', '.')
+    .option('-t, --transitive', 'include every module it imports, transitively')
+    .option('-c, --count', 'print only the number')
+    .option('--json', 'output JSON')
+    .action((module: string, dir: string, opts: { transitive?: boolean; count?: boolean; json?: boolean }) =>
+        emit(axioms(module, dir, opts)),
+    );
+
+program
+    .command('rests-on')
+    .description('List every axiom a declaration rests on, following its proof through all imported modules')
+    .argument('<name>', 'qualified declaration name, e.g. Ethics.Main.keep_promises')
     .argument('[dir]', 'directory', '.')
     .option('--json', "output JSON, including each axiom's module")
-    .action((name: string, dir: string, opts: { json?: boolean }) => emit(axioms(name, dir, opts.json)));
+    .action((name: string, dir: string, opts: { json?: boolean }) => emit(restsOn(name, dir, opts.json)));
 
 program
     .command('show')

@@ -238,7 +238,7 @@ describe('commands', () => {
     it('axioms prints each axiom with its proposition', () => {
         const dir = tmpDir();
         write(dir, { ...KANT, ...ETHICS });
-        expect(commands.axioms('Ethics.Main.acting', dir).out).toEqual([
+        expect(commands.restsOn('Ethics.Main.acting', dir).out).toEqual([
             'Kant.Ethics.duty : good X => ought (act_from X)',
             'Kant.Ethics.good_will : good will',
         ]);

@@ -3,6 +3,7 @@ import path from 'path';
 import { checkModule, Declaration, keyOf, Module } from './check';
 import { Loc, UnilogError } from './errors';
 import { parse } from './parser';
+import { PropExpr } from './syntax';
 
 export const EXTENSION = '.ul';
 
@@ -14,8 +15,45 @@ export const EXTENSION = '.ul';
  * looks for its imports relative to its own location, so a package's files work unchanged wherever they
  * sit (as the project itself, or alongside other packages in a dependency folder).
  */
+/** An axiom as written in a module, read without checking. */
+export interface DeclaredAxiom {
+    /** `Module.name` */
+    name: string;
+    module: string;
+    /** The proposition as written. */
+    proposition: string;
+    loc: Loc;
+}
+
+/** A module read without checking: only what it imports and which axioms it declares. */
+export interface ModuleOutline {
+    name: string;
+    file: string;
+    imports: string[];
+    /** Where each import is written, parallel to `imports`. */
+    importLocs: Loc[];
+    axioms: DeclaredAxiom[];
+}
+
+/** Prints proposition syntax (as written, before checking). */
+export function showProp(e: PropExpr): string {
+    switch (e.k) {
+        case 'atom':
+        case 'var':
+            return e.name;
+        case 'app': {
+            const fn = e.fn.k === 'imp' ? `(${showProp(e.fn)})` : showProp(e.fn);
+            const arg = e.arg.k === 'app' || e.arg.k === 'imp' ? `(${showProp(e.arg)})` : showProp(e.arg);
+            return `${fn} ${arg}`;
+        }
+        case 'imp':
+            return `${e.from.k === 'imp' ? `(${showProp(e.from)})` : showProp(e.from)} => ${showProp(e.to)}`;
+    }
+}
+
 export class Workspace {
     private readonly modules = new Map<string, Module>();
+    private readonly outlines = new Map<string, ModuleOutline>();
     private readonly loading: string[] = [];
 
     constructor(public readonly roots: readonly string[]) {}
@@ -69,6 +107,44 @@ export class Workspace {
         } finally {
             this.loading.pop();
         }
+    }
+
+    /**
+     * Reads a module's imports and declared axioms without checking anything. Much cheaper than `load`,
+     * and works on modules that would fail to check.
+     */
+    outline(name: string, from?: Loc): ModuleOutline {
+        const cached = this.outlines.get(name);
+        if (cached) return cached;
+        const file = this.locate(name);
+        if (!file) throw new UnilogError(`Module ${name} not found (looked in ${this.roots.join(', ')})`, from);
+        const decls = parse(fs.readFileSync(file, 'utf8'), file);
+        const outline: ModuleOutline = {
+            name,
+            file,
+            imports: decls.flatMap((d) => (d.k === 'import' ? [d.path.join('.')] : [])),
+            importLocs: decls.flatMap((d) => (d.k === 'import' ? [d.loc] : [])),
+            axioms: decls.flatMap((d) =>
+                d.k === 'axiom'
+                    ? [{ name: `${name}.${d.name}`, module: name, proposition: showProp(d.prop), loc: d.loc }]
+                    : [],
+            ),
+        };
+        this.outlines.set(name, outline);
+        return outline;
+    }
+
+    /** Outlines of a module and every module it imports, transitively, each once, in visiting order. */
+    outlineClosure(name: string): ModuleOutline[] {
+        const seen = new Map<string, ModuleOutline>();
+        const visit = (n: string, from?: Loc) => {
+            if (seen.has(n)) return;
+            const o = this.outline(n, from);
+            seen.set(n, o);
+            o.imports.forEach((imp, i) => visit(imp, o.importLocs[i]));
+        };
+        visit(name);
+        return [...seen.values()];
     }
 
     /** Loads the module in a file. */
