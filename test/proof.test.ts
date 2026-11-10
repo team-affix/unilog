@@ -102,6 +102,45 @@ describe('proof', () => {
         });
     });
 
+    it('--flat numbers the steps, each after the steps it uses, without indentation', () => {
+        expect(commands.proof('M.T.twice', project(T), { flat: true }).out).toEqual([
+            '1. pair : likes jake sugar => likes jake sugar => both (likes jake sugar) (likes jake sugar)   [axiom M.T.pair]',
+            '2. b : likes jake cake => likes jake sugar   [axiom M.T.b]',
+            '3. a : likes jake cake   [axiom M.T.a]',
+            '4. lemma : likes jake sugar   [theorem M.T.lemma = b a; from 2, 3]',
+            '5. pair lemma : likes jake sugar => both (likes jake sugar) (likes jake sugar)   [from 1, 4]',
+            '6. lemma : likes jake sugar   [theorem M.T.lemma, as in step 4]',
+            '7. M.T.twice = pair lemma lemma : both (likes jake sugar) (likes jake sugar)   [from 5, 6]',
+        ]);
+    });
+
+    it('--flat works with --shallow, and for axioms', () => {
+        expect(commands.proof('M.T.use_lift', project(T), { flat: true, shallow: true }).out).toEqual([
+            '1. lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [theorem M.T.lift]',
+            '2. a : likes jake cake   [axiom M.T.a]',
+            '3. M.T.use_lift = lift a : both (likes jake cake) (likes jake sugar)   [from 1, 2]',
+        ]);
+        expect(commands.proof('M.T.a', project(T), { flat: true }).out).toEqual([
+            '1. M.T.a : likes jake cake   [axiom M.T.a]',
+        ]);
+    });
+
+    it('--flat --json gives the numbered steps as data', () => {
+        const steps = JSON.parse(commands.proof('M.T.twice', project(T), { flat: true, json: true }).out[0] as string);
+        expect(steps).toHaveLength(7);
+        expect(steps[3]).toEqual({
+            step: 4,
+            expr: 'lemma',
+            proposition: 'likes jake sugar',
+            kind: 'theorem',
+            name: 'M.T.lemma',
+            proof: 'b a',
+            from: [2, 3],
+        });
+        expect(steps[5]).toMatchObject({ step: 6, name: 'M.T.lemma', sameAs: 4, from: [] });
+        expect(steps[6]).toMatchObject({ step: 7, from: [5, 6] });
+    });
+
     it('reports an unknown declaration', () => {
         expect(commands.proof('M.T.nope', project(T))).toMatchObject({
             ok: false,

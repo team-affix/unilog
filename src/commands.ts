@@ -414,7 +414,63 @@ export interface ProofNode {
 export interface ProofOptions {
     /** Don't expand the theorems this proof uses into their own proofs. */
     shallow?: boolean;
+    /**
+     * List the steps without indentation, numbered, each after the steps it uses, with references to them
+     * ("from 1, 2"). The same tree, written out as a proof.
+     */
+    flat?: boolean;
     json?: boolean;
+}
+
+/** One numbered step of a flat proof. */
+export interface ProofStep {
+    step: number;
+    expr: string;
+    proposition: string;
+    kind: ProofNode['kind'];
+    name?: string;
+    proof?: string;
+    /** Steps this one is derived from. */
+    from: number[];
+    /** For a theorem used again: the step where it was first proved. */
+    sameAs?: number;
+}
+
+/** Numbers a proof tree's steps so each comes after the steps it uses. */
+function flatten(root: ProofNode): ProofStep[] {
+    const steps: ProofStep[] = [];
+    const provedAt = new Map<string, number>();
+    const visit = (n: ProofNode): number => {
+        const from = n.children.map(visit);
+        const step: ProofStep = {
+            step: steps.length + 1,
+            expr: n.expr,
+            proposition: n.proposition,
+            kind: n.kind,
+            from,
+        };
+        if (n.name) step.name = n.name;
+        if (n.proof) step.proof = n.proof;
+        if (n.shownAbove && n.name) step.sameAs = provedAt.get(n.name);
+        else if (n.kind === 'theorem' && n.name && n.proof) provedAt.set(n.name, step.step);
+        steps.push(step);
+        return step.step;
+    };
+    visit(root);
+    return steps;
+}
+
+function stepText(s: ProofStep, isLast: boolean): string {
+    const notes: string[] = [];
+    if (s.kind === 'axiom') notes.push(`axiom ${s.name}`);
+    else if (s.kind === 'assumption') notes.push('assumption');
+    else if (s.kind === 'theorem' && !isLast) {
+        if (s.sameAs) notes.push(`theorem ${s.name}, as in step ${s.sameAs}`);
+        else notes.push(s.proof ? `theorem ${s.name} = ${s.proof}` : `theorem ${s.name}`);
+    }
+    if (s.from.length > 0) notes.push(`from ${s.from.join(', ')}`);
+    const head = isLast && s.proof ? `${s.name} = ${s.proof}` : s.expr;
+    return `${s.step}. ${head} : ${s.proposition}${notes.length > 0 ? `   [${notes.join('; ')}]` : ''}`;
 }
 
 /**
@@ -463,6 +519,12 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
               }
             : { expr: keyOf(d), proposition: p.print(d.scheme.body), kind: 'axiom', name: keyOf(d), children: [] };
 
+        if (options.flat) {
+            const steps = flatten(root);
+            if (options.json) out.push(JSON.stringify(steps, null, 2));
+            else steps.forEach((s, i) => out.push(stepText(s, i === steps.length - 1)));
+            return;
+        }
         if (options.json) {
             out.push(JSON.stringify(root, null, 2));
             return;
