@@ -1,5 +1,5 @@
 # Equality as ordinary rules. Substitution: if X and Y are the same, whatever holds of X holds of Y.
-refl : eq X X.
-sym : eq X Y => eq Y X.
-trans : eq X Y => eq Y Z => eq X Z.
-subst : eq X Y => P X => P Y.
+refl : eq X X;
+sym : eq X Y => eq Y X;
+trans : eq X Y => eq Y Z => eq X Z;
+subst : eq X Y => P X => P Y;

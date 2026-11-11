@@ -10,9 +10,9 @@ import { tmpDir, write } from './helpers';
  */
 const ALICE = {
     'Alice/Beliefs.ul': `
-        lying_wrong : lies X => wrong X.
-        surprise_lies : surprises X => lies X.
-        party : surprises bob_party.
+        lying_wrong : lies X => wrong X;
+        surprise_lies : surprises X => lies X;
+        party : surprises bob_party;
     `,
 };
 
@@ -30,15 +30,15 @@ describe('axioms: counting', () => {
     const dir = () =>
         debate(
             `
-            import Alice.Beliefs.
-            import Shared.Common.
-            mine : believes bob things.
-            party_wrong = lying_wrong (surprise_lies party).
+            import Alice.Beliefs;
+            import Shared.Common;
+            mine : believes bob things;
+            party_wrong = lying_wrong (surprise_lies party);
         `,
             {
                 // Alice's module also imports Shared.Common: a diamond, so Shared.Common must be counted once.
-                'Alice/Beliefs.ul': 'import Shared.Common.\n' + (ALICE['Alice/Beliefs.ul'] as string),
-                'Shared/Common.ul': 'common : everyone (agrees X).',
+                'Alice/Beliefs.ul': 'import Shared.Common;\n' + (ALICE['Alice/Beliefs.ul'] as string),
+                'Shared/Common.ul': 'common : everyone (agrees X);',
             },
         );
 
@@ -78,12 +78,12 @@ describe('axioms: counting', () => {
     });
 
     it('prints propositions as written, including variables and nested implications', () => {
-        const d = debate('r : (a X => b) => f (g X) => c.');
+        const d = debate('r : (a X => b) => f (g X) => c;');
         expect(commands.axioms('Bob.Rebuttal', d).out[0]).toBe('Bob.Rebuttal.r : (a X => b) => f (g X) => c');
     });
 
     it('only parses: it counts axioms in code that would fail to check', () => {
-        const d = debate('a : p.\nbroken = nope.\nb : q.');
+        const d = debate('a : p;\nbroken = nope;\nb : q;');
         expect(commands.check(d).ok).toBe(false);
         expect(commands.axioms('Bob.Rebuttal', d, { count: true })).toEqual({ ok: true, out: ['2'], err: [] });
     });
@@ -93,7 +93,7 @@ describe('axioms: counting', () => {
             ok: false,
             err: [expect.stringMatching(/Module Nope\.Gone not found/)],
         });
-        const d = debate('import Missing.Thing.\na : p.');
+        const d = debate('import Missing.Thing;\na : p;');
         expect(commands.axioms('Bob.Rebuttal', d, { count: true }).out).toEqual(['1']);
         expect(commands.axioms('Bob.Rebuttal', d, { transitive: true })).toMatchObject({
             ok: false,
@@ -102,7 +102,7 @@ describe('axioms: counting', () => {
     });
 
     it('is independent of check: check reports validity only', () => {
-        const d = debate('import Alice.Beliefs.\nconvenient : wrong alice.');
+        const d = debate('import Alice.Beliefs;\nconvenient : wrong alice;');
         expect(commands.check(d)).toMatchObject({ ok: true });
     });
 });
@@ -110,8 +110,8 @@ describe('axioms: counting', () => {
 describe('rests-on: what a conclusion depends on', () => {
     it('lists each axiom a conclusion rests on, with its module', () => {
         const dir = debate(`
-            import Alice.Beliefs.
-            party_wrong = lying_wrong (surprise_lies party).
+            import Alice.Beliefs;
+            party_wrong = lying_wrong (surprise_lies party);
         `);
         expect(JSON.parse(commands.restsOn('Bob.Rebuttal.party_wrong', dir, true).out[0] as string)).toEqual({
             declaration: 'Bob.Rebuttal.party_wrong',
@@ -126,11 +126,11 @@ describe('rests-on: what a conclusion depends on', () => {
     it('sees axioms coming from any imported module, not just the checked one', () => {
         const dir = debate(
             `
-            import Alice.Beliefs.
-            import Bob.Helpers.
-            alice_wrong = lying_wrong alice_lies.
+            import Alice.Beliefs;
+            import Bob.Helpers;
+            alice_wrong = lying_wrong alice_lies;
         `,
-            { 'Bob/Helpers.ul': 'alice_lies : lies alice.' },
+            { 'Bob/Helpers.ul': 'alice_lies : lies alice;' },
         );
         expect(commands.axioms('Bob.Rebuttal', dir, { count: true }).out).toEqual(['0']);
         const { axioms } = JSON.parse(commands.restsOn('Bob.Rebuttal.alice_wrong', dir, true).out[0] as string) as {
@@ -143,9 +143,9 @@ describe('rests-on: what a conclusion depends on', () => {
 describe('summary', () => {
     const dir = () =>
         debate(`
-            import Alice.Beliefs.
-            party_wrong = lying_wrong (surprise_lies party).
-            via = \\P -> lying_wrong P.
+            import Alice.Beliefs;
+            party_wrong = lying_wrong (surprise_lies party);
+            via = \\P. lying_wrong P;
         `);
 
     it('tabulates axioms and inferences per module, checked and imported', () => {
@@ -184,6 +184,6 @@ describe('summary', () => {
     });
 
     it('reports check errors instead of a summary', () => {
-        expect(commands.summary(debate('x = nope.'))).toMatchObject({ ok: false });
+        expect(commands.summary(debate('x = nope;'))).toMatchObject({ ok: false });
     });
 });

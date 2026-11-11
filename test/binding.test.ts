@@ -8,15 +8,15 @@ import { tmpDir, write } from './helpers';
  * quantified once around the whole declaration, including ones that first appear in a later premise.
  */
 const DECLS = `
-    same : A => A.
-    any : A => B.
-    later : p X => q Y => r X Y.
-    fixed : p jake => q Y => r jake Y.
-    twin : p X => q X => r X X.
-    b : likes X cake => likes X sugar.
-    bj : likes jake cake => likes jake sugar.
-    nested : (A => A) => done.
-    nested_c : (c => c) => done.
+    same : A => A;
+    any : A => B;
+    later : p X => q Y => r X Y;
+    fixed : p jake => q Y => r jake Y;
+    twin : p X => q X => r X X;
+    b : likes X cake => likes X sugar;
+    bj : likes jake cake => likes jake sugar;
+    nested : (A => A) => done;
+    nested_c : (c => c) => done;
 `;
 
 function names(query: string, mode: 'default' | 'exact' | 'unify'): string[] {
@@ -61,12 +61,12 @@ describe('checking never confuses bound variables either', () => {
         const dir = tmpDir();
         write(dir, {
             'M/D.ul': `
-                later : p X => q Y => r X Y.
-                pa : p a.
-                pb : p b.
-                qc : q c.
-                pair : A => B => both A B.
-                two = pair (later pa qc) (later pb qc).
+                later : p X => q Y => r X Y;
+                pa : p a;
+                pb : p b;
+                qc : q c;
+                pair : A => B => both A B;
+                two = pair (later pa qc) (later pb qc);
             `,
         });
         expect(commands.show('M.D.two', dir).out).toEqual(['inference M.D.two : both (r a c) (r b c)']);
@@ -74,7 +74,7 @@ describe('checking never confuses bound variables either', () => {
 
     it("keeps a stated claim's variables distinct from the proof's", () => {
         const dir = tmpDir();
-        write(dir, { 'M/D.ul': 'later : p X => q Y => r X Y.\nbad : p X => q Y => r Y X = later.' });
+        write(dir, { 'M/D.ul': 'later : p X => q Y => r X Y;\nbad : p X => q Y => r Y X = later;' });
         expect(commands.check(dir)).toMatchObject({
             ok: false,
             err: [expect.stringMatching(/does not prove the stated claim/)],

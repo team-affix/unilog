@@ -1,11 +1,11 @@
 # Knowledge as justified true belief (the classical account Gettier challenged).
-knowledge_is_jtb : believes S X => justified S X => holds X => knows S X.
+knowledge_is_jtb : believes S X => justified S X => holds X => knows S X;
 
-smith_believes : believes smith (gets_job jones).
-smith_has_evidence : justified smith (gets_job jones).
-it_is_true : holds (gets_job jones).
+smith_believes : believes smith (gets_job jones);
+smith_has_evidence : justified smith (gets_job jones);
+it_is_true : holds (gets_job jones);
 
-smith_knows : knows smith (gets_job jones) = knowledge_is_jtb smith_believes smith_has_evidence it_is_true.
+smith_knows : knows smith (gets_job jones) = knowledge_is_jtb smith_believes smith_has_evidence it_is_true;
 
 # Gettier's point: justification can rest on a falsehood and still land on a truth by luck. Someone who
 # rejects the JTB account replaces `knowledge_is_jtb` with a stronger rule, and `smith_knows` stops checking.

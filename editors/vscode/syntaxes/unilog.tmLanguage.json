@@ -45,14 +45,14 @@
             }
         },
         "proof": {
-            "comment": "A declaration's proof: from its '=' (not '=>') up to the '.' that ends the declaration, possibly over several lines. Uppercase names here are assumptions.",
+            "comment": "A declaration's proof: from its '=' (not '=>') up to the ';' that ends the declaration, possibly over several lines. Uppercase names here are assumptions.",
             "begin": "(?<![=!<>:])=(?![=>])",
             "beginCaptures": {
                 "0": {
                     "name": "keyword.operator.equals.unilog"
                 }
             },
-            "end": "(?=\\.(?![A-Za-z0-9_']))",
+            "end": "(?=;)",
             "name": "meta.proof.unilog",
             "patterns": [
                 {
@@ -85,12 +85,13 @@
                 },
                 {
                     "name": "punctuation.terminator.unilog",
-                    "match": "\\.(?![A-Za-z0-9_'])"
+                    "match": ";"
                 },
                 {
                     "include": "#parens"
                 }
-            ]
+            ],
+            "comment": "Also used for whole lines outside proofs, so it colors the ';' that ends a declaration."
         },
         "qualified": {
             "comment": "A qualified reference, e.g. Kant.Ethics.duty",
@@ -114,13 +115,29 @@
                     "include": "#comment"
                 },
                 {
-                    "comment": "Introduces assumptions: \\P -> body",
-                    "name": "keyword.operator.lambda.unilog",
-                    "match": "\\\\"
-                },
-                {
-                    "name": "keyword.operator.arrow.unilog",
-                    "match": "->"
+                    "comment": "An assumption's head, \\F G X. : the names are assumptions, introduced for the body after the '.'",
+                    "begin": "\\\\",
+                    "beginCaptures": {
+                        "0": {
+                            "name": "keyword.operator.lambda.unilog"
+                        }
+                    },
+                    "end": "\\.",
+                    "endCaptures": {
+                        "0": {
+                            "name": "keyword.operator.lambda.unilog"
+                        }
+                    },
+                    "name": "meta.assumption.head.unilog",
+                    "patterns": [
+                        {
+                            "include": "#comment"
+                        },
+                        {
+                            "name": "variable.parameter.assumption.unilog",
+                            "match": "[A-Za-z0-9_']+"
+                        }
+                    ]
                 },
                 {
                     "comment": "A qualified reference to a proof, e.g. Kant.Ethics.duty",

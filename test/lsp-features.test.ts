@@ -17,8 +17,8 @@ function project() {
     const dir = tmpDir();
     write(dir, {
         'unilog.json': JSON.stringify({ roots: ['.', 'deps'], check: ['Mine'] }),
-        'deps/Kant/Ethics.ul': 'duty : good X => ought X.\nhonesty : good truthful.\ntell_truth = duty honesty.',
-        'Mine/Main.ul': 'import Kant.Ethics.\nmine = duty honesty.\nstated : ought truthful = tell_truth.\n',
+        'deps/Kant/Ethics.ul': 'duty : good X => ought X;\nhonesty : good truthful;\ntell_truth = duty honesty;',
+        'Mine/Main.ul': 'import Kant.Ethics;\nmine = duty honesty;\nstated : ought truthful = tell_truth;\n',
     });
     return dir;
 }
@@ -43,7 +43,7 @@ describe('language server features', () => {
     it('checks unsaved editor text, and locates problems with ranges', () => {
         const dir = project();
         const main = path.join(dir, 'Mine/Main.ul');
-        const a = analyze(dir, overlay({ [main]: 'import Kant.Ethics.\nbad = duty duty.' }));
+        const a = analyze(dir, overlay({ [main]: 'import Kant.Ethics;\nbad = duty duty;' }));
         expect(problems(a)).toEqual([
             {
                 file: main,
@@ -56,7 +56,7 @@ describe('language server features', () => {
     it('reports a problem in an imported module at its own location, saying how it was reached', () => {
         const dir = project();
         const kant = path.join(dir, 'deps/Kant/Ethics.ul');
-        const a = analyze(dir, overlay({ [kant]: 'duty : good X => ought X.\nhonesty = nope.' }));
+        const a = analyze(dir, overlay({ [kant]: 'duty : good X => ought X;\nhonesty = nope;' }));
         expect(problems(a)).toEqual([
             {
                 file: kant,
@@ -99,14 +99,14 @@ describe('language server features', () => {
         });
 
         describe('inside a curried proof, without needing parentheses', () => {
-            // and_comm = \P -> pair (snd P) (fst P).
+            // and_comm = \P. pair (snd P) (fst P);
             // 0         1         2         3
-            // 01234567890123456789012345678901234567
+            // 012345678901234567890123456789012345
             const dir = () => {
                 const d = tmpDir();
                 write(d, {
                     'M/P.ul':
-                        'pair : A => B => and A B.\nfst : and A B => A.\nsnd : and A B => B.\nand_comm = \\P -> pair (snd P) (fst P).',
+                        'pair : A => B => and A B;\nfst : and A B => A;\nsnd : and A B => B;\nand_comm = \\P. pair (snd P) (fst P);',
                 });
                 return d;
             };
@@ -116,7 +116,7 @@ describe('language server features', () => {
             };
 
             it('the rule name shows it taking each argument in turn, named as in the statement', () => {
-                expect(on(18)).toBe(
+                expect(on(16)).toBe(
                     '```unilog-step\npair : B => A => and B A\npair (snd P) : A => and B A\npair (snd P) (fst P) : and B A\n```' +
                         '\n\n```unilog-step\nM.P.pair : A => B => and A B\n```\n\naxiom',
                 );
@@ -124,25 +124,25 @@ describe('language server features', () => {
 
             it('an assumption where it is introduced shows what it is assumed to prove', () => {
                 expect(on(12)).toBe('```unilog-step\nP : and A B\n```\n\nassumption');
-                expect(on(27)).toBe('```unilog-step\nP : and A B\n```\n\nassumption');
+                expect(on(25)).toBe('```unilog-step\nP : and A B\n```\n\nassumption');
             });
 
             it('parentheses belong to the step they enclose, at both ends', () => {
-                expect(on(22)).toBe('```unilog-step\nsnd P : B\n```');
-                expect(on(28)).toBe('```unilog-step\nsnd P : B\n```');
-                expect(on(30)).toBe('```unilog-step\nfst P : A\n```');
+                expect(on(20)).toBe('```unilog-step\nsnd P : B\n```');
+                expect(on(26)).toBe('```unilog-step\nsnd P : B\n```');
+                expect(on(28)).toBe('```unilog-step\nfst P : A\n```');
             });
 
             it('a rule taking one argument shows both steps', () => {
-                expect(on(23)).toBe(
+                expect(on(21)).toBe(
                     '```unilog-step\nsnd : and A B => B\nsnd P : B\n```\n\n```unilog-step\nM.P.snd : and A B => B\n```\n\naxiom',
                 );
             });
 
             it('the gap after a rule name is its first application only; the last gap is the whole', () => {
-                // and_comm = \P -> pair (snd P) (fst P).   gap at 21 is after `pair`, gap at 29 after `(snd P)`
-                expect(on(21)).toBe('```unilog-step\npair (snd P) : A => and B A\n```');
-                expect(on(29)).toBe('```unilog-step\npair (snd P) (fst P) : and B A\n```');
+                // and_comm = \P. pair (snd P) (fst P);   gap at 19 is after `pair`, gap at 27 after `(snd P)`
+                expect(on(19)).toBe('```unilog-step\npair (snd P) : A => and B A\n```');
+                expect(on(27)).toBe('```unilog-step\npair (snd P) (fst P) : and B A\n```');
             });
 
             it('reports the exact range it describes, for the editor to highlight', () => {
@@ -153,16 +153,16 @@ describe('language server features', () => {
                     start: { line: 3, character: from },
                     end: { line: 3, character: to },
                 });
-                expect(range(18)).toEqual(span(17, 21)); // the name pair
-                expect(range(21)).toEqual(span(17, 29)); // pair (snd P)
-                expect(range(29)).toEqual(span(17, 37)); // pair (snd P) (fst P)
-                expect(range(22)).toEqual(span(22, 29)); // (snd P), parentheses included
+                expect(range(16)).toEqual(span(15, 19)); // the name pair
+                expect(range(19)).toEqual(span(15, 27)); // pair (snd P)
+                expect(range(27)).toEqual(span(15, 35)); // pair (snd P) (fst P)
+                expect(range(20)).toEqual(span(20, 27)); // (snd P), parentheses included
                 expect(range(12)).toEqual(span(12, 13)); // the assumption P
                 expect(range(2)).toEqual(span(0, 8)); // the declaration name and_comm
             });
 
             it('whitespace between steps belongs to the enclosing application', () => {
-                expect(on(29)).toBe('```unilog-step\npair (snd P) (fst P) : and B A\n```');
+                expect(on(27)).toBe('```unilog-step\npair (snd P) (fst P) : and B A\n```');
             });
         });
 
@@ -194,7 +194,7 @@ describe('language server features', () => {
     });
 
     it('declaration markers: which lines start axioms and which start inferences, from parsing alone', () => {
-        const text = 'import Kant.Ethics.\n\na : p.\nb : p => q.\nc =\n    b a.\nd : q = c.\n';
+        const text = 'import Kant.Ethics;\n\na : p;\nb : p => q;\nc =\n    b a;\nd : q = c;\n';
         expect(declarationMarkers(text, 'f.ul')).toEqual([
             { name: 'a', kind: 'axiom', line: 2 },
             { name: 'b', kind: 'axiom', line: 3 },
@@ -202,9 +202,9 @@ describe('language server features', () => {
             { name: 'd', kind: 'inference', line: 6 },
         ]);
         // Still there when the file has checking errors (nothing here is declared or imported) ...
-        expect(declarationMarkers('t = nope nope.', 'f.ul')).toEqual([{ name: 't', kind: 'inference', line: 0 }]);
+        expect(declarationMarkers('t = nope nope;', 'f.ul')).toEqual([{ name: 't', kind: 'inference', line: 0 }]);
         // ... and none while it doesn't parse.
-        expect(declarationMarkers('a : (p.', 'f.ul')).toEqual([]);
+        expect(declarationMarkers('a : (p;', 'f.ul')).toEqual([]);
     });
 
     it('outline lists declarations with what they prove', () => {

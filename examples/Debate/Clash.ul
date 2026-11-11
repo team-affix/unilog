@@ -1,13 +1,13 @@
 # Kant and Mill can't both be right about the murderer at the door. This module declares no beliefs of its
 # own (`unilog axioms Debate.Clash` is 0); it only shows what follows from theirs, taken together.
-import Ethics.Core.
-import Ethics.Kant.
-import Ethics.Mill.
-import Ethics.MurdererAtTheDoor.
+import Ethics.Core;
+import Ethics.Kant;
+import Ethics.Mill;
+import Ethics.MurdererAtTheDoor;
 
-lie_is_wrong : wrong answering_the_murderer = lying_is_wrong lie_to_murderer.
-lie_is_permitted : permitted answering_the_murderer = saving_lives_permitted lie_saves_friend.
+lie_is_wrong : wrong answering_the_murderer = lying_is_wrong lie_to_murderer;
+lie_is_permitted : permitted answering_the_murderer = saving_lives_permitted lie_saves_friend;
 
 # A contradiction: `unilog find false` finds it, and `unilog rests-on Debate.Clash.clash` lists exactly
 # which beliefs, from which side, would have to give.
-clash : false = wrong_excludes_permitted lie_is_wrong lie_is_permitted.
+clash : false = wrong_excludes_permitted lie_is_wrong lie_is_permitted;

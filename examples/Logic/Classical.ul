@@ -1,8 +1,8 @@
 # Classical logic is one belief away: excluded middle, stated as an axiom.
 # Anything proved with it lists Logic.Classical.lem among its axioms (`unilog axioms`).
-import Logic.Prelude.
+import Logic.Prelude;
 
-lem : or P (P => false).
+lem : or P (P => false);
 
 double_negation : ((P => false) => false) => P =
-    \Nnp -> case lem (\P -> P) (\Np -> explode (Nnp Np)).
+    \Nnp. case lem (\P. P) (\Np. explode (Nnp Np));

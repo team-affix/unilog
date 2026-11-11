@@ -1,9 +1,9 @@
 # Pattern matching: applying a rule matches its premise against a proof.
-a : likes jake cake.
-b : likes X cake => likes X sugar.
-c = b a.                                # proves: likes jake sugar
-c_stated : likes jake sugar = b a.      # the same, with the claim written out and checked
+a : likes jake cake;
+b : likes X cake => likes X sugar;
+c = b a;                                # proves: likes jake sugar
+c_stated : likes jake sugar = b a;      # the same, with the claim written out and checked
 
 # A rule whose premise is just a variable accepts any proof.
-everything_prover : X => theorem X.
-d = everything_prover c.                # proves: theorem (likes jake sugar)
+everything_prover : X => theorem X;
+d = everything_prover c;                # proves: theorem (likes jake sugar)

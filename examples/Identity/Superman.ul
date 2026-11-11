@@ -1,9 +1,9 @@
 # The same puzzle, with a costume.
-import Identity.Equality.
+import Identity.Equality;
 
-kent_is_superman : eq clark_kent superman.
-superman_is_kal_el : eq superman kal_el.
-kent_wears_glasses : wears_glasses clark_kent.
+kent_is_superman : eq clark_kent superman;
+superman_is_kal_el : eq superman kal_el;
+kent_wears_glasses : wears_glasses clark_kent;
 
-kent_is_kal_el : eq clark_kent kal_el = trans kent_is_superman superman_is_kal_el.
-superman_wears_glasses : wears_glasses superman = subst kent_is_superman kent_wears_glasses.
+kent_is_kal_el : eq clark_kent kal_el = trans kent_is_superman superman_is_kal_el;
+superman_wears_glasses : wears_glasses superman = subst kent_is_superman kent_wears_glasses;

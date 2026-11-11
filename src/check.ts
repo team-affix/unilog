@@ -87,7 +87,7 @@ function toTerm(e: PropExpr, vars: Map<string, Term>, makeVar: (name: string) =>
     }
 }
 
-/** Prints proof syntax. Consecutive assumptions are written together: \F G X -> body. */
+/** Prints proof syntax. Consecutive assumptions are written together: \F G X. body. */
 const showProof = (e: ProofExpr): string => {
     switch (e.k) {
         case 'ref':
@@ -104,7 +104,7 @@ const showProof = (e: ProofExpr): string => {
                 params.push(body.param);
                 body = body.body;
             }
-            return `\\${params.join(' ')} -> ${showProof(body)}`;
+            return `\\${params.join(' ')}. ${showProof(body)}`;
         }
     }
 };

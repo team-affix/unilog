@@ -53,11 +53,11 @@ const ATOM = 'constant.other.symbol.unilog';
 
 const cases = [
     [
-        ['import Kant.Ethics.'],
-        [['import', 'keyword.control.import.unilog'], ['Kant.Ethics', 'entity.name.namespace.unilog'], ['.', 'punctuation.terminator.unilog']],
+        ['import Kant.Ethics;'],
+        [['import', 'keyword.control.import.unilog'], ['Kant.Ethics', 'entity.name.namespace.unilog'], [';', 'punctuation.terminator.unilog']],
     ],
     [
-        ['b : likes X cake => likes X sugar.  # a rule'],
+        ['b : likes X cake => likes X sugar;  # a rule'],
         [
             ['b', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
@@ -68,13 +68,13 @@ const cases = [
             ['likes', ATOM],
             ['X', PROP_VAR],
             ['sugar', ATOM],
-            ['.', 'punctuation.terminator.unilog'],
+            [';', 'punctuation.terminator.unilog'],
             ['# a rule', 'comment.line.number-sign.unilog'],
         ],
     ],
     [
         // Proposition variables (A, B) and assumptions (P) get different scopes, on the same line.
-        ['and_comm : and A B => and B A = \\P -> pair (snd P) (fst P).'],
+        ['and_comm : and A B => and B A = \\P. pair (snd P) (fst P);'],
         [
             ['and_comm', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
@@ -88,7 +88,7 @@ const cases = [
             ['=', 'keyword.operator.equals.unilog'],
             ['\\', LAMBDA],
             ['P', ASSUMPTION],
-            ['->', 'keyword.operator.arrow.unilog'],
+            ['.', LAMBDA],
             ['pair', PROOF],
             ['(', 'punctuation.parenthesis.unilog'],
             ['snd', PROOF],
@@ -98,11 +98,11 @@ const cases = [
             ['fst', PROOF],
             ['P', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
-            ['.', 'punctuation.terminator.unilog'],
+            [';', 'punctuation.terminator.unilog'],
         ],
     ],
     [
-        ['mine = Kant.Ethics.duty (P).'],
+        ['mine = Kant.Ethics.duty (P);'],
         [
             ['mine', 'entity.name.function.unilog'],
             ['=', 'keyword.operator.equals.unilog'],
@@ -111,13 +111,13 @@ const cases = [
             ['(', 'punctuation.parenthesis.unilog'],
             ['P', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
-            ['.', 'punctuation.terminator.unilog'],
+            [';', 'punctuation.terminator.unilog'],
         ],
     ],
     [
         // A proof continuing onto the next line: still a proof, so Nnp and P are assumptions.
-        // After the '.', the next declaration's variable is a proposition variable again.
-        ['double_negation : ((P => false) => false) => P =', '    \\Nnp -> case lem (\\P -> P).', 'next : X.'],
+        // After the ';', the next declaration's variable is a proposition variable again.
+        ['double_negation : ((P => false) => false) => P =', '    \\Nnp. case lem (\\P. P);', 'next : X;'],
         [
             ['double_negation', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
@@ -135,25 +135,25 @@ const cases = [
             ['=', 'keyword.operator.equals.unilog'],
             ['\\', LAMBDA],
             ['Nnp', ASSUMPTION],
-            ['->', 'keyword.operator.arrow.unilog'],
+            ['.', LAMBDA],
             ['case', PROOF],
             ['lem', PROOF],
             ['(', 'punctuation.parenthesis.unilog'],
             ['\\', LAMBDA],
             ['P', ASSUMPTION],
-            ['->', 'keyword.operator.arrow.unilog'],
+            ['.', LAMBDA],
             ['P', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
-            ['.', 'punctuation.terminator.unilog'],
+            [';', 'punctuation.terminator.unilog'],
             ['next', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
             ['X', PROP_VAR],
-            ['.', 'punctuation.terminator.unilog'],
+            [';', 'punctuation.terminator.unilog'],
         ],
     ],
     [
         // route_more is a proof (colored) where it is used in a proof, and route is just a symbol in a proposition.
-        ['two_roads : road X Y => route X Z = \\Xy -> route_more Xy (route_road Yz).'],
+        ['two_roads : road X Y => route X Z = \\Xy. route_more Xy (route_road Yz);'],
         [
             ['two_roads', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
@@ -167,14 +167,33 @@ const cases = [
             ['=', 'keyword.operator.equals.unilog'],
             ['\\', LAMBDA],
             ['Xy', ASSUMPTION],
-            ['->', 'keyword.operator.arrow.unilog'],
+            ['.', LAMBDA],
             ['route_more', PROOF],
             ['Xy', ASSUMPTION],
             ['(', 'punctuation.parenthesis.unilog'],
             ['route_road', PROOF],
             ['Yz', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
-            ['.', 'punctuation.terminator.unilog'],
+            [';', 'punctuation.terminator.unilog'],
+        ],
+    ],
+    [
+        // Several assumptions in one head, and a body right after the '.': X is an assumption, Kant.Ethics. a namespace.
+        ['both = \\F X.Kant.Ethics.duty (F X);'],
+        [
+            ['both', 'entity.name.function.unilog'],
+            ['=', 'keyword.operator.equals.unilog'],
+            ['\\', LAMBDA],
+            ['F', ASSUMPTION],
+            ['X', ASSUMPTION],
+            ['.', LAMBDA],
+            ['Kant.Ethics.', 'entity.name.namespace.unilog'],
+            ['duty', PROOF],
+            ['(', 'punctuation.parenthesis.unilog'],
+            ['F', ASSUMPTION],
+            ['X', ASSUMPTION],
+            [')', 'punctuation.parenthesis.unilog'],
+            [';', 'punctuation.terminator.unilog'],
         ],
     ],
 ];
@@ -196,6 +215,23 @@ const stepCases = [
             ['route', ATOM],
             ['X', PROP_VAR],
             ['Z', PROP_VAR],
+        ],
+    ],
+    [
+        ['\\P. pair P lemma : A => both A B'],
+        [
+            ['\\', LAMBDA],
+            ['P', ASSUMPTION],
+            ['.', LAMBDA],
+            ['pair', PROOF],
+            ['P', ASSUMPTION],
+            ['lemma', PROOF],
+            [':', 'keyword.operator.colon.unilog'],
+            ['A', PROP_VAR],
+            ['=>', 'keyword.operator.arrow.unilog'],
+            ['both', ATOM],
+            ['A', PROP_VAR],
+            ['B', PROP_VAR],
         ],
     ],
     [

@@ -3,9 +3,9 @@
 A minimal constructive logic for stating beliefs and checking what follows from them.
 
 ```
-a : likes jake cake.                  # a belief (axiom)
-b : likes X cake => likes X sugar.    # a rule: for any X
-c = b a.                              # a proof; the checker infers: likes jake sugar
+a : likes jake cake;                  # a belief (axiom)
+b : likes X cake => likes X sugar;    # a rule: for any X
+c = b a;                              # a proof; the checker infers: likes jake sugar
 ```
 
 - **Constructive logic via Curry–Howard.** Propositions are types, proofs are programs, and checking is type inference. You never write types or quantifiers.
