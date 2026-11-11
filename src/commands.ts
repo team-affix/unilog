@@ -75,14 +75,14 @@ export function check(dir: string, options: CheckOptions = {}): Output {
     const decls = modules.flatMap((m) => [...m.decls.values()]);
     if (options.verbose)
         for (const d of decls)
-            out.push(`${d.kind === 'axiom' ? 'axiom  ' : 'theorem'} ${keyOf(d)} : ${prop(d.scheme.body)}`);
+            out.push(`${d.kind === 'axiom' ? 'axiom    ' : 'inference'} ${keyOf(d)} : ${prop(d.scheme.body)}`);
     if (l.errors.length > 0) return { ok: false, out, err: l.errors };
 
     const mine = decls.filter((d) => isOwn(l, d));
     const myAxioms = mine.filter((d) => d.kind === 'axiom');
     const imported = modules.length - l.own.size;
     out.push(
-        `ok: ${l.own.size} module(s) checked, declaring ${mine.length - myAxioms.length} theorem(s) and ` +
+        `ok: ${l.own.size} module(s) checked, declaring ${mine.length - myAxioms.length} inference(s) and ` +
             `${myAxioms.length} axiom(s); ${imported} imported module(s)`,
     );
     return { ok: true, out, err: [] };
@@ -185,10 +185,10 @@ export interface ModuleSummary {
     own: boolean;
     imports: string[];
     axioms: number;
-    theorems: number;
+    inferences: number;
     declarations: {
         name: string;
-        kind: 'axiom' | 'theorem';
+        kind: 'axiom' | 'inference';
         proposition: string;
         /** Declarations its proof refers to directly. */
         uses: string[];
@@ -198,7 +198,7 @@ export interface ModuleSummary {
 }
 
 /**
- * `unilog summary [dir]`: every module in the project and everything it imports, with axiom and theorem
+ * `unilog summary [dir]`: every module in the project and everything it imports, with axiom and inference
  * counts. With --json, the full dependency graph between declarations, for analysis and visualization.
  */
 export function summary(dir: string, json = false): Output {
@@ -218,7 +218,7 @@ export function summary(dir: string, json = false): Output {
             own: l.own.has(m.name),
             imports: [...m.imports],
             axioms: decls.filter((d) => d.kind === 'axiom').length,
-            theorems: decls.filter((d) => d.kind === 'theorem').length,
+            inferences: decls.filter((d) => d.kind === 'inference').length,
             declarations: decls.map((d) => ({
                 name: keyOf(d),
                 kind: d.kind,
@@ -231,10 +231,10 @@ export function summary(dir: string, json = false): Output {
     if (json) return { ok: true, out: [JSON.stringify({ modules }, null, 2)], err: [] };
 
     const width = Math.max(6, ...modules.map((m) => m.name.length));
-    const out = [`${'module'.padEnd(width)}  ${'source'.padEnd(8)}  axioms  theorems`];
+    const out = [`${'module'.padEnd(width)}  ${'source'.padEnd(8)}  axioms  inferences`];
     for (const m of modules)
         out.push(
-            `${m.name.padEnd(width)}  ${(m.own ? 'checked' : 'imported').padEnd(8)}  ${String(m.axioms).padStart(6)}  ${String(m.theorems).padStart(8)}`,
+            `${m.name.padEnd(width)}  ${(m.own ? 'checked' : 'imported').padEnd(8)}  ${String(m.axioms).padStart(6)}  ${String(m.inferences).padStart(10)}`,
         );
     const total = (own: boolean) => modules.filter((m) => m.own === own).reduce((n, m) => n + m.axioms, 0);
     out.push(`axioms: ${total(true)} in checked code, ${total(false)} in imported modules`);
@@ -338,12 +338,12 @@ export function find(query: string, dir: string, options: FindOptions = {}): Out
     if (found.length === 0) return { ok: false, out: [], err: [`No declaration proves ${shown}`] };
     return {
         ok: true,
-        out: found.map((d) => `${d.kind === 'axiom' ? 'axiom  ' : 'theorem'} ${keyOf(d)} : ${prop(d.scheme.body)}`),
+        out: found.map((d) => `${d.kind === 'axiom' ? 'axiom    ' : 'inference'} ${keyOf(d)} : ${prop(d.scheme.body)}`),
         err: [],
     };
 }
 
-export interface TheoremsOptions {
+export interface InferencesOptions {
     /** Include every module it imports, transitively. */
     transitive?: boolean;
     count?: boolean;
@@ -351,11 +351,11 @@ export interface TheoremsOptions {
 }
 
 /**
- * `unilog theorems <Module> [dir]`: the theorems declared in a module (or with `transitive`, in it and
+ * `unilog inferences <Module> [dir]`: the inferences declared in a module (or with `transitive`, in it and
  * everything it imports), with what each proves. Proofs are not shown. Checks the modules involved,
- * since what a theorem proves is inferred.
+ * since what an inference proves is inferred.
  */
-export function theorems(module: string, dir: string, options: TheoremsOptions = {}): Output {
+export function inferences(module: string, dir: string, options: InferencesOptions = {}): Output {
     return guarded((out) => {
         const ws = new Workspace(targetOf(dir).roots);
         const modules = [ws.load(module)];
@@ -363,7 +363,7 @@ export function theorems(module: string, dir: string, options: TheoremsOptions =
             // Visits modules appended during the loop too, so this walks the whole import graph.
             for (const mod of modules)
                 for (const imp of mod.imports) if (!modules.some((m) => m.name === imp)) modules.push(ws.load(imp));
-        const list = modules.flatMap((m) => [...m.decls.values()].filter((d) => d.kind === 'theorem'));
+        const list = modules.flatMap((m) => [...m.decls.values()].filter((d) => d.kind === 'inference'));
         if (options.count) {
             out.push(String(list.length));
         } else if (options.json) {
@@ -373,7 +373,7 @@ export function theorems(module: string, dir: string, options: TheoremsOptions =
                         module,
                         transitive: !!options.transitive,
                         count: list.length,
-                        theorems: list.map((d) => ({
+                        inferences: list.map((d) => ({
                             name: keyOf(d),
                             module: d.module,
                             proposition: prop(d.scheme.body),
@@ -387,8 +387,8 @@ export function theorems(module: string, dir: string, options: TheoremsOptions =
             for (const d of list) out.push(`${keyOf(d)} : ${prop(d.scheme.body)}`);
             out.push(
                 options.transitive
-                    ? `${list.length} theorem(s) in ${module} and the ${modules.length - 1} module(s) it imports`
-                    : `${list.length} theorem(s) in ${module}`,
+                    ? `${list.length} inference(s) in ${module} and the ${modules.length - 1} module(s) it imports`
+                    : `${list.length} inference(s) in ${module}`,
             );
         }
     });
@@ -400,17 +400,17 @@ export interface ProofNode {
     expr: string;
     /** What this step proves, with variables as the proof filled them in. */
     proposition: string;
-    kind: 'axiom' | 'theorem' | 'assumption' | 'apply' | 'assume';
-    /** For axioms and theorems: the qualified name. */
+    kind: 'axiom' | 'inference' | 'assumption' | 'apply' | 'assume';
+    /** For axioms and inferences: the qualified name. */
     name?: string;
-    /** For an expanded theorem: its own proof expression. */
+    /** For an expanded inference: its own proof expression. */
     proof?: string;
-    /** A theorem already expanded earlier in this tree, not expanded again. */
+    /** An inference already expanded earlier in this tree, not expanded again. */
     shownAbove?: boolean;
     /**
      * How this step follows from its children: `apply` (the first child, an implication, applied to the
      * second, its premise), `assume` (the child was proved with `assumption` assumed, giving an
-     * implication), or `same` (a theorem defined as the child).
+     * implication), or `same` (an inference defined as the child).
      */
     rule?: 'apply' | 'assume' | 'same';
     /** For `assume`: the name of the assumption. */
@@ -426,14 +426,14 @@ function ruleOf(dv: Derivation): Pick<ProofNode, 'rule' | 'assumption'> {
 }
 
 export interface ProofOptions {
-    /** Don't expand the theorems this proof uses into their own proofs. */
+    /** Don't expand the inferences this proof uses into their own proofs. */
     shallow?: boolean;
     /**
      * Instead of a tree, list every declaration the proof relies on, each once, in declaration order (as
      * written, each module after those it imports). Lines refer to each other by name, as in the source.
      */
     flat?: boolean;
-    /** With `flat`: list axioms before theorems (each group still in declaration order). */
+    /** With `flat`: list axioms before inferences (each group still in declaration order). */
     axiomsFirst?: boolean;
     json?: boolean;
 }
@@ -441,10 +441,10 @@ export interface ProofOptions {
 /** One declaration in a flat proof listing. */
 export interface ProofLine {
     name: string;
-    kind: 'axiom' | 'theorem';
+    kind: 'axiom' | 'inference';
     /** The declaration's own (general) statement. */
     proposition: string;
-    /** For theorems: the proof expression, which refers to earlier lines by name. */
+    /** For inferences: the proof expression, which refers to earlier lines by name. */
     proof?: string;
 }
 
@@ -463,7 +463,7 @@ function proofLines(d: Declaration, ws: Workspace, shallow: boolean, axiomsFirst
     visit(d);
     const ordered = [...included.values()].sort((a, b) => ws.orderOf(keyOf(a)) - ws.orderOf(keyOf(b)));
     const final = axiomsFirst
-        ? [...ordered.filter((x) => x.kind === 'axiom'), ...ordered.filter((x) => x.kind === 'theorem')]
+        ? [...ordered.filter((x) => x.kind === 'axiom'), ...ordered.filter((x) => x.kind === 'inference')]
         : ordered;
     return final.map((x) => {
         const l: ProofLine = { name: keyOf(x), kind: x.kind, proposition: prop(x.scheme.body) };
@@ -474,7 +474,7 @@ function proofLines(d: Declaration, ws: Workspace, shallow: boolean, axiomsFirst
 
 /**
  * `unilog proof <Mod.name> [dir]`: a declaration's whole proof as a tree. Each step shows its expression and
- * what it proves at that point; leaves are axioms and assumptions. Theorems the proof uses are expanded
+ * what it proves at that point; leaves are axioms and assumptions. Inferences the proof uses are expanded
  * into their own proofs (each once; later uses say "shown above"), unless `shallow`.
  */
 export function proof(name: string, dir: string, options: ProofOptions = {}): Output {
@@ -496,12 +496,12 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
             if (!target) return { ...base, kind: 'assumption', children: [] };
             const key = keyOf(target);
             if (target.kind === 'axiom') return { ...base, kind: 'axiom', name: key, children: [] };
-            if (options.shallow || !target.proof) return { ...base, kind: 'theorem', name: key, children: [] };
-            if (expanded.has(key)) return { ...base, kind: 'theorem', name: key, shownAbove: true, children: [] };
+            if (options.shallow || !target.proof) return { ...base, kind: 'inference', name: key, children: [] };
+            if (expanded.has(key)) return { ...base, kind: 'inference', name: key, shownAbove: true, children: [] };
             expanded.add(key);
             return {
                 ...base,
-                kind: 'theorem',
+                kind: 'inference',
                 name: key,
                 proof: target.proof.text,
                 ...ruleOf(target.proof),
@@ -514,7 +514,7 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
                   expr: keyOf(d),
                   // From the proof itself (not the generalized statement), so variable names match the steps below.
                   proposition: p.print(d.proof.term),
-                  kind: 'theorem',
+                  kind: 'inference',
                   name: keyOf(d),
                   proof: d.proof.text,
                   ...ruleOf(d.proof),
@@ -544,9 +544,9 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
                     return `   [axiom ${n.name}]`;
                 case 'assumption':
                     return '   [assumption]';
-                case 'theorem':
-                    if (n.shownAbove) return `   [theorem ${n.name}, shown above]`;
-                    return n.proof ? `   [theorem ${n.name} = ${n.proof}]` : `   [theorem ${n.name}]`;
+                case 'inference':
+                    if (n.shownAbove) return `   [inference ${n.name}, shown above]`;
+                    return n.proof ? `   [inference ${n.name} = ${n.proof}]` : `   [inference ${n.name}]`;
                 default:
                     return '';
             }

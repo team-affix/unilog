@@ -85,7 +85,7 @@ describe('language server (over the protocol)', () => {
         const uri = pathToFileURL(file).toString();
         const { client, nextDiagnostics } = await start(dir);
 
-        // Opened with unsaved text containing a mistake (on disk the file has no theorem at all).
+        // Opened with unsaved text containing a mistake (on disk the file has no inference at all).
         await client.sendNotification('textDocument/didOpen', {
             textDocument: {
                 uri,
@@ -139,7 +139,7 @@ describe('language server (over the protocol)', () => {
         expect(await client.sendRequest('unilog/declarationMarkers', { uri })).toEqual([
             { name: 'a', kind: 'axiom', line: 0 },
             { name: 'b', kind: 'axiom', line: 1 },
-            { name: 'c', kind: 'theorem', line: 2 },
+            { name: 'c', kind: 'inference', line: 2 },
         ]);
     });
 

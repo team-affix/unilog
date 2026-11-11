@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { VERSION } from './version';
-import { axioms, check, find, init, Output, proof, restsOn, show, summary, theorems } from './commands';
+import { axioms, check, find, init, Output, proof, restsOn, show, summary, inferences } from './commands';
 
 const emit = (o: Output) => {
     o.out.forEach((l) => console.log(l));
@@ -50,15 +50,15 @@ program
     .action((name: string, dir: string, opts: { json?: boolean }) => emit(restsOn(name, dir, opts.json)));
 
 program
-    .command('theorems')
-    .description('List the theorems declared in a module, with what each proves')
+    .command('inferences')
+    .description('List the inferences declared in a module, with what each proves')
     .argument('<module>', 'module name, e.g. Ethics.Main')
     .argument('[dir]', 'directory', '.')
     .option('-t, --transitive', 'include every module it imports, transitively')
     .option('-c, --count', 'print only the number')
     .option('--json', 'output JSON')
     .action((module: string, dir: string, opts: { transitive?: boolean; count?: boolean; json?: boolean }) =>
-        emit(theorems(module, dir, opts)),
+        emit(inferences(module, dir, opts)),
     );
 
 program
@@ -83,9 +83,9 @@ program
     .description("Show a declaration's whole proof as a tree, down to axioms and assumptions")
     .argument('<name>', 'qualified declaration name, e.g. Ethics.Main.keep_promises')
     .argument('[dir]', 'directory', '.')
-    .option('-s, --shallow', "don't expand the theorems it uses into their own proofs")
+    .option('-s, --shallow', "don't expand the inferences it uses into their own proofs")
     .option('-f, --flat', 'list the declarations it relies on, each once, in declaration order')
-    .option('-a, --axioms-first', 'with --flat: list axioms before theorems')
+    .option('-a, --axioms-first', 'with --flat: list axioms before inferences')
     .option('--json', 'output the tree (or with --flat, the list) as JSON')
     .action(
         (
@@ -104,7 +104,7 @@ program
 
 program
     .command('summary')
-    .description('Axiom and theorem counts for every module, checked and imported')
+    .description('Axiom and inference counts for every module, checked and imported')
     .argument('[dir]', 'directory', '.')
     .option('--json', 'output the full declaration graph as JSON (uses, and the axioms each rests on)')
     .action((dir: string, opts: { json?: boolean }) => emit(summary(dir, opts.json)));

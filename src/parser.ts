@@ -15,7 +15,7 @@ import {
     ProofAtomContext,
     ProofContext,
     ProofNameContext,
-    TheoremDeclContext,
+    InferenceDeclContext,
     UnilogParser,
 } from './generated/UnilogParser';
 import { Decl, PropExpr, ProofExpr } from './syntax';
@@ -166,18 +166,18 @@ function converters(file: string) {
                 loc: locOf(ctx),
                 pathLoc: locOf(ctx.NAME().symbol),
             };
-        const named = ctx as ClaimDeclContext | TheoremDeclContext;
+        const named = ctx as ClaimDeclContext | InferenceDeclContext;
         const name = simpleName(named.NAME().symbol, 'A declaration name');
         const nameLoc = locOf(named.NAME().symbol);
         if (!/^[a-z0-9]/.test(name))
             throw new UnilogError(`Declaration names must start with a lowercase letter or digit: '${name}'`, nameLoc);
-        if (ctx instanceof TheoremDeclContext)
-            return { k: 'theorem', name, proof: proof(ctx.proof()), loc: locOf(ctx), nameLoc };
+        if (ctx instanceof InferenceDeclContext)
+            return { k: 'inference', name, proof: proof(ctx.proof()), loc: locOf(ctx), nameLoc };
         const claim = ctx as ClaimDeclContext;
         const p = prop(claim.prop());
         const pr = claim.proof();
         return pr
-            ? { k: 'theorem', name, prop: p, proof: proof(pr), loc: locOf(ctx), nameLoc }
+            ? { k: 'inference', name, prop: p, proof: proof(pr), loc: locOf(ctx), nameLoc }
             : { k: 'axiom', name, prop: p, loc: locOf(ctx), nameLoc };
     }
 

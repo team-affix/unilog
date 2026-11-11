@@ -27,7 +27,7 @@ describe('find', () => {
         const dir = project('import Base.Facts.\nmine = b a.');
         expect(commands.find('likes jake sugar', dir)).toEqual({
             ok: true,
-            out: ['theorem Base.Facts.c : likes jake sugar', 'theorem Mine.Main.mine : likes jake sugar'],
+            out: ['inference Base.Facts.c : likes jake sugar', 'inference Mine.Main.mine : likes jake sugar'],
             err: [],
         });
     });
@@ -44,20 +44,20 @@ describe('find', () => {
         `);
         expect(commands.find('false', contradictory)).toMatchObject({
             ok: true,
-            out: ['theorem Mine.Main.oops : false'],
+            out: ['inference Mine.Main.oops : false'],
         });
     });
 
     it('counts a more general proof: something proving every X also proves the query', () => {
         const dir = project('import Base.Facts.');
-        expect(commands.find('wrong bob_party', dir).out).toEqual(['axiom   Base.Facts.everything : wrong X']);
+        expect(commands.find('wrong bob_party', dir).out).toEqual(['axiom     Base.Facts.everything : wrong X']);
     });
 
     it('requires a proof of the query in full generality by default', () => {
         const dir = project('import Base.Facts.');
         // b proves likes X cake => likes X sugar for every X; c only for jake
         expect(commands.find('likes X cake => likes X sugar', dir).out).toEqual([
-            'axiom   Base.Facts.b : likes X cake => likes X sugar',
+            'axiom     Base.Facts.b : likes X cake => likes X sugar',
         ]);
         expect(commands.find('likes X sugar', dir)).toMatchObject({ ok: false });
     });
@@ -65,7 +65,7 @@ describe('find', () => {
     it('--unify matches anything of the query shape', () => {
         const dir = project('import Base.Facts.');
         expect(commands.find('likes X sugar', dir, { unify: true }).out).toEqual([
-            'theorem Base.Facts.c : likes jake sugar',
+            'inference Base.Facts.c : likes jake sugar',
         ]);
     });
 
@@ -78,14 +78,14 @@ describe('find', () => {
             found: [
                 {
                     name: 'Base.Facts.c',
-                    kind: 'theorem',
+                    kind: 'inference',
                     module: 'Base.Facts',
                     own: false,
                     proposition: 'likes jake sugar',
                 },
                 {
                     name: 'Mine.Main.mine',
-                    kind: 'theorem',
+                    kind: 'inference',
                     module: 'Mine.Main',
                     own: true,
                     proposition: 'likes jake sugar',
@@ -103,35 +103,35 @@ describe('find', () => {
     });
 });
 
-describe('theorems', () => {
-    it('lists the theorems declared in a module, without proofs', () => {
+describe('inferences', () => {
+    it('lists the inferences declared in a module, without proofs', () => {
         const dir = project('import Base.Facts.\nmine = b a.\nalso : likes jake cake = a.\nmore : q.');
-        expect(commands.theorems('Mine.Main', dir).out).toEqual([
+        expect(commands.inferences('Mine.Main', dir).out).toEqual([
             'Mine.Main.mine : likes jake sugar',
             'Mine.Main.also : likes jake cake',
-            '2 theorem(s) in Mine.Main',
+            '2 inference(s) in Mine.Main',
         ]);
     });
 
     it('--transitive includes every imported module, each once', () => {
         const dir = project('import Base.Facts.\nimport Logic.Core.\nmine = b a.');
-        expect(commands.theorems('Mine.Main', dir, { transitive: true }).out).toEqual([
+        expect(commands.inferences('Mine.Main', dir, { transitive: true }).out).toEqual([
             'Mine.Main.mine : likes jake sugar',
             'Base.Facts.c : likes jake sugar',
             'Logic.Core.id : A => A',
-            '3 theorem(s) in Mine.Main and the 2 module(s) it imports',
+            '3 inference(s) in Mine.Main and the 2 module(s) it imports',
         ]);
-        expect(commands.theorems('Mine.Main', dir, { transitive: true, count: true }).out).toEqual(['3']);
-        expect(JSON.parse(commands.theorems('Base.Facts', dir, { json: true }).out[0] as string)).toEqual({
+        expect(commands.inferences('Mine.Main', dir, { transitive: true, count: true }).out).toEqual(['3']);
+        expect(JSON.parse(commands.inferences('Base.Facts', dir, { json: true }).out[0] as string)).toEqual({
             module: 'Base.Facts',
             transitive: false,
             count: 1,
-            theorems: [{ name: 'Base.Facts.c', module: 'Base.Facts', proposition: 'likes jake sugar' }],
+            inferences: [{ name: 'Base.Facts.c', module: 'Base.Facts', proposition: 'likes jake sugar' }],
         });
     });
 
     it('reports check errors', () => {
-        expect(commands.theorems('Mine.Main', project('x = nope.'))).toMatchObject({ ok: false });
+        expect(commands.inferences('Mine.Main', project('x = nope.'))).toMatchObject({ ok: false });
     });
 });
 

@@ -23,7 +23,7 @@ describe('lexing (via parse)', () => {
 
     it('records ranges for proof steps, spanning applications', () => {
         const [d] = parse('c = b (f a) x.', 'f');
-        const proof = d?.k === 'theorem' ? d.proof : undefined;
+        const proof = d?.k === 'inference' ? d.proof : undefined;
         // ((b (f a)) x): the whole application runs from b to x
         expect(proof?.loc).toEqual({ file: 'f', line: 1, col: 5, end: { line: 1, col: 14 } });
         expect(proof?.k === 'app' && proof.arg.loc).toEqual({ file: 'f', line: 1, col: 13, end: { line: 1, col: 14 } });
@@ -38,11 +38,11 @@ describe('lexing (via parse)', () => {
 });
 
 describe('parse', () => {
-    it('parses axioms, theorems and imports', () => {
+    it('parses axioms, inferences and imports', () => {
         const decls = parse('import Kant.Ethics.\na : likes jake cake.\nc = b a.\nd : p = c.', 'f');
-        expect(decls.map((d) => d.k)).toEqual(['import', 'axiom', 'theorem', 'theorem']);
+        expect(decls.map((d) => d.k)).toEqual(['import', 'axiom', 'inference', 'inference']);
         expect(decls[0]).toMatchObject({ k: 'import', path: ['Kant', 'Ethics'] });
-        expect(decls[3]).toMatchObject({ k: 'theorem', name: 'd', prop: { k: 'atom', name: 'p' } });
+        expect(decls[3]).toMatchObject({ k: 'inference', name: 'd', prop: { k: 'atom', name: 'p' } });
     });
 
     it('makes => right-associative and application left-associative', () => {

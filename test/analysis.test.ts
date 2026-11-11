@@ -148,18 +148,18 @@ describe('summary', () => {
             via = \\P -> lying_wrong P.
         `);
 
-    it('tabulates axioms and theorems per module, checked and imported', () => {
+    it('tabulates axioms and inferences per module, checked and imported', () => {
         expect(commands.summary(dir()).out).toEqual([
-            'module         source    axioms  theorems',
-            'Alice.Beliefs  imported       3         0',
-            'Bob.Rebuttal   checked        0         2',
+            'module         source    axioms  inferences',
+            'Alice.Beliefs  imported       3           0',
+            'Bob.Rebuttal   checked        0           2',
             'axioms: 0 in checked code, 3 in imported modules',
         ]);
     });
 
     it('outputs the declaration graph as JSON, with what each declaration rests on', () => {
         const { modules } = JSON.parse(commands.summary(dir(), true).out[0] as string) as { modules: ModuleSummary[] };
-        expect(modules.map((m) => [m.name, m.own, m.axioms, m.theorems])).toEqual([
+        expect(modules.map((m) => [m.name, m.own, m.axioms, m.inferences])).toEqual([
             ['Alice.Beliefs', false, 3, 0],
             ['Bob.Rebuttal', true, 0, 2],
         ]);
@@ -168,14 +168,14 @@ describe('summary', () => {
         expect(bob?.declarations).toEqual([
             {
                 name: 'Bob.Rebuttal.party_wrong',
-                kind: 'theorem',
+                kind: 'inference',
                 proposition: 'wrong bob_party',
                 uses: ['Alice.Beliefs.lying_wrong', 'Alice.Beliefs.surprise_lies', 'Alice.Beliefs.party'],
                 restsOn: ['Alice.Beliefs.lying_wrong', 'Alice.Beliefs.party', 'Alice.Beliefs.surprise_lies'],
             },
             {
                 name: 'Bob.Rebuttal.via',
-                kind: 'theorem',
+                kind: 'inference',
                 proposition: 'lies X => wrong X',
                 uses: ['Alice.Beliefs.lying_wrong'],
                 restsOn: ['Alice.Beliefs.lying_wrong'],

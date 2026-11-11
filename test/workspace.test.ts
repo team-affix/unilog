@@ -53,7 +53,7 @@ describe('Workspace', () => {
         );
         expect(commands.check(project)).toMatchObject({ ok: true });
         expect(commands.check(app)).toMatchObject({ ok: true });
-        expect(commands.show('App.Main.mine', app).out).toEqual(['theorem App.Main.mine : ought (act_from will)']);
+        expect(commands.show('App.Main.mine', app).out).toEqual(['inference App.Main.mine : ought (act_from will)']);
     });
 
     it('supports qualified references and reports ambiguity', () => {
@@ -172,7 +172,7 @@ describe('targetOf', () => {
             'vendor/libs/Lib/L.ul': 'l : from_lib.',
         });
         expect(commands.check(dir)).toMatchObject({ ok: true });
-        expect(commands.show('Mine.M.t', dir).out).toEqual(['theorem Mine.M.t : from_lib']);
+        expect(commands.show('Mine.M.t', dir).out).toEqual(['inference Mine.M.t : from_lib']);
     });
 
     it('checks every .ul file in a directory without unilog.json', () => {
@@ -237,7 +237,7 @@ describe('commands', () => {
         write(dir, { ...KANT, ...ETHICS });
         expect(commands.check(dir)).toEqual({
             ok: true,
-            out: ['ok: 2 module(s) checked, declaring 1 theorem(s) and 2 axiom(s); 0 imported module(s)'],
+            out: ['ok: 2 module(s) checked, declaring 1 inference(s) and 2 axiom(s); 0 imported module(s)'],
             err: [],
         });
     });
@@ -246,8 +246,8 @@ describe('commands', () => {
         const dir = tmpDir();
         write(dir, KANT);
         expect(commands.check(dir, { verbose: true }).out.slice(0, 2)).toEqual([
-            'axiom   Kant.Ethics.good_will : good will',
-            'axiom   Kant.Ethics.duty : good X => ought (act_from X)',
+            'axiom     Kant.Ethics.good_will : good will',
+            'axiom     Kant.Ethics.duty : good X => ought (act_from X)',
         ]);
     });
 

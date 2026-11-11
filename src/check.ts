@@ -7,14 +7,14 @@ import { app, atom, fresh, generalize, imp, instantiate, Printer, rigid, Scheme,
 export interface Declaration {
     readonly module: string;
     readonly name: string;
-    readonly kind: 'axiom' | 'theorem';
+    readonly kind: 'axiom' | 'inference';
     /** What it proves, quantified over its variables. */
     readonly scheme: Scheme;
     /** Declarations its proof refers to directly (empty for axioms), as `Module.name` keys. */
     readonly uses: readonly string[];
-    /** For theorems: how the proof was checked, step by step. */
+    /** For inferences: how the proof was checked, step by step. */
     readonly proof?: Derivation;
-    /** For theorems: whether the claim was written out (`name : P = proof`) rather than inferred. */
+    /** For inferences: whether the claim was written out (`name : P = proof`) rather than inferred. */
     readonly stated?: boolean;
     readonly loc: Loc;
     /** Where the declaration's name is written. */
@@ -183,7 +183,7 @@ export function checkModule(
         local.set(decl.name, {
             module: name,
             name: decl.name,
-            kind: 'theorem',
+            kind: 'inference',
             scheme: generalize(proves),
             uses: [...uses],
             proof: derivation,

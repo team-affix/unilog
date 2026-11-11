@@ -33,7 +33,7 @@ describe('the examples from the design discussion', () => {
     });
 });
 
-describe('axioms and theorems', () => {
+describe('axioms and inferences', () => {
     it('quantifies an axiom over its variables, freshly at each use', () => {
         const m = checkSource(`
             likes_self : likes X X.
@@ -44,7 +44,7 @@ describe('axioms and theorems', () => {
         expect(proves(m, 'b')).toBe('both (likes X X) (likes X1 X1)');
     });
 
-    it('infers general theorems from assumptions', () => {
+    it('infers general inferences from assumptions', () => {
         const m = checkSource(`
             id = \\P -> P.
             compose = \\F G X -> G (F X).

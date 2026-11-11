@@ -20,21 +20,21 @@ installed, open this folder to hover over any step of a proof.
 ## Things to try
 
 ```bash
-unilog check -v                                   # everything checks; -v shows what each declaration proves
+unilog check -v                                           # everything checks; -v shows what each declaration proves
 
-unilog find false                                 # finds the one contradiction: Debate.Clash.clash
-unilog rests-on Debate.Clash.clash                # the five beliefs it rests on, from both sides
-unilog axioms Debate.Clash --count                # 0: the debate adds no beliefs of its own
+unilog find false                                         # finds the one contradiction: Debate.Clash.clash
+unilog rests-on Debate.Clash.clash                        # the five beliefs it rests on, from both sides
+unilog axioms Debate.Clash --count                        # 0: the debate adds no beliefs of its own
 
-unilog rests-on Aristotle.Syllogisms.barbara      # rests on no axioms: it is pure logic
-unilog rests-on Logic.Classical.double_negation   # needs excluded middle (Logic.Classical.lem)
+unilog rests-on Aristotle.Syllogisms.barbara              # rests on no axioms: it is pure logic
+unilog rests-on Logic.Classical.double_negation           # needs excluded middle (Logic.Classical.lem)
 
-unilog proof Identity.Venus.hesperus_seen_at_dawn --flat   # the whole argument, in order
-unilog proof Arithmetic.Peano.two_times_two                # 2 * 2 = 4, step by step
+unilog proof Identity.Venus.hesperus_seen_at_dawn --flat  # the whole argument, in order
+unilog proof Arithmetic.Peano.two_times_two               # 2 * 2 = 4, step by step
 
-unilog find "mortal X" --unify                    # everyone proved mortal: socrates, plato
-unilog theorems Logic.Laws                        # the laws and what each states
-unilog summary                                    # axiom and theorem counts for every module
+unilog find "mortal X" --unify                            # everyone proved mortal: socrates, plato
+unilog inferences Logic.Laws                              # the laws and what each states
+unilog summary                                            # axiom and inference counts for every module
 ```
 
 To see a belief give way, edit `Ethics/Kant.ul` so lying is wrong only when it harms someone

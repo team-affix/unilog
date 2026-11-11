@@ -79,6 +79,11 @@
                     "match": "\\b[A-Z_][A-Za-z0-9_']*"
                 },
                 {
+                    "comment": "Atoms: the symbols propositions are about (likes, jake, cake). Lowercase or digit first.",
+                    "name": "constant.other.symbol.unilog",
+                    "match": "\\b[a-z0-9][A-Za-z0-9_']*"
+                },
+                {
                     "name": "punctuation.terminator.unilog",
                     "match": "\\.(?![A-Za-z0-9_'])"
                 },
@@ -135,7 +140,7 @@
                     "match": "\\b[A-Z_][A-Za-z0-9_']*"
                 },
                 {
-                    "comment": "Lowercase names in a proof refer to axioms and theorems: proofs",
+                    "comment": "Lowercase names in a proof refer to axioms and inferences: proofs",
                     "name": "entity.name.function.proof.unilog",
                     "match": "\\b[a-z0-9][A-Za-z0-9_']*"
                 },

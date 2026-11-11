@@ -48,6 +48,8 @@ const ASSUMPTION = 'variable.parameter.assumption.unilog';
 // Proof names, used or declared, share the theme's declaration color (entity.name.function).
 const PROOF = 'entity.name.function.proof.unilog';
 const LAMBDA = 'keyword.operator.lambda.unilog';
+// Atoms (lowercase symbols in propositions) are colored too: they are what propositions are about.
+const ATOM = 'constant.other.symbol.unilog';
 
 const cases = [
     [
@@ -59,13 +61,13 @@ const cases = [
         [
             ['b', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
-            ['likes', ''],
+            ['likes', ATOM],
             ['X', PROP_VAR],
-            ['cake', ''],
+            ['cake', ATOM],
             ['=>', 'keyword.operator.arrow.unilog'],
-            ['likes', ''],
+            ['likes', ATOM],
             ['X', PROP_VAR],
-            ['sugar', ''],
+            ['sugar', ATOM],
             ['.', 'punctuation.terminator.unilog'],
             ['# a rule', 'comment.line.number-sign.unilog'],
         ],
@@ -76,11 +78,11 @@ const cases = [
         [
             ['and_comm', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
-            ['and', ''],
+            ['and', ATOM],
             ['A', PROP_VAR],
             ['B', PROP_VAR],
             ['=>', 'keyword.operator.arrow.unilog'],
-            ['and', ''],
+            ['and', ATOM],
             ['B', PROP_VAR],
             ['A', PROP_VAR],
             ['=', 'keyword.operator.equals.unilog'],
@@ -123,10 +125,10 @@ const cases = [
             ['(', 'punctuation.parenthesis.unilog'],
             ['P', PROP_VAR],
             ['=>', 'keyword.operator.arrow.unilog'],
-            ['false', ''],
+            ['false', ATOM],
             [')', 'punctuation.parenthesis.unilog'],
             ['=>', 'keyword.operator.arrow.unilog'],
-            ['false', ''],
+            ['false', ATOM],
             [')', 'punctuation.parenthesis.unilog'],
             ['=>', 'keyword.operator.arrow.unilog'],
             ['P', PROP_VAR],
@@ -155,11 +157,11 @@ const cases = [
         [
             ['two_roads', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
-            ['road', ''],
+            ['road', ATOM],
             ['X', PROP_VAR],
             ['Y', PROP_VAR],
             ['=>', 'keyword.operator.arrow.unilog'],
-            ['route', ''],
+            ['route', ATOM],
             ['X', PROP_VAR],
             ['Z', PROP_VAR],
             ['=', 'keyword.operator.equals.unilog'],
@@ -191,7 +193,7 @@ const stepCases = [
             ['Yz', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
             [':', 'keyword.operator.colon.unilog'],
-            ['route', ''],
+            ['route', ATOM],
             ['X', PROP_VAR],
             ['Z', PROP_VAR],
         ],
@@ -201,7 +203,7 @@ const stepCases = [
         [
             ['P', ASSUMPTION],
             [':', 'keyword.operator.colon.unilog'],
-            ['and', ''],
+            ['and', ATOM],
             ['A', PROP_VAR],
             ['B', PROP_VAR],
         ],
