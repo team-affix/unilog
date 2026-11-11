@@ -1,14 +1,14 @@
 # Reachability on a map: a route is a road, or a road followed by a route.
-road_paris_lyon : road paris lyon.
-road_lyon_milan : road lyon milan.
-road_milan_venice : road milan venice.
-road_paris_brussels : road paris brussels.
+road_paris_lyon : road paris lyon;
+road_lyon_milan : road lyon milan;
+road_milan_venice : road milan venice;
+road_paris_brussels : road paris brussels;
 
-route_road : road X Y => route X Y.
-route_more : road X Y => route Y Z => route X Z.
+route_road : road X Y => route X Y;
+route_more : road X Y => route Y Z => route X Z;
 
 paris_to_venice : route paris venice =
-    route_more road_paris_lyon (route_more road_lyon_milan (route_road road_milan_venice)).
+    route_more road_paris_lyon (route_more road_lyon_milan (route_road road_milan_venice));
 
 # Any two roads in a row make a route.
-two_roads : road X Y => road Y Z => route X Z = \Xy Yz -> route_more Xy (route_road Yz).
+two_roads : road X Y => road Y Z => route X Z = \Xy Yz. route_more Xy (route_road Yz);

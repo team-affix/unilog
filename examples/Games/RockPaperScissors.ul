@@ -1,11 +1,11 @@
 # Who wins, as rules.
-rock_beats_scissors : beats rock scissors.
-scissors_beats_paper : beats scissors paper.
-paper_beats_rock : beats paper rock.
+rock_beats_scissors : beats rock scissors;
+scissors_beats_paper : beats scissors paper;
+paper_beats_rock : beats paper rock;
 
-winner : plays A X => plays B Y => beats X Y => wins A B.
+winner : plays A X => plays B Y => beats X Y => wins A B;
 
-ann_plays_paper : plays ann paper.
-ben_plays_rock : plays ben rock.
+ann_plays_paper : plays ann paper;
+ben_plays_rock : plays ben rock;
 
-ann_wins : wins ann ben = winner ann_plays_paper ben_plays_rock paper_beats_rock.
+ann_wins : wins ann ben = winner ann_plays_paper ben_plays_rock paper_beats_rock;

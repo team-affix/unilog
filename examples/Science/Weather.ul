@@ -1,12 +1,12 @@
 # Reasoning backwards with modus tollens: no wet ground, so no rain.
-import Logic.Prelude.
+import Logic.Prelude;
 
-rain_wets_ground : rains => wet ground.
-sprinkler_wets_ground : sprinkler_on => wet ground.
-ground_is_dry : wet ground => false.
+rain_wets_ground : rains => wet ground;
+sprinkler_wets_ground : sprinkler_on => wet ground;
+ground_is_dry : wet ground => false;
 
-no_rain : rains => false = tollens rain_wets_ground ground_is_dry.
-no_sprinkler : sprinkler_on => false = tollens sprinkler_wets_ground ground_is_dry.
+no_rain : rains => false = tollens rain_wets_ground ground_is_dry;
+no_sprinkler : sprinkler_on => false = tollens sprinkler_wets_ground ground_is_dry;
 
 # Neither one: both cases of "rain or sprinkler" lead to a contradiction.
-neither : or rains sprinkler_on => false = \O -> case O no_rain no_sprinkler.
+neither : or rains sprinkler_on => false = \O. case O no_rain no_sprinkler;

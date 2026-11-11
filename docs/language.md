@@ -20,13 +20,13 @@ likes X cake => likes X sugar
 
 ## Declarations
 
-Every declaration ends with `.` followed by whitespace or the end of the file. `#` starts a comment.
+Every declaration ends with `;`. A `.` has only two jobs: it joins the parts of a qualified name (`Kant.Ethics.duty`, no spaces around it), and it ends the head of an assumption (`\P. body`, as in the lambda calculus). `#` starts a comment.
 
 ```
-a : likes jake cake.                      # axiom: a stated belief
-c = b a.                                  # inference: what it proves is inferred
-c : likes jake sugar = b a.               # inference with its claim stated and checked
-import Kant.Ethics.                       # module import (before any declaration)
+a : likes jake cake;                      # axiom: a stated belief
+c = b a;                                  # inference: what it proves is inferred
+c : likes jake sugar = b a;               # inference with its claim stated and checked
+import Kant.Ethics;                       # module import (before any declaration)
 ```
 
 Declaration names start with a lowercase letter or digit.
@@ -36,35 +36,35 @@ Declaration names start with a lowercase letter or digit.
 **Axioms** are beliefs you state without proof. Variables in an axiom are universally quantified, and each use gets fresh copies:
 
 ```
-b : likes X cake => likes X sugar.        # for every X
+b : likes X cake => likes X sugar;        # for every X
 ```
 
-**Inferences** are proofs. A stated claim's variables must hold *in general*: `c : likes X sugar = b a.` is rejected, because `b a` only proves it for `jake`. A claim may be a special case of what the proof shows, and the declaration then proves exactly the claim. This is the same rule `unilog find` uses by default ("the proof proves the claim"). A claim is never checked by unification, which would let it claim more than the proof shows.
+**Inferences** are proofs. A stated claim's variables must hold *in general*: `c : likes X sugar = b a;` is rejected, because `b a` only proves it for `jake`. A claim may be a special case of what the proof shows, and the declaration then proves exactly the claim. This is the same rule `unilog find` uses by default ("the proof proves the claim"). A claim is never checked by unification, which would let it claim more than the proof shows.
 
 ## Proofs
 
 ```
 b a                     # apply b to a: a's proposition must match b's premise
-\F G X -> G (F X)       # assumptions: "assume F, G and X; then G (F X)"
+\F G X. G (F X)       # assumptions: "assume F, G and X; then G (F X)"
 Kant.Ethics.duty        # a qualified reference to an imported declaration
 ```
 
 - **Application** `b a` unifies `a`'s proposition with `b`'s premise, and proves `b`'s conclusion with the resulting substitution.
 - **Currying.** A rule with several premises takes them one at a time: given `gift : likes X Y => has Z Y => gives Z X Y`, `gift a` proves `has Z cake => gives Z jake cake`, an implication still waiting for its second premise. `gift a h` is the same as `(gift a) h`.
-- **Assumption** `\P -> body` proves `A => B` when `body` proves `B` using `P` as a proof of `A`: "assume P; then body". This is how you prove implications by hypothetical reasoning. What `P` must prove is inferred from how it is used: `and_comm = \P -> pair (snd P) (fst P).` proves `and A B => and B A`.
-  - Several at once: `\F G X -> body` means `\F -> \G -> \X -> body`.
+- **Assumption** `\P. body` proves `A => B` when `body` proves `B` using `P` as a proof of `A`: "assume P; then body". This is how you prove implications by hypothetical reasoning. What `P` must prove is inferred from how it is used: `and_comm = \P. pair (snd P) (fst P);` proves `and A B => and B A`.
+  - Several at once: `\F G X. body` means `\F. \G. \X. body`.
   - An assumption is introduced by a single name, never a pattern. The proof it stands for can be used but not taken apart; that's what elimination rules like `fst`, `snd` and `case` are for.
-  - `=>` always means implication. In a proof, the old form `P => body` is an error that says to write `\P -> body`.
-- **Names.** Uppercase means a variable everywhere. In a proof, an uppercase name is an assumption (introduced by an enclosing `\P ->`), and a lowercase name is a declaration: an earlier one in the same module, or one in exactly one imported module. Use a qualified name (`Mod.name`) when two imports define the same name.
+  - `=>` always means implication. In a proof, the old forms `P => body` and `\P -> body` are errors that say to write `\P. body`, and an old `.` at the end of a declaration is an error that says to use `;`.
+- **Names.** Uppercase means a variable everywhere. In a proof, an uppercase name is an assumption (introduced by an enclosing `\P.`), and a lowercase name is a declaration: an earlier one in the same module, or one in exactly one imported module. Use a qualified name (`Mod.name`) when two imports define the same name.
 
 ## What keeps it sound
 
-- **No recursion.** A declaration can only use declarations before it, never itself. Every proof is finite, checking always terminates, and nothing can prove itself (`loop = loop.` is rejected).
-- **Occurs check.** A proposition cannot be unified with something containing itself, so self-application (`\X -> X X`) and fixed-point combinators like `\F -> (\X -> F (X X)) (\X -> F (X X))` are rejected. Those are where untyped lambda calculus gets its paradoxes.
+- **No recursion.** A declaration can only use declarations before it, never itself. Every proof is finite, checking always terminates, and nothing can prove itself (`loop = loop;` is rejected).
+- **Occurs check.** A proposition cannot be unified with something containing itself, so self-application (`\X. X X`) and fixed-point combinators like `\F. (\X. F (X X)) (\X. F (X X))` are rejected. Those are where untyped lambda calculus gets its paradoxes.
 - **Assumptions are fixed, not general.** Inside its proof, an assumption stands for one particular proposition: it cannot be used as a proof of `a` in one place and of `b` in another. Only finished top-level declarations are general, and they have no open assumptions.
-- **Assumptions stay inside their proof.** `P` can only be used inside the `\P -> ...` that introduces it.
+- **Assumptions stay inside their proof.** `P` can only be used inside the `\P. ...` that introduces it.
 
-Formally, proofs are the simply typed lambda calculus with type variables, which by the Curry–Howard correspondence is natural deduction for intuitionistic implicational logic: an assumption `\P -> body` is ⇒-introduction, and application `f a` is ⇒-elimination (modus ponens), plus your axioms. The proof terms are never run; the checker only infers what they prove.
+Formally, proofs are the simply typed lambda calculus with type variables, which by the Curry–Howard correspondence is natural deduction for intuitionistic implicational logic: an assumption `\P. body` is ⇒-introduction, and application `f a` is ⇒-elimination (modus ponens), plus your axioms. The proof terms are never run; the checker only infers what they prove.
 - **Nothing private.** Every declaration in every module is public, so everything a claim rests on can be inspected and cited. `unilog axioms` lists the full set of axioms behind any declaration.
 - **Logic lives in packages.** The core knows only `=>`. `and`, `or` and `false` are axioms in a package ([`examples/Logic/Prelude.ul`](../examples/Logic/Prelude.ul)). Excluded middle is not built in: a classical thinker states it as an axiom, and it then appears in the axiom list of everything that relies on it.
 
@@ -99,12 +99,12 @@ A directory without a `unilog.json` checks every `.ul` file in it, with the dire
 There are no functions that compute. Write relations as rules instead:
 
 ```
-znat : nat z.
-snat : nat X => nat (s X).
-ltz : nat Y => lt z (s Y).
-lts : lt X Y => lt (s X) (s Y).
+znat : nat z;
+snat : nat X => nat (s X);
+ltz : nat Y => lt z (s Y);
+lts : lt X Y => lt (s X) (s Y);
 
-one_lt_two : lt (s z) (s (s z)) = lts (ltz znat).
+one_lt_two : lt (s z) (s (s z)) = lts (ltz znat);
 ```
 
 This keeps the core tiny and sound. Recursive functions would allow `loop = loop`, a "proof" of everything.
@@ -114,8 +114,8 @@ This keeps the core tiny and sound. Recursive functions would allow `loop = loop
 Variables are quantified only at the outside of a declaration. You can say "for every X, ..." but not "if (for every X, ...) then ...". When an argument needs nested quantifiers, encode a quantified logic as a package, with `forall` and `exists` as ordinary symbols, object variables as data, and rules for substitution and "not free in" as relations:
 
 ```
-forall_elim  : proves G (forall X P) => subst P X T Q => proves G Q.
-forall_intro : proves G P => notfree X G => proves G (forall X P).
+forall_elim  : proves G (forall X P) => subst P X T Q => proves G Q;
+forall_intro : proves G P => notfree X G => proves G (forall X P);
 ```
 
 This is how Metamath builds mathematics from a core that does little more than substitution. Nothing in the core changes. It only makes proofs longer, which is a job for proof-search tools.

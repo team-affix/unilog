@@ -38,5 +38,5 @@ unilog summary                                            # axiom and inference 
 ```
 
 To see a belief give way, edit `Ethics/Kant.ul` so lying is wrong only when it harms someone
-(`lying_is_wrong : lies X => harms X => wrong X.`). `unilog check` then reports exactly where
+(`lying_is_wrong : lies X => harms X => wrong X;`). `unilog check` then reports exactly where
 `Debate.Clash` stopped working: the contradiction depended on the old belief.

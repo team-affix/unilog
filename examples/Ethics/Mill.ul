@@ -1,2 +1,2 @@
 # A utilitarian belief: whatever saves lives is permitted.
-saving_lives_permitted : saves_lives X => permitted X.
+saving_lives_permitted : saves_lives X => permitted X;

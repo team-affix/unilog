@@ -4,7 +4,7 @@ Language support for [Unilog](https://github.com/team-affix/unilog) (`.ul` files
 
 - **Errors as you type**, from the same checker as `unilog check`, including in files you haven't saved.
 - **Hover** a declaration to see what it proves, or any step of a proof to see what that step proves there, with variables filled in.
-- **Inferred claims inline**: an inference written without its claim (`c = b a.`) shows what it proves next to its name. Double-click the hint to write it into the file.
+- **Inferred claims inline**: an inference written without its claim (`c = b a;`) shows what it proves next to its name. Double-click the hint to write it into the file.
 - **Go to definition** for any name in a proof, and for imported modules (including ones in your dependency folders).
 - **Outline** of each module's axioms and inferences.
 - **Gutter markers**: a hollow amber diamond beside each axiom (assumed, not proved) and a solid teal circle beside each inference (derived), so a file's beliefs are visible at a glance.

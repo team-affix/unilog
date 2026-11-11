@@ -79,7 +79,7 @@ describe('language server (over the protocol)', () => {
         const dir = tmpDir();
         write(dir, {
             'unilog.json': JSON.stringify({ roots: ['.'], check: ['Mine'] }),
-            'Mine/Main.ul': 'a : likes jake cake.\nb : likes X cake => likes X sugar.\n',
+            'Mine/Main.ul': 'a : likes jake cake;\nb : likes X cake => likes X sugar;\n',
         });
         const file = path.join(dir, 'Mine/Main.ul');
         const uri = pathToFileURL(file).toString();
@@ -91,7 +91,7 @@ describe('language server (over the protocol)', () => {
                 uri,
                 languageId: 'unilog',
                 version: 1,
-                text: 'a : likes jake pie.\nb : likes X cake => likes X sugar.\nc = b a.\n',
+                text: 'a : likes jake pie;\nb : likes X cake => likes X sugar;\nc = b a;\n',
             },
         });
         const bad = await nextDiagnostics(file);
@@ -102,7 +102,7 @@ describe('language server (over the protocol)', () => {
         // The user fixes it.
         await client.sendNotification('textDocument/didChange', {
             textDocument: { uri, version: 2 },
-            contentChanges: [{ text: 'a : likes jake cake.\nb : likes X cake => likes X sugar.\nc = b a.\n' }],
+            contentChanges: [{ text: 'a : likes jake cake;\nb : likes X cake => likes X sugar;\nc = b a;\n' }],
         });
         expect((await nextDiagnostics(file)).diagnostics).toEqual([]);
 
@@ -147,8 +147,8 @@ describe('language server (over the protocol)', () => {
         const dir = tmpDir();
         write(dir, {
             'unilog.json': JSON.stringify({ roots: ['.', 'deps'], check: ['Mine'] }),
-            'deps/Kant/Ethics.ul': 'duty : good X => ought X.\n',
-            'Mine/Main.ul': 'import Kant.Ethics.\nmine = \\P -> duty P.\n',
+            'deps/Kant/Ethics.ul': 'duty : good X => ought X;\n',
+            'Mine/Main.ul': 'import Kant.Ethics;\nmine = \\P. duty P;\n',
         });
         const uri = pathToFileURL(path.join(dir, 'Mine/Main.ul')).toString();
         const { client } = await start(dir);
@@ -157,7 +157,7 @@ describe('language server (over the protocol)', () => {
                 uri,
                 languageId: 'unilog',
                 version: 1,
-                text: 'import Kant.Ethics.\nmine = \\P -> duty P.\n',
+                text: 'import Kant.Ethics;\nmine = \\P. duty P;\n',
             },
         });
         const def = await client.sendRequest('textDocument/definition', {

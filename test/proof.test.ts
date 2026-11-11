@@ -11,13 +11,13 @@ function project(files: Record<string, string>) {
 
 const T = {
     'M/T.ul': `
-        b : likes X cake => likes X sugar.
-        a : likes jake cake.
-        pair : A => B => both A B.
-        lemma = b a.
-        twice = pair lemma lemma.
-        lift = \\P -> pair P lemma.
-        use_lift = lift a.
+        b : likes X cake => likes X sugar;
+        a : likes jake cake;
+        pair : A => B => both A B;
+        lemma = b a;
+        twice = pair lemma lemma;
+        lift = \\P. pair P lemma;
+        use_lift = lift a;
     `,
 };
 
@@ -45,7 +45,7 @@ describe('proof', () => {
     it("shows assumptions, and a used inference's own (general) proof", () => {
         const out = commands.proof('M.T.use_lift', project(T)).out;
         expect(out[1]).toBe(
-            '├── lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [inference M.T.lift = \\P -> pair P lemma]',
+            '├── lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [inference M.T.lift = \\P. pair P lemma]',
         );
         expect(out).toContain('│       │   └── P : A   [assumption]');
     });
@@ -64,14 +64,14 @@ describe('proof', () => {
 
     it('names variables consistently between the statement and the steps', () => {
         const out = commands.proof('M.T.lift', project(T)).out;
-        expect(out[0]).toBe('M.T.lift = \\P -> pair P lemma : A => both A (likes jake sugar)');
+        expect(out[0]).toBe('M.T.lift = \\P. pair P lemma : A => both A (likes jake sugar)');
         expect(out[1]).toBe('└── pair P lemma : both A (likes jake sugar)');
     });
 
     it('follows proofs across modules', () => {
         const dir = project({
-            'Kant/Ethics.ul': 'duty : good X => ought X.\nhonesty : good truthful.\ntell_truth = duty honesty.',
-            'Mine/Main.ul': 'import Kant.Ethics.\nmine = tell_truth.',
+            'Kant/Ethics.ul': 'duty : good X => ought X;\nhonesty : good truthful;\ntell_truth = duty honesty;',
+            'Mine/Main.ul': 'import Kant.Ethics;\nmine = tell_truth;',
         });
         expect(commands.proof('Mine.Main.mine', dir).out).toEqual([
             'Mine.Main.mine = tell_truth : ought truthful',
@@ -116,12 +116,12 @@ describe('proof', () => {
     it('--flat keeps declarations in source order even when axioms and inferences alternate; --axioms-first groups them', () => {
         const dir = project({
             'M/I.ul': `
-                a : p.
-                ab : p => q.
-                b = ab a.
-                bc : q => r.
-                unused : s.
-                c = bc b.
+                a : p;
+                ab : p => q;
+                b = ab a;
+                bc : q => r;
+                unused : s;
+                c = bc b;
             `,
         });
         expect(commands.proof('M.I.c', dir, { flat: true }).out).toEqual([
@@ -142,8 +142,8 @@ describe('proof', () => {
 
     it('--flat follows inferences through their own proofs, across modules', () => {
         const dir = project({
-            'Kant/Ethics.ul': 'duty : good X => ought X.\nhonesty : good truthful.\ntell_truth = duty honesty.',
-            'Mine/Main.ul': 'import Kant.Ethics.\nmine = tell_truth.\nboth_ways = \\P -> duty P.',
+            'Kant/Ethics.ul': 'duty : good X => ought X;\nhonesty : good truthful;\ntell_truth = duty honesty;',
+            'Mine/Main.ul': 'import Kant.Ethics;\nmine = tell_truth;\nboth_ways = \\P. duty P;',
         });
         expect(commands.proof('Mine.Main.mine', dir, { flat: true }).out).toEqual([
             'Kant.Ethics.duty : good X => ought X   [axiom]',
@@ -153,7 +153,7 @@ describe('proof', () => {
         ]);
         expect(commands.proof('Mine.Main.both_ways', dir, { flat: true }).out).toEqual([
             'Kant.Ethics.duty : good X => ought X   [axiom]',
-            'Mine.Main.both_ways = \\P -> duty P : good X => ought X',
+            'Mine.Main.both_ways = \\P. duty P : good X => ought X',
         ]);
     });
 

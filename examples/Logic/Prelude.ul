@@ -2,20 +2,20 @@
 # These are constructive: excluded middle is deliberately absent (see Classical.ul).
 
 # and
-pair : A => B => and A B.
-fst : and A B => A.
-snd : and A B => B.
+pair : A => B => and A B;
+fst : and A B => A;
+snd : and A B => B;
 
 # or
-left : A => or A B.
-right : B => or A B.
-case : or A B => (A => C) => (B => C) => C.
+left : A => or A B;
+right : B => or A B;
+case : or A B => (A => C) => (B => C) => C;
 
 # false, and "not P" written as P => false
-explode : false => C.
+explode : false => C;
 
 # Some consequences
-and_comm = \P -> pair (snd P) (fst P).
-or_comm = \P -> case P right left.
-contradiction : A => (A => false) => B = \P Np -> explode (Np P).
-tollens : (P => Q) => (Q => false) => P => false = \F Nq P -> Nq (F P).
+and_comm = \P. pair (snd P) (fst P);
+or_comm = \P. case P right left;
+contradiction : A => (A => false) => B = \P Np. explode (Np P);
+tollens : (P => Q) => (Q => false) => P => false = \F Nq P. Nq (F P);

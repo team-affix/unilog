@@ -1,2 +1,2 @@
 # What "wrong" and "permitted" mean: nothing is both.
-wrong_excludes_permitted : wrong X => permitted X => false.
+wrong_excludes_permitted : wrong X => permitted X => false;

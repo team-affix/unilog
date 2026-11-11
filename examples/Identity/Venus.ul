@@ -1,12 +1,12 @@
 # Frege's puzzle: the morning star and the evening star turned out to be the same planet, Venus.
-import Identity.Equality.
+import Identity.Equality;
 
-morning_is_venus : eq phosphorus venus.
-evening_is_venus : eq hesperus venus.
-phosphorus_seen_at_dawn : seen_at_dawn phosphorus.
+morning_is_venus : eq phosphorus venus;
+evening_is_venus : eq hesperus venus;
+phosphorus_seen_at_dawn : seen_at_dawn phosphorus;
 
 # Chaining identities: phosphorus = venus = hesperus.
-morning_is_evening : eq phosphorus hesperus = trans morning_is_venus (sym evening_is_venus).
+morning_is_evening : eq phosphorus hesperus = trans morning_is_venus (sym evening_is_venus);
 
 # So the evening star is seen at dawn. `subst` works out that the property is `seen_at_dawn`.
-hesperus_seen_at_dawn : seen_at_dawn hesperus = subst morning_is_evening phosphorus_seen_at_dawn.
+hesperus_seen_at_dawn : seen_at_dawn hesperus = subst morning_is_evening phosphorus_seen_at_dawn;

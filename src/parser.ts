@@ -3,7 +3,9 @@ import { Loc, span, UnilogError } from './errors';
 import { UnilogLexer } from './generated/UnilogLexer';
 import {
     ApplyContext,
+    ArrowAssumeContext,
     AssumeContext,
+    BadAssumeContext,
     OldAssumeContext,
     ClaimDeclContext,
     DeclContext,
@@ -16,6 +18,7 @@ import {
     ProofContext,
     ProofNameContext,
     InferenceDeclContext,
+    TerminatorContext,
     UnilogParser,
 } from './generated/UnilogParser';
 import { Decl, PropExpr, ProofExpr } from './syntax';
@@ -47,10 +50,12 @@ class ThrowingErrorListener extends BaseErrorListener {
         const loc = { file: this.file, line, col: charPositionInLine + 1 };
         const tok = offendingSymbol as Token | null;
         if (tok?.type === UnilogLexer.UNEXPECTED) throw new UnilogError(`Unexpected character '${tok.text}'`, loc);
-        throw new UnilogError(
-            `Syntax error: ${msg.replace('<EOF>', 'end of file').replace(/\bNAME\b/g, 'a name')}`,
-            loc,
-        );
+        // '.' is only in the grammar to report the old terminator, so it is never suggested.
+        const text = msg
+            .replace('<EOF>', 'end of file')
+            .replace(/\bNAME\b/g, 'a name')
+            .replace(/, '\.'|'\.', /g, '');
+        throw new UnilogError(`Syntax error: ${text}`, loc);
     }
 }
 
@@ -91,11 +96,7 @@ function converters(file: string) {
 
     const simpleName = (tok: Token, role: string): string => {
         const text = tok.text ?? '';
-        if (text.includes('.'))
-            throw new UnilogError(
-                `${role} cannot be a qualified name: '${text}' (if the '.' ends a declaration, put a space or newline after it)`,
-                locOf(tok),
-            );
+        if (text.includes('.')) throw new UnilogError(`${role} cannot be a qualified name: '${text}'`, locOf(tok));
         return text;
     };
 
@@ -119,27 +120,58 @@ function converters(file: string) {
         return { ...prop((ctx as PropAtomContext & { prop(): PropContext }).prop()), loc: locOf(ctx) };
     }
 
+    /** The names in an assumption head such as '\F G X.', each with its location. */
+    const lambdaParams = (tok: Token): { name: string; loc: Loc }[] => {
+        const text = tok.text ?? '';
+        const params: { name: string; loc: Loc }[] = [];
+        let line = tok.line;
+        let col = tok.column + 1;
+        for (let i = 0; i < text.length;) {
+            const m = /^[A-Za-z0-9_']+/.exec(text.slice(i));
+            if (m) {
+                params.push({ name: m[0], loc: { file, line, col, end: { line, col: col + m[0].length } } });
+                i += m[0].length;
+                col += m[0].length;
+            } else {
+                if (text[i] === '\n') {
+                    line++;
+                    col = 1;
+                } else col++;
+                i++;
+            }
+        }
+        return params;
+    };
+
     function proof(ctx: ProofContext): ProofExpr {
         if (ctx instanceof OldAssumeContext) {
             const name = ctx.NAME().getText();
             throw new UnilogError(
-                `Assumptions are written with a backslash: '\\${name} -> ...' rather than '${name} => ...' ('=>' means implication)`,
+                `Assumptions are written with a backslash: '\\${name}. ...' rather than '${name} => ...' ('=>' means implication)`,
+                locOf(ctx),
+            );
+        }
+        if (ctx instanceof ArrowAssumeContext || ctx instanceof BadAssumeContext) {
+            const names = ctx.NAME().map((n) => n.getText());
+            const head = `\\${names.length ? names.join(' ') : 'P'}.`;
+            throw new UnilogError(
+                ctx instanceof ArrowAssumeContext
+                    ? `Assumptions are written '${head} ...' rather than '\\${names.join(' ')} -> ...'`
+                    : `An assumption needs a '.' after its name: '${head} ...'`,
                 locOf(ctx),
             );
         }
         if (ctx instanceof AssumeContext) {
-            // \P Q -> body is \P -> \Q -> body: one assumption per name, innermost last.
-            const names = ctx.NAME();
+            // \P Q. body is \P. \Q. body: one assumption per name, innermost last.
             const body = proof(ctx.proof());
             const loc = locOf(ctx);
-            return names.reduceRight<ProofExpr>((inner, tok) => {
-                const param = simpleName(tok.symbol, 'An assumption');
+            return lambdaParams(ctx.LAMBDA().symbol).reduceRight<ProofExpr>((inner, { name: param, loc: paramLoc }) => {
                 if (!isVariableName(param))
                     throw new UnilogError(
                         `Assumptions are variables, so their names start with an uppercase letter or '_': '${param}'`,
-                        locOf(tok.symbol),
+                        paramLoc,
                     );
-                return { k: 'lam', param, body: inner, loc, paramLoc: locOf(tok.symbol) };
+                return { k: 'lam', param, body: inner, loc, paramLoc };
             }, body);
         }
         const atoms = (ctx as ApplyContext).proofAtom().map(proofAtom);
@@ -159,6 +191,12 @@ function converters(file: string) {
     }
 
     function decl(ctx: DeclContext): Decl {
+        const end = (ctx as DeclContext & { terminator(): TerminatorContext }).terminator();
+        if (end.DOT())
+            throw new UnilogError(
+                "Declarations end with ';' ('.' only joins the parts of a qualified name, and ends an assumption's '\\P.')",
+                locOf(end),
+            );
         if (ctx instanceof ImportDeclContext)
             return {
                 k: 'import',
