@@ -50,6 +50,16 @@
         "configurationDefaults": {
             "[unilog]": {
                 "editor.inlayHints.enabled": "on"
+            },
+            "editor.tokenColorCustomizations": {
+                "textMateRules": [
+                    {
+                        "scope": "constant.other.symbol.unilog",
+                        "settings": {
+                            "foreground": "#4FA3E0"
+                        }
+                    }
+                ]
             }
         }
     },
