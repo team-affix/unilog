@@ -13,12 +13,19 @@ c = b a;                              # a proof; the checker infers: likes jake 
 - **Adversarial transparency.** Everything is public, and `unilog axioms` lists every belief a claim ultimately rests on.
 - **Independent of any package manager.** Modules import each other by name, resolved through the search roots in the project's `unilog.json`. Whatever installs dependencies, point a root at the folder it uses.
 
+## Install, or update to the latest release
+
+Needs Node.js 20+. This one command installs the `unilog` CLI and the VS Code extension, both from the [latest release](https://github.com/team-affix/unilog/releases); run it again to update both (bash, zsh, cmd or PowerShell 7):
+
+```bash
+npm install -g --prefer-online https://github.com/team-affix/unilog/releases/latest/download/team-affix-unilog.tgz && curl -fsSL -o unilog-vscode.vsix https://github.com/team-affix/unilog/releases/latest/download/unilog-vscode.vsix && code --install-extension unilog-vscode.vsix --force
+```
+
+`--prefer-online` makes npm fetch the URL again instead of reusing a cached copy. After an update, reload VS Code (*Developer: Reload Window*) to use the new extension.
+
 ## Usage
 
 ```bash
-# install (Node.js 20+), using the .tgz from the latest release: https://github.com/team-affix/unilog/releases
-npm install -g https://github.com/team-affix/unilog/releases/download/v0.1.6/team-affix-unilog-0.1.6.tgz
-
 unilog init                                # create a unilog.json here (--roots . deps --check MyPkg to fill it in)
 unilog check                               # check the project in this directory, as configured by unilog.json
 unilog check -v                            # ...and print what every declaration proves
@@ -58,6 +65,8 @@ Built files are never committed. They are attached to [GitHub Releases](https://
 | `unilog-lsp-<version>.cjs` | the language server as a single file, for any LSP editor: `node unilog-lsp-<version>.cjs --stdio` |
 | `unilog-vscode-<version>.vsix` | the VS Code extension: `code --install-extension unilog-vscode-<version>.vsix` |
 | `team-affix-unilog-<version>.tgz` | the npm package (both commands and the library): `npm i -g ./team-affix-unilog-<version>.tgz` |
+
+Each release also has `team-affix-unilog.tgz` and `unilog-vscode.vsix` without the version, so `releases/latest/download/<file>` always gives the newest (used by the install command above).
 
 To release: set the same new version in `package.json` and `editors/vscode/package.json`, and merge to `main`. After every test job passes, CI tags the merge commit `v<version>` and publishes the release. Merges that don't change the version publish nothing. (Pushing a matching `v*` tag by hand also releases.)
 

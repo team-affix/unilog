@@ -113,6 +113,14 @@ jobs:
           npm run build
           npx vsce package --no-dependencies --out "../../dist-release/unilog-vscode-$VERSION.vsix"
 
+      # Version-less copies, so https://github.com/team-affix/unilog/releases/latest/download/<name> always
+      # points at the newest release. Updating everything is then one command (see README, "Install").
+      - name: Add version-less copies for the latest-release links
+        if: steps.decide.outputs.release == 'true'
+        run: |
+          cp "dist-release/team-affix-unilog-$VERSION.tgz" dist-release/team-affix-unilog.tgz
+          cp "dist-release/unilog-vscode-$VERSION.vsix" dist-release/unilog-vscode.vsix
+
       - name: Create the GitHub Release
         if: steps.decide.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
