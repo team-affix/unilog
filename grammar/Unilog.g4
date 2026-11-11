@@ -34,8 +34,9 @@ propAtom
     ;
 
 proof
-    : NAME ARROW proof  # assume        // p => body
-    | proofAtom+        # apply         // b a, applied left to right
+    : BACKSLASH NAME+ MAPS_TO proof  # assume      // \P -> body, or \P Q -> body for \P -> \Q -> body
+    | NAME ARROW proof               # oldAssume   // P => body: the old syntax, parsed only to report it
+    | proofAtom+                     # apply       // b a, applied left to right
     ;
 
 proofAtom
@@ -45,6 +46,8 @@ proofAtom
 
 IMPORT : 'import' ;
 ARROW  : '=>' ;
+MAPS_TO : '->' ;
+BACKSLASH : '\\' ;
 COLON  : ':' ;
 EQUALS : '=' ;
 LPAREN : '(' ;

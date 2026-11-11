@@ -9,4 +9,4 @@ no_rain : rains => false = tollens rain_wets_ground ground_is_dry.
 no_sprinkler : sprinkler_on => false = tollens sprinkler_wets_ground ground_is_dry.
 
 # Neither one: both cases of "rain or sprinkler" lead to a contradiction.
-neither : or rains sprinkler_on => false = O => case O no_rain no_sprinkler.
+neither : or rains sprinkler_on => false = \O -> case O no_rain no_sprinkler.

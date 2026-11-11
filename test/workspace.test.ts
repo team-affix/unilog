@@ -132,7 +132,7 @@ describe('axiomsOf: everything a claim rests on', () => {
         write(dir, {
             'Base/Facts.ul': 'a : likes jake cake.\nunused : irrelevant.',
             'Base/Rules.ul': 'b : likes X cake => likes X sugar.\nlift : P => believed P.',
-            'Mine/Main.ul': 'import Base.Facts.\nimport Base.Rules.\nc = b a.\nd = lift c.\ne = P => P.',
+            'Mine/Main.ul': 'import Base.Facts.\nimport Base.Rules.\nc = b a.\nd = lift c.\ne = \\P -> P.',
         });
         const ws = new Workspace([dir]);
         expect(ws.axiomsOf('Mine.Main.d').map(keyOf)).toEqual(['Base.Facts.a', 'Base.Rules.b', 'Base.Rules.lift']);

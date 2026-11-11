@@ -11,4 +11,4 @@ paris_to_venice : route paris venice =
     route_more road_paris_lyon (route_more road_lyon_milan (route_road road_milan_venice)).
 
 # Any two roads in a row make a route.
-two_roads : road X Y => road Y Z => route X Z = Xy => Yz => route_more Xy (route_road Yz).
+two_roads : road X Y => road Y Z => route X Z = \Xy Yz -> route_more Xy (route_road Yz).
