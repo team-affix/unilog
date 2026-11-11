@@ -9,7 +9,7 @@ function project(mine: string) {
     const dir = tmpDir();
     write(dir, {
         'unilog.json': JSON.stringify({ roots: ['.'], check: ['Mine'] }),
-        'Logic/Core.ul': 'explode : false => C.\nid = P => P.',
+        'Logic/Core.ul': 'explode : false => C.\nid = \\P -> P.',
         'Base/Facts.ul': `
             import Logic.Core.
             a : likes jake cake.

@@ -46,9 +46,9 @@ describe('axioms and theorems', () => {
 
     it('infers general theorems from assumptions', () => {
         const m = checkSource(`
-            id = P => P.
-            compose = F => G => X => G (F X).
-            const = X => Y => X.
+            id = \\P -> P.
+            compose = \\F G X -> G (F X).
+            const = \\X Y -> X.
         `);
         expect(proves(m, 'id')).toBe('A => A');
         expect(proves(m, 'compose')).toBe('(A => B) => (B => C) => A => C');
@@ -58,7 +58,7 @@ describe('axioms and theorems', () => {
     it('applies assumptions that are themselves implications', () => {
         const src = `
             b : likes X cake => likes X sugar.
-            apply_to_b = F => F b.
+            apply_to_b = \\F -> F b.
         `;
         expect(provesIn(src, 'apply_to_b')).toBe('((likes X cake => likes X sugar) => A) => A');
     });
@@ -146,12 +146,12 @@ describe('stated claims', () => {
     });
 
     it('accepts a general claim proved generally', () => {
-        expect(provesIn('swap : X => Y => X = X => Y => X.', 'swap')).toBe('X => Y => X');
-        expect(() => checkSource('bad : X => Y => Y = X => Y => X.')).toThrow(/does not prove/);
+        expect(provesIn('swap : X => Y => X = \\X Y -> X.', 'swap')).toBe('X => Y => X');
+        expect(() => checkSource('bad : X => Y => Y = \\X Y -> X.')).toThrow(/does not prove/);
     });
 
     it('records the claim, not the more general proof', () => {
-        expect(provesIn('id_a : a => a = P => P.', 'id_a')).toBe('a => a');
+        expect(provesIn('id_a : a => a = \\P -> P.', 'id_a')).toBe('a => a');
     });
 });
 
@@ -171,7 +171,7 @@ describe('soundness', () => {
     });
 
     it('rejects self-application (occurs check)', () => {
-        expect(() => checkSource('selfapp = X => X X.')).toThrow(/would have to contain itself/);
+        expect(() => checkSource('selfapp = \\X -> X X.')).toThrow(/would have to contain itself/);
     });
 
     it('allows no recursion: a declaration cannot use itself', () => {
@@ -190,32 +190,34 @@ describe('soundness', () => {
 
     it('cannot prove an arbitrary proposition from no axioms', () => {
         // With no axioms, only implications built from assumptions are provable, never a bare X.
-        expect(() => checkSource('cheat : X = P => P.')).toThrow(/does not prove/);
+        expect(() => checkSource('cheat : X = \\P -> P.')).toThrow(/does not prove/);
     });
 
     it('scopes assumptions to their body', () => {
-        expect(() => checkSource('f = P => P.\ng = P.')).toThrow(/'P' is not an assumption in scope/);
+        expect(() => checkSource('f = \\P -> P.\ng = P.')).toThrow(/'P' is not an assumption in scope/);
     });
 
     it('rejects the Y combinator (no fixed points, so nothing proves itself)', () => {
-        expect(() => checkSource('y = F => (X => F (X X)) (X => F (X X)).')).toThrow(/would have to contain itself/);
+        expect(() => checkSource('y = \\F -> (\\X -> F (X X)) (\\X -> F (X X)).')).toThrow(
+            /would have to contain itself/,
+        );
     });
 
     it('treats an assumption as one fixed proposition: it cannot stand for two different ones', () => {
         // If P could be both an `a` and a `b`, this would prove a => (anything b gives).
-        const src = 'to_c : a => c.\nto_d : b => d.\npair : A => B => both A B.\nbad = P => pair (to_c P) (to_d P).';
+        const src = 'to_c : a => c.\nto_d : b => d.\npair : A => B => both A B.\nbad = \\P -> pair (to_c P) (to_d P).';
         expect(() => checkSource(src)).toThrow(/Cannot apply to_d to P[\s\S]*b does not match a/);
     });
 
     it('cannot derive A => B for unrelated A and B from assumptions alone', () => {
-        expect(() => checkSource('cheat : A => B = P => P.')).toThrow(/does not prove the stated claim/);
+        expect(() => checkSource('cheat : A => B = \\P -> P.')).toThrow(/does not prove the stated claim/);
     });
 
     it('in a proof, an uppercase name is an assumption and a lowercase name a declaration', () => {
         expect(() => checkSource('a : p.\nf = A.')).toThrow(/'A' is not an assumption in scope/);
-        expect(() => checkSource('f = P => p.')).toThrow(/'p' is not declared/);
+        expect(() => checkSource('f = \\P -> p.')).toThrow(/'p' is not declared/);
         // A declaration and an assumption can share a spelling apart from case without interfering.
-        expect(provesIn('p : likes jake cake.\nk = P => p.', 'k')).toBe('A => likes jake cake');
+        expect(provesIn('p : likes jake cake.\nk = \\P -> p.', 'k')).toBe('A => likes jake cake');
     });
 
     it('rejects duplicate declarations', () => {
@@ -235,27 +237,27 @@ describe('logic built from axioms (no special support in the core)', () => {
     `;
 
     it('and is commutative', () => {
-        expect(provesIn(prelude + 'and_comm = P => pair (snd P) (fst P).', 'and_comm')).toBe('and A B => and B A');
+        expect(provesIn(prelude + 'and_comm = \\P -> pair (snd P) (fst P).', 'and_comm')).toBe('and A B => and B A');
     });
 
     it('or is commutative', () => {
-        expect(provesIn(prelude + 'or_comm = P => case P right left.', 'or_comm')).toBe('or B A => or A B');
+        expect(provesIn(prelude + 'or_comm = \\P -> case P right left.', 'or_comm')).toBe('or B A => or A B');
     });
 
     it('not P is P => false: contradiction implies anything', () => {
-        expect(provesIn(prelude + 'contra = P => Np => explode (Np P).', 'contra')).toBe('A => (A => false) => B');
+        expect(provesIn(prelude + 'contra = \\P Np -> explode (Np P).', 'contra')).toBe('A => (A => false) => B');
     });
 
     it('modus tollens', () => {
-        const src = prelude + 'tollens : (P => Q) => (Q => false) => (P => false) = F => Nq => P => Nq (F P).';
+        const src = prelude + 'tollens : (P => Q) => (Q => false) => (P => false) = \\F Nq P -> Nq (F P).';
         expect(provesIn(src, 'tollens')).toBe('(P => Q) => (Q => false) => P => false');
     });
 
     it('excluded middle is not provable, but can be stated as a belief', () => {
-        expect(() => checkSource(prelude + 'lem : or P (P => false) = P => P.')).toThrow(/does not prove/);
+        expect(() => checkSource(prelude + 'lem : or P (P => false) = \\P -> P.')).toThrow(/does not prove/);
         const m = checkSource(
             prelude +
-                'lem : or P (P => false).\ndne : ((P => false) => false) => P = Nnp => case lem (P => P) (Np => explode (Nnp Np)).',
+                'lem : or P (P => false).\ndne : ((P => false) => false) => P = \\Nnp -> case lem (\\P -> P) (\\Np -> explode (Nnp Np)).',
         );
         expect(proves(m, 'dne')).toBe('((P => false) => false) => P');
         expect(m.decls.get('lem')?.kind).toBe('axiom');
@@ -268,7 +270,7 @@ describe('dependencies between declarations', () => {
             a : likes jake cake.
             b : likes X cake => likes X sugar.
             c = b a.
-            d = P => c.
+            d = \\P -> c.
         `);
         expect(m.decls.get('c')?.uses).toEqual(['Test.b', 'Test.a']);
         expect(m.decls.get('d')?.uses).toEqual(['Test.c']);

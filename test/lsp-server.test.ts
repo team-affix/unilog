@@ -148,12 +148,17 @@ describe('language server (over the protocol)', () => {
         write(dir, {
             'unilog.json': JSON.stringify({ roots: ['.', 'deps'], check: ['Mine'] }),
             'deps/Kant/Ethics.ul': 'duty : good X => ought X.\n',
-            'Mine/Main.ul': 'import Kant.Ethics.\nmine = P => duty P.\n',
+            'Mine/Main.ul': 'import Kant.Ethics.\nmine = \\P -> duty P.\n',
         });
         const uri = pathToFileURL(path.join(dir, 'Mine/Main.ul')).toString();
         const { client } = await start(dir);
         await client.sendNotification('textDocument/didOpen', {
-            textDocument: { uri, languageId: 'unilog', version: 1, text: 'import Kant.Ethics.\nmine = P => duty P.\n' },
+            textDocument: {
+                uri,
+                languageId: 'unilog',
+                version: 1,
+                text: 'import Kant.Ethics.\nmine = \\P -> duty P.\n',
+            },
         });
         const def = await client.sendRequest('textDocument/definition', {
             textDocument: { uri },

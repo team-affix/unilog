@@ -47,6 +47,7 @@ const PROP_VAR = 'entity.name.type.parameter.unilog';
 const ASSUMPTION = 'variable.parameter.assumption.unilog';
 // Proof names, used or declared, share the theme's declaration color (entity.name.function).
 const PROOF = 'entity.name.function.proof.unilog';
+const LAMBDA = 'keyword.operator.lambda.unilog';
 
 const cases = [
     [
@@ -71,7 +72,7 @@ const cases = [
     ],
     [
         // Proposition variables (A, B) and assumptions (P) get different scopes, on the same line.
-        ['and_comm : and A B => and B A = P => pair (snd P) (fst P).'],
+        ['and_comm : and A B => and B A = \\P -> pair (snd P) (fst P).'],
         [
             ['and_comm', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
@@ -83,8 +84,9 @@ const cases = [
             ['B', PROP_VAR],
             ['A', PROP_VAR],
             ['=', 'keyword.operator.equals.unilog'],
+            ['\\', LAMBDA],
             ['P', ASSUMPTION],
-            ['=>', 'keyword.operator.arrow.unilog'],
+            ['->', 'keyword.operator.arrow.unilog'],
             ['pair', PROOF],
             ['(', 'punctuation.parenthesis.unilog'],
             ['snd', PROOF],
@@ -113,7 +115,7 @@ const cases = [
     [
         // A proof continuing onto the next line: still a proof, so Nnp and P are assumptions.
         // After the '.', the next declaration's variable is a proposition variable again.
-        ['double_negation : ((P => false) => false) => P =', '    Nnp => case lem (P => P).', 'next : X.'],
+        ['double_negation : ((P => false) => false) => P =', '    \\Nnp -> case lem (\\P -> P).', 'next : X.'],
         [
             ['double_negation', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
@@ -129,13 +131,15 @@ const cases = [
             ['=>', 'keyword.operator.arrow.unilog'],
             ['P', PROP_VAR],
             ['=', 'keyword.operator.equals.unilog'],
+            ['\\', LAMBDA],
             ['Nnp', ASSUMPTION],
-            ['=>', 'keyword.operator.arrow.unilog'],
+            ['->', 'keyword.operator.arrow.unilog'],
             ['case', PROOF],
             ['lem', PROOF],
             ['(', 'punctuation.parenthesis.unilog'],
+            ['\\', LAMBDA],
             ['P', ASSUMPTION],
-            ['=>', 'keyword.operator.arrow.unilog'],
+            ['->', 'keyword.operator.arrow.unilog'],
             ['P', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
             ['.', 'punctuation.terminator.unilog'],
@@ -147,7 +151,7 @@ const cases = [
     ],
     [
         // route_more is a proof (colored) where it is used in a proof, and route is just a symbol in a proposition.
-        ['two_roads : road X Y => route X Z = Xy => route_more Xy (route_road Yz).'],
+        ['two_roads : road X Y => route X Z = \\Xy -> route_more Xy (route_road Yz).'],
         [
             ['two_roads', 'entity.name.function.unilog'],
             [':', 'keyword.operator.colon.unilog'],
@@ -159,8 +163,9 @@ const cases = [
             ['X', PROP_VAR],
             ['Z', PROP_VAR],
             ['=', 'keyword.operator.equals.unilog'],
+            ['\\', LAMBDA],
             ['Xy', ASSUMPTION],
-            ['=>', 'keyword.operator.arrow.unilog'],
+            ['->', 'keyword.operator.arrow.unilog'],
             ['route_more', PROOF],
             ['Xy', ASSUMPTION],
             ['(', 'punctuation.parenthesis.unilog'],

@@ -109,8 +109,13 @@
                     "include": "#comment"
                 },
                 {
+                    "comment": "Introduces assumptions: \\P -> body",
+                    "name": "keyword.operator.lambda.unilog",
+                    "match": "\\\\"
+                },
+                {
                     "name": "keyword.operator.arrow.unilog",
-                    "match": "=>"
+                    "match": "->"
                 },
                 {
                     "comment": "A qualified reference to a proof, e.g. Kant.Ethics.duty",

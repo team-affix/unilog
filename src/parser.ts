@@ -4,6 +4,7 @@ import { UnilogLexer } from './generated/UnilogLexer';
 import {
     ApplyContext,
     AssumeContext,
+    OldAssumeContext,
     ClaimDeclContext,
     DeclContext,
     FileContext,
@@ -119,14 +120,27 @@ function converters(file: string) {
     }
 
     function proof(ctx: ProofContext): ProofExpr {
+        if (ctx instanceof OldAssumeContext) {
+            const name = ctx.NAME().getText();
+            throw new UnilogError(
+                `Assumptions are written with a backslash: '\\${name} -> ...' rather than '${name} => ...' ('=>' means implication)`,
+                locOf(ctx),
+            );
+        }
         if (ctx instanceof AssumeContext) {
-            const param = simpleName(ctx.NAME().symbol, 'An assumption');
-            if (!isVariableName(param))
-                throw new UnilogError(
-                    `Assumptions are variables, so their names start with an uppercase letter or '_': '${param}'`,
-                    locOf(ctx),
-                );
-            return { k: 'lam', param, body: proof(ctx.proof()), loc: locOf(ctx), paramLoc: locOf(ctx.NAME().symbol) };
+            // \P Q -> body is \P -> \Q -> body: one assumption per name, innermost last.
+            const names = ctx.NAME();
+            const body = proof(ctx.proof());
+            const loc = locOf(ctx);
+            return names.reduceRight<ProofExpr>((inner, tok) => {
+                const param = simpleName(tok.symbol, 'An assumption');
+                if (!isVariableName(param))
+                    throw new UnilogError(
+                        `Assumptions are variables, so their names start with an uppercase letter or '_': '${param}'`,
+                        locOf(tok.symbol),
+                    );
+                return { k: 'lam', param, body: inner, loc, paramLoc: locOf(tok.symbol) };
+            }, body);
         }
         const atoms = (ctx as ApplyContext).proofAtom().map(proofAtom);
         return atoms

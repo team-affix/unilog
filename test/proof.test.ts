@@ -16,7 +16,7 @@ const T = {
         pair : A => B => both A B.
         lemma = b a.
         twice = pair lemma lemma.
-        lift = P => pair P lemma.
+        lift = \\P -> pair P lemma.
         use_lift = lift a.
     `,
 };
@@ -45,7 +45,7 @@ describe('proof', () => {
     it("shows assumptions, and a used theorem's own (general) proof", () => {
         const out = commands.proof('M.T.use_lift', project(T)).out;
         expect(out[1]).toBe(
-            '├── lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [theorem M.T.lift = P => pair P lemma]',
+            '├── lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [theorem M.T.lift = \\P -> pair P lemma]',
         );
         expect(out).toContain('│       │   └── P : A   [assumption]');
     });
@@ -64,7 +64,7 @@ describe('proof', () => {
 
     it('names variables consistently between the statement and the steps', () => {
         const out = commands.proof('M.T.lift', project(T)).out;
-        expect(out[0]).toBe('M.T.lift = P => pair P lemma : A => both A (likes jake sugar)');
+        expect(out[0]).toBe('M.T.lift = \\P -> pair P lemma : A => both A (likes jake sugar)');
         expect(out[1]).toBe('└── pair P lemma : both A (likes jake sugar)');
     });
 
@@ -143,7 +143,7 @@ describe('proof', () => {
     it('--flat follows theorems through their own proofs, across modules', () => {
         const dir = project({
             'Kant/Ethics.ul': 'duty : good X => ought X.\nhonesty : good truthful.\ntell_truth = duty honesty.',
-            'Mine/Main.ul': 'import Kant.Ethics.\nmine = tell_truth.\nboth_ways = P => duty P.',
+            'Mine/Main.ul': 'import Kant.Ethics.\nmine = tell_truth.\nboth_ways = \\P -> duty P.',
         });
         expect(commands.proof('Mine.Main.mine', dir, { flat: true }).out).toEqual([
             'Kant.Ethics.duty : good X => ought X   [axiom]',
@@ -153,7 +153,7 @@ describe('proof', () => {
         ]);
         expect(commands.proof('Mine.Main.both_ways', dir, { flat: true }).out).toEqual([
             'Kant.Ethics.duty : good X => ought X   [axiom]',
-            'Mine.Main.both_ways = P => duty P : good X => ought X',
+            'Mine.Main.both_ways = \\P -> duty P : good X => ought X',
         ]);
     });
 

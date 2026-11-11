@@ -5,4 +5,4 @@ import Logic.Prelude.
 lem : or P (P => false).
 
 double_negation : ((P => false) => false) => P =
-    Nnp => case lem (P => P) (Np => explode (Nnp Np)).
+    \Nnp -> case lem (\P -> P) (\Np -> explode (Nnp Np)).

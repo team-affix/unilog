@@ -15,7 +15,7 @@ case : or A B => (A => C) => (B => C) => C.
 explode : false => C.
 
 # Some consequences
-and_comm = P => pair (snd P) (fst P).
-or_comm = P => case P right left.
-contradiction : A => (A => false) => B = P => Np => explode (Np P).
-tollens : (P => Q) => (Q => false) => P => false = F => Nq => P => Nq (F P).
+and_comm = \P -> pair (snd P) (fst P).
+or_comm = \P -> case P right left.
+contradiction : A => (A => false) => B = \P Np -> explode (Np P).
+tollens : (P => Q) => (Q => false) => P => false = \F Nq P -> Nq (F P).

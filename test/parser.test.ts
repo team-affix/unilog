@@ -68,7 +68,7 @@ describe('parse', () => {
     });
 
     it('parses assumptions in proofs', () => {
-        const [d] = parse('t = F => X => F (g X).', 'f');
+        const [d] = parse('t = \\F X -> F (g X).', 'f');
         expect(d).toMatchObject({
             proof: { k: 'lam', param: 'F', body: { k: 'lam', param: 'X', body: { k: 'app' } } },
         });
@@ -81,8 +81,13 @@ describe('parse', () => {
         ['qualified symbol in a proposition', 'a : b.c.', /put a space or newline/],
         [
             'lowercase assumption',
-            't = x => x.',
+            't = \\x -> x.',
             /Assumptions are variables, so their names start with an uppercase letter/,
+        ],
+        [
+            'the old assumption syntax',
+            't = X => X.',
+            /Assumptions are written with a backslash: '\\X -> \.\.\.' rather than 'X => \.\.\.'/,
         ],
         ['unbalanced parens', 'a : (b c.', /1:9: Syntax error: missing '\)'/],
         ['empty proposition', 'a : .', /1:5: Syntax error: .*expecting \{'\(', a name\}/],
