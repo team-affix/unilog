@@ -22,4 +22,4 @@ export type Decl =
     /** `name : P.` A stated belief. `nameLoc` is the name's location. */
     | { k: 'axiom'; name: string; prop: PropExpr; loc: Loc; nameLoc: Loc }
     /** `name = proof.` or `name : P = proof.` */
-    | { k: 'theorem'; name: string; prop?: PropExpr; proof: ProofExpr; loc: Loc; nameLoc: Loc };
+    | { k: 'inference'; name: string; prop?: PropExpr; proof: ProofExpr; loc: Loc; nameLoc: Loc };

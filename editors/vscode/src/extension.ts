@@ -7,7 +7,7 @@ let client: LanguageClient | undefined;
 /** One declaration, as reported by the server's `unilog/declarationMarkers` request. */
 interface DeclarationMarker {
     name: string;
-    kind: 'axiom' | 'theorem';
+    kind: 'axiom' | 'inference';
     line: number;
 }
 
@@ -26,25 +26,25 @@ export async function activate(context: ExtensionContext): Promise<void> {
     client = new LanguageClient('unilog', 'Unilog', serverOptions, clientOptions);
     await client.start();
 
-    // Gutter markers: a hollow diamond beside each axiom (assumed), a solid circle beside each theorem (derived).
+    // Gutter markers: a hollow diamond beside each axiom (assumed), a solid circle beside each inference (derived).
     const markers: Record<DeclarationMarker['kind'], TextEditorDecorationType> = {
         axiom: window.createTextEditorDecorationType({
             gutterIconPath: context.asAbsolutePath(path.join('media', 'axiom.svg')),
             gutterIconSize: '75%',
         }),
-        theorem: window.createTextEditorDecorationType({
-            gutterIconPath: context.asAbsolutePath(path.join('media', 'theorem.svg')),
+        inference: window.createTextEditorDecorationType({
+            gutterIconPath: context.asAbsolutePath(path.join('media', 'inference.svg')),
             gutterIconSize: '75%',
         }),
     };
-    context.subscriptions.push(markers.axiom, markers.theorem);
+    context.subscriptions.push(markers.axiom, markers.inference);
 
     const refresh = async (editor: TextEditor) => {
         if (editor.document.languageId !== 'unilog' || !client) return;
         const found = await client.sendRequest<DeclarationMarker[]>('unilog/declarationMarkers', {
             uri: editor.document.uri.toString(),
         });
-        for (const kind of ['axiom', 'theorem'] as const)
+        for (const kind of ['axiom', 'inference'] as const)
             editor.setDecorations(
                 markers[kind],
                 found.filter((m) => m.kind === kind).map((m) => new Range(m.line, 0, m.line, 0)),

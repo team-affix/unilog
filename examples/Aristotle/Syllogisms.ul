@@ -4,7 +4,7 @@ socrates_is_a_man : man socrates.
 socrates_is_mortal : mortal socrates = men_are_mortal socrates_is_a_man.
 
 # The syllogism form "Barbara" (all M are P; all S are M; so all S are P) is not an axiom here.
-# It is a theorem of logic, with no axioms at all: `unilog rests-on Aristotle.Syllogisms.barbara`.
+# It is derived from logic alone, with no axioms at all: `unilog rests-on Aristotle.Syllogisms.barbara`.
 barbara : (M => P) => (S => M) => S => P = \Mp Sm X -> Mp (Sm X).
 
 greeks_are_men : greek X => man X.

@@ -118,7 +118,7 @@ function stepsAt(d: Derivation, pos: Position, cursor: boolean): Derivation[] {
 
 /** Proof steps (`proof : proposition`), in the editor's step grammar, which colors the proof part as a proof. */
 const steps = (lines: string[]) => '```unilog-step\n' + lines.join('\n') + '\n```';
-/** A declaration as a step line (its name is a proof), then whether it is an axiom or a theorem. */
+/** A declaration as a step line (its name is a proof), then whether it is an axiom or an inference. */
 const describe = (d: Declaration, p: Printer) => `${steps([`${keyOf(d)} : ${p.print(d.scheme.body)}`])}\n\n${d.kind}`;
 
 /** What a hover shows, and the range of source it describes (which the editor highlights). */
@@ -149,7 +149,7 @@ export function hover(a: Analysis, file: string, pos: Position): HoverInfo | und
         const decls = [...m.decls.values()];
         const axioms = decls.filter((d) => d.kind === 'axiom').length;
         return {
-            markdown: `module **${m.name}**: ${axioms} axiom(s), ${decls.length - axioms} theorem(s)\n\n${m.file}`,
+            markdown: `module **${m.name}**: ${axioms} axiom(s), ${decls.length - axioms} inference(s)\n\n${m.file}`,
             range: rangeOf(mod.importLocs[imported] as Loc),
         };
     }
@@ -157,14 +157,14 @@ export function hover(a: Analysis, file: string, pos: Position): HoverInfo | und
     for (const d of mod.decls.values()) {
         if (contains(d.nameLoc, pos))
             return {
-                markdown: describe(d, p) + (d.kind === 'theorem' && !d.stated ? ' (claim inferred)' : ''),
+                markdown: describe(d, p) + (d.kind === 'inference' && !d.stated ? ' (claim inferred)' : ''),
                 range: rangeOf(d.nameLoc),
             };
         if (!d.proof || !contains(d.loc, pos)) continue;
         const path = stepsAt(d.proof, pos, false);
         const step = path.at(-1);
         if (!step) continue;
-        // Name variables as in the theorem's own statement (and its inlay hint), so every step agrees with it.
+        // Name variables as in the inference's own statement (and its inlay hint), so every step agrees with it.
         p.print(d.proof.term);
 
         if (step.k === 'assume' && contains(step.paramLoc, pos)) {
@@ -198,12 +198,12 @@ export interface InlayHint {
     insert: string;
 }
 
-/** For each theorem without a written claim, a hint after its name showing what it proves. */
+/** For each inference without a written claim, a hint after its name showing what it proves. */
 export function inlayHints(a: Analysis, file: string): InlayHint[] {
     const mod = a.ws.moduleAt(file);
     if (!mod) return [];
     return [...mod.decls.values()]
-        .filter((d) => d.kind === 'theorem' && !d.stated && d.proof)
+        .filter((d) => d.kind === 'inference' && !d.stated && d.proof)
         .map((d) => {
             const prop = new Printer().print((d.proof as Derivation).term);
             return { position: rangeOf(d.nameLoc).end, label: `: ${prop}`, insert: ` : ${prop}` };
@@ -236,7 +236,7 @@ export function definition(a: Analysis, file: string, pos: Position): { file: st
 /** One entry in a module's outline. */
 export interface OutlineEntry {
     name: string;
-    kind: 'axiom' | 'theorem';
+    kind: 'axiom' | 'inference';
     detail: string;
     range: Range;
     selectionRange: Range;
@@ -255,16 +255,16 @@ export function outline(a: Analysis, file: string): OutlineEntry[] {
     }));
 }
 
-/** Where a declaration starts, and whether it is an axiom or a theorem. */
+/** Where a declaration starts, and whether it is an axiom or an inference. */
 export interface DeclarationMarker {
     name: string;
-    kind: 'axiom' | 'theorem';
+    kind: 'axiom' | 'inference';
     /** The 0-based line of the declaration's name. */
     line: number;
 }
 
 /**
- * The axioms and theorems declared in some source text, for gutter markers. Only parses, so it also works
+ * The axioms and inferences declared in some source text, for gutter markers. Only parses, so it also works
  * while the file has checking errors (a file that doesn't parse has no markers).
  */
 export function declarationMarkers(text: string, file: string): DeclarationMarker[] {

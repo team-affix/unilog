@@ -69,7 +69,7 @@ describe('checking never confuses bound variables either', () => {
                 two = pair (later pa qc) (later pb qc).
             `,
         });
-        expect(commands.show('M.D.two', dir).out).toEqual(['theorem M.D.two : both (r a c) (r b c)']);
+        expect(commands.show('M.D.two', dir).out).toEqual(['inference M.D.two : both (r a c) (r b c)']);
     });
 
     it("keeps a stated claim's variables distinct from the proof's", () => {

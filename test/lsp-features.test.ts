@@ -83,8 +83,8 @@ describe('language server features', () => {
         };
 
         it('on a declaration name: what it proves, and that it was inferred', () => {
-            expect(at(1, 1)).toBe('```unilog-step\nMine.Main.mine : ought truthful\n```\n\ntheorem (claim inferred)');
-            expect(at(2, 2)).toBe('```unilog-step\nMine.Main.stated : ought truthful\n```\n\ntheorem');
+            expect(at(1, 1)).toBe('```unilog-step\nMine.Main.mine : ought truthful\n```\n\ninference (claim inferred)');
+            expect(at(2, 2)).toBe('```unilog-step\nMine.Main.stated : ought truthful\n```\n\ninference');
         });
 
         it('on a rule applied to arguments: each step of applying it, then its general statement', () => {
@@ -95,7 +95,7 @@ describe('language server features', () => {
         });
 
         it('on an import: the module', () => {
-            expect(at(0, 10)).toMatch(/^module \*\*Kant\.Ethics\*\*: 2 axiom\(s\), 1 theorem\(s\)/);
+            expect(at(0, 10)).toMatch(/^module \*\*Kant\.Ethics\*\*: 2 axiom\(s\), 1 inference\(s\)/);
         });
 
         describe('inside a curried proof, without needing parentheses', () => {
@@ -193,16 +193,16 @@ describe('language server features', () => {
         });
     });
 
-    it('declaration markers: which lines start axioms and which start theorems, from parsing alone', () => {
+    it('declaration markers: which lines start axioms and which start inferences, from parsing alone', () => {
         const text = 'import Kant.Ethics.\n\na : p.\nb : p => q.\nc =\n    b a.\nd : q = c.\n';
         expect(declarationMarkers(text, 'f.ul')).toEqual([
             { name: 'a', kind: 'axiom', line: 2 },
             { name: 'b', kind: 'axiom', line: 3 },
-            { name: 'c', kind: 'theorem', line: 4 },
-            { name: 'd', kind: 'theorem', line: 6 },
+            { name: 'c', kind: 'inference', line: 4 },
+            { name: 'd', kind: 'inference', line: 6 },
         ]);
         // Still there when the file has checking errors (nothing here is declared or imported) ...
-        expect(declarationMarkers('t = nope nope.', 'f.ul')).toEqual([{ name: 't', kind: 'theorem', line: 0 }]);
+        expect(declarationMarkers('t = nope nope.', 'f.ul')).toEqual([{ name: 't', kind: 'inference', line: 0 }]);
         // ... and none while it doesn't parse.
         expect(declarationMarkers('a : (p.', 'f.ul')).toEqual([]);
     });
@@ -214,7 +214,7 @@ describe('language server features', () => {
         ).toEqual([
             ['duty', 'axiom', 'good X => ought X'],
             ['honesty', 'axiom', 'good truthful'],
-            ['tell_truth', 'theorem', 'ought truthful'],
+            ['tell_truth', 'inference', 'ought truthful'],
         ]);
     });
 });

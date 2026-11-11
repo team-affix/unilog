@@ -30,30 +30,30 @@ describe('proof', () => {
         ]);
     });
 
-    it('expands theorems the proof uses, each once', () => {
+    it('expands inferences the proof uses, each once', () => {
         expect(commands.proof('M.T.twice', project(T)).out).toEqual([
             'M.T.twice = pair lemma lemma : both (likes jake sugar) (likes jake sugar)',
             '├── pair lemma : likes jake sugar => both (likes jake sugar) (likes jake sugar)',
             '│   ├── pair : likes jake sugar => likes jake sugar => both (likes jake sugar) (likes jake sugar)   [axiom M.T.pair]',
-            '│   └── lemma : likes jake sugar   [theorem M.T.lemma = b a]',
+            '│   └── lemma : likes jake sugar   [inference M.T.lemma = b a]',
             '│       ├── b : likes jake cake => likes jake sugar   [axiom M.T.b]',
             '│       └── a : likes jake cake   [axiom M.T.a]',
-            '└── lemma : likes jake sugar   [theorem M.T.lemma, shown above]',
+            '└── lemma : likes jake sugar   [inference M.T.lemma, shown above]',
         ]);
     });
 
-    it("shows assumptions, and a used theorem's own (general) proof", () => {
+    it("shows assumptions, and a used inference's own (general) proof", () => {
         const out = commands.proof('M.T.use_lift', project(T)).out;
         expect(out[1]).toBe(
-            '├── lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [theorem M.T.lift = \\P -> pair P lemma]',
+            '├── lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [inference M.T.lift = \\P -> pair P lemma]',
         );
         expect(out).toContain('│       │   └── P : A   [assumption]');
     });
 
-    it('--shallow does not expand used theorems', () => {
+    it('--shallow does not expand used inferences', () => {
         expect(commands.proof('M.T.use_lift', project(T), { shallow: true }).out).toEqual([
             'M.T.use_lift = lift a : both (likes jake cake) (likes jake sugar)',
-            '├── lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [theorem M.T.lift]',
+            '├── lift : likes jake cake => both (likes jake cake) (likes jake sugar)   [inference M.T.lift]',
             '└── a : likes jake cake   [axiom M.T.a]',
         ]);
     });
@@ -75,7 +75,7 @@ describe('proof', () => {
         });
         expect(commands.proof('Mine.Main.mine', dir).out).toEqual([
             'Mine.Main.mine = tell_truth : ought truthful',
-            '└── tell_truth : ought truthful   [theorem Kant.Ethics.tell_truth = duty honesty]',
+            '└── tell_truth : ought truthful   [inference Kant.Ethics.tell_truth = duty honesty]',
             '    ├── duty : good truthful => ought truthful   [axiom Kant.Ethics.duty]',
             '    └── honesty : good truthful   [axiom Kant.Ethics.honesty]',
         ]);
@@ -86,7 +86,7 @@ describe('proof', () => {
         expect(root).toEqual({
             expr: 'M.T.lemma',
             proposition: 'likes jake sugar',
-            kind: 'theorem',
+            kind: 'inference',
             name: 'M.T.lemma',
             proof: 'b a',
             rule: 'apply',
@@ -113,7 +113,7 @@ describe('proof', () => {
         ]);
     });
 
-    it('--flat keeps declarations in source order even when axioms and theorems alternate; --axioms-first groups them', () => {
+    it('--flat keeps declarations in source order even when axioms and inferences alternate; --axioms-first groups them', () => {
         const dir = project({
             'M/I.ul': `
                 a : p.
@@ -140,7 +140,7 @@ describe('proof', () => {
         ]);
     });
 
-    it('--flat follows theorems through their own proofs, across modules', () => {
+    it('--flat follows inferences through their own proofs, across modules', () => {
         const dir = project({
             'Kant/Ethics.ul': 'duty : good X => ought X.\nhonesty : good truthful.\ntell_truth = duty honesty.',
             'Mine/Main.ul': 'import Kant.Ethics.\nmine = tell_truth.\nboth_ways = \\P -> duty P.',
@@ -160,7 +160,7 @@ describe('proof', () => {
     it('--flat --shallow lists only what the proof uses directly', () => {
         expect(commands.proof('M.T.use_lift', project(T), { flat: true, shallow: true }).out).toEqual([
             'M.T.a : likes jake cake   [axiom]',
-            'M.T.lift : A => both A (likes jake sugar)   [theorem]',
+            'M.T.lift : A => both A (likes jake sugar)   [inference]',
             'M.T.use_lift = lift a : both (likes jake cake) (likes jake sugar)',
         ]);
     });
@@ -175,7 +175,7 @@ describe('proof', () => {
         ).toEqual([
             { name: 'M.T.b', kind: 'axiom', proposition: 'likes X cake => likes X sugar' },
             { name: 'M.T.a', kind: 'axiom', proposition: 'likes jake cake' },
-            { name: 'M.T.lemma', kind: 'theorem', proposition: 'likes jake sugar', proof: 'b a' },
+            { name: 'M.T.lemma', kind: 'inference', proposition: 'likes jake sugar', proof: 'b a' },
         ]);
     });
 

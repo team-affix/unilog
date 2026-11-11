@@ -15,8 +15,8 @@ query
 
 decl
     : IMPORT NAME DOT                       # importDecl
-    | NAME COLON prop (EQUALS proof)? DOT   # claimDecl     // axiom, or theorem with a stated claim
-    | NAME EQUALS proof DOT                 # theoremDecl   // theorem, claim inferred
+    | NAME COLON prop (EQUALS proof)? DOT   # claimDecl     // axiom, or inference with a stated claim
+    | NAME EQUALS proof DOT                 # inferenceDecl   // inference, claim inferred
     ;
 
 // '=>' is right-associative; application (juxtaposition) binds tighter.

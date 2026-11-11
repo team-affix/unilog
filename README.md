@@ -16,18 +16,19 @@ c = b a.                              # a proof; the checker infers: likes jake 
 ## Usage
 
 ```bash
-npm i -g @team-affix/unilog
+# install (Node.js 20+), using the .tgz from the latest release: https://github.com/team-affix/unilog/releases
+npm install -g https://github.com/team-affix/unilog/releases/download/v0.1.6/team-affix-unilog-0.1.6.tgz
 
-unilog init            # create a unilog.json here (--roots . deps --check MyPkg to fill it in)
-unilog check           # check the project in this directory, as configured by unilog.json
-unilog check -v        # ...and print what every declaration proves
-unilog axioms Ethics.Main                 # axioms declared in a module (--transitive: and all it imports)
-unilog theorems Ethics.Main               # theorems in a module and what they prove (--transitive)
-unilog find false                         # which declarations prove a proposition (exit 1 if none)
-unilog rests-on Ethics.Main.keep_promises # every axiom that claim rests on
-unilog proof Ethics.Main.keep_promises    # the whole proof as a tree, down to the axioms
-unilog show Ethics.Main.keep_promises     # what it proves
-unilog summary                            # axiom/theorem counts per module (--json: the full graph)
+unilog init                                # create a unilog.json here (--roots . deps --check MyPkg to fill it in)
+unilog check                               # check the project in this directory, as configured by unilog.json
+unilog check -v                            # ...and print what every declaration proves
+unilog axioms Ethics.Main                  # axioms declared in a module (--transitive: and all it imports)
+unilog inferences Ethics.Main              # inferences in a module and what they prove (--transitive)
+unilog find false                          # which declarations prove a proposition (exit 1 if none)
+unilog rests-on Ethics.Main.keep_promises  # every axiom that claim rests on
+unilog proof Ethics.Main.keep_promises     # the whole proof as a tree, down to the axioms
+unilog show Ethics.Main.keep_promises      # what it proves
+unilog summary                             # axiom/inference counts per module (--json: the full graph)
 ```
 
 A project's `unilog.json` says where modules are found and what to check:

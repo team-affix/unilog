@@ -162,7 +162,7 @@ export function listen(connection: Connection): void {
     );
 
     // Unilog-specific request, used by the VS Code extension for gutter markers: which lines start axioms
-    // and which start theorems. Parse-only, so markers stay while the file has checking errors.
+    // and which start inferences. Parse-only, so markers stay while the file has checking errors.
     connection.onRequest('unilog/declarationMarkers', ({ uri }: { uri: string }) => {
         const doc = documents.get(uri);
         const text = doc ? doc.getText() : sources.read(toPath(uri));
