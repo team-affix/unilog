@@ -11,6 +11,7 @@ c = b a;                                  # a proof; the checker works out: like
 - **Constructive logic via Curry–Howard.** Propositions are types, proofs are programs, and checking is type checking. You never write types.
 - **Tiny, sound core.** It knows only `=>` and "for every" (`\X.`), usable anywhere, including inside premises. There is no recursion, and checking always terminates. `and`, `or`, `false`, `exists`, equality and even excluded middle are ordinary rules in packages.
 - **Quantifiers are yours to define.** Any quantifier is a symbol applied to a proposition with a gap (`exists \X. loves X mom`), and its rules are written once for every proposition.
+- **Every proof is checked twice.** A small independent kernel ([`src/kernel.ts`](src/kernel.ts)) re-checks every proof the checker accepts, from a certificate with everything made explicit. To trust a verdict, that file is all you need to read.
 - **Adversarial transparency.** Everything is public, and `unilog axioms` lists every belief a claim ultimately rests on.
 - **Independent of any package manager.** Modules import each other by name, resolved through the search roots in the project's `unilog.json`. Whatever installs dependencies, point a root at the folder it uses.
 
@@ -74,10 +75,12 @@ npm run build
 The parser is generated from [`grammar/Unilog.g4`](grammar/Unilog.g4) with [antlr-ng](https://github.com/mike-lischke/antlr-ng) (no Java needed) into `src/generated/`, which is not committed. `npm run grammar` regenerates it.
 
 ```
-src/term.ts       propositions, unification, generalization, printing
+src/kernel.ts     the proof kernel: re-checks every certificate (the only code you need to trust)
+src/term.ts       propositions, matching (unknowns, gaps, scopes), printing
 grammar/Unilog.g4 the ANTLR grammar
 src/parser.ts     parse tree -> AST, and the rules about names
-src/check.ts      inference for each declaration (the trusted core)
+src/check.ts      works out what each declaration proves, and writes its certificate
+src/certificate.ts the checker's work, written out for the kernel
 src/workspace.ts  modules, imports, search roots, axiom tracing
 src/commands.ts   check / axioms / show
 src/cli.ts        command-line entry point

@@ -344,9 +344,19 @@ export class Unifier {
 
     /** Strips leading "for every"s, putting a new unknown for each variable. */
     instantiate(t: Term): Term {
+        return this.specialize(t).term;
+    }
+
+    /** Like `instantiate`, also returning the new unknowns, in order (the outermost "for every" first). */
+    specialize(t: Term): { term: Term; vars: Var[] } {
+        const vars: Var[] = [];
         t = whnf(t);
-        while (t.k === 'all') t = whnf(open(t, this.fresh(t.hint, t.ty)));
-        return t;
+        while (t.k === 'all') {
+            const v = this.fresh(t.hint, t.ty);
+            vars.push(v);
+            t = whnf(open(t, v));
+        }
+        return { term: t, vars };
     }
 
     /** Matches a and b, filling unknowns. Returns undefined on success, or the clash. */
@@ -562,16 +572,22 @@ function gaps(s: Term, args: readonly Term[]): Term[] {
     return go(s, 0);
 }
 
+/** The unknowns left in a term, in order of first appearance: the ones `generalize` binds. */
+export function unknownsOf(t: Term): Var[] {
+    const vars: Var[] = [];
+    visit(norm(t), (u) => {
+        if (u.k === 'var' && !vars.includes(u)) vars.push(u);
+    });
+    return vars;
+}
+
 /**
  * Closes a proposition over its remaining unknowns: each becomes a "for every" at the front, in order of first
  * appearance.
  */
 export function generalize(t: Term): Term {
     t = norm(t);
-    const vars: Var[] = [];
-    visit(t, (u) => {
-        if (u.k === 'var' && !vars.includes(u)) vars.push(u);
-    });
+    const vars = unknownsOf(t);
     // A source name is kept only if no other variable here has it; the rest are named A, B, C ... when printed.
     const unique = (v: Var) => v.hint !== '' && vars.filter((w) => w.hint === v.hint).length === 1;
     for (let i = vars.length - 1; i >= 0; i--) {

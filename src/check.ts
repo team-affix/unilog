@@ -1,4 +1,6 @@
+import { certificate, instantiated, kernelTerm, Work } from './certificate';
 import { Loc, UnilogError } from './errors';
+import { checkProof, checkProposition, KernelError, KProof, KTerm } from './kernel';
 import { isVariableName } from './parser';
 import { Decl, PropExpr, ProofExpr } from './syntax';
 import {
@@ -18,6 +20,8 @@ import {
     resetFills,
     Ty,
     Unifier,
+    unknownsOf,
+    Var,
     whnf,
 } from './term';
 
@@ -34,6 +38,8 @@ export interface Declaration {
     readonly proof?: Derivation;
     /** For inferences: whether the claim was written out (`name : P = proof`) rather than inferred. */
     readonly stated?: boolean;
+    /** For inferences: the proof written out in full, as the kernel checked it (see kernel.ts). */
+    readonly certificate?: KProof;
     readonly loc: Loc;
     /** Where the declaration's name is written. */
     readonly nameLoc: Loc;
@@ -239,6 +245,15 @@ const showProof = (e: ProofExpr): string => {
     }
 };
 
+/** A checked step: the derivation (for display) and the work behind it (for the kernel). */
+interface Done {
+    readonly d: Derivation;
+    readonly w: Work;
+}
+
+/** The proposition a declaration proves, in the kernel's form. */
+export const kernelProposition = (d: Declaration): KTerm => kernelTerm(d.prop);
+
 /** A proof that proves something other than what was needed at that point. Turned into a message by the caller. */
 class Mismatched {
     constructor(
@@ -289,11 +304,13 @@ export function checkModule(
         resetFills();
 
         if (decl.k === 'axiom') {
+            const prop = propositionTerm(decl.prop);
+            kernel(decl.name, decl.loc, () => checkProposition(kernelTerm(prop)));
             local.set(decl.name, {
                 module: name,
                 name: decl.name,
                 kind: 'axiom',
-                prop: propositionTerm(decl.prop),
+                prop,
                 uses: [],
                 loc: decl.loc,
                 nameLoc: decl.nameLoc,
@@ -302,12 +319,12 @@ export function checkModule(
         }
 
         const uses = new Set<string>();
-        let derivation: Derivation;
+        let done: Done;
         let proves: Term;
         if (decl.prop) {
             const claim = propositionTerm(decl.prop);
             try {
-                derivation = check(decl.proof, claim, new Map(), uses);
+                done = check(decl.proof, claim, new Map(), uses);
             } catch (e) {
                 if (!(e instanceof Mismatched)) throw e;
                 const p = new Printer();
@@ -321,24 +338,52 @@ export function checkModule(
             }
             proves = claim;
         } else {
-            derivation = infer(decl.proof, new Map(), uses);
-            proves = derivation.term;
+            done = infer(decl.proof, new Map(), uses);
+            proves = done.d.term;
         }
         undetermined(decl.loc);
+        // An inferred claim is closed over what is left unknown; the certificate proves it for each.
+        const generalized = decl.prop ? [] : unknownsOf(proves);
+        const prop = decl.prop ? proves : generalize(proves);
+        const cert = certificate(done.w, generalized);
+        kernel(decl.name, decl.loc, () => checkProof(cert, kernelTerm(prop), kernelEnv));
         local.set(decl.name, {
             module: name,
             name: decl.name,
             kind: 'inference',
-            prop: decl.prop ? proves : generalize(proves),
+            prop,
             uses: [...uses],
-            proof: derivation,
+            proof: done.d,
             stated: decl.prop !== undefined,
+            certificate: cert,
             loc: decl.loc,
             nameLoc: decl.nameLoc,
         });
     }
 
     return { name, file, imports, importLocs, decls: local };
+
+    /** The propositions the kernel may cite: every declaration this module can see, by `Module.name`. */
+    function kernelEnv(key: string): KTerm | undefined {
+        const at = key.lastIndexOf('.');
+        const mod = key.slice(0, at);
+        const d = mod === name ? local.get(key.slice(at + 1)) : imported.get(mod)?.decls.get(key.slice(at + 1));
+        return d && kernelProposition(d);
+    }
+
+    /** Runs a kernel check. The checker accepted the declaration, so a rejection is a bug in the checker. */
+    function kernel(declName: string, loc: Loc, run: () => void): void {
+        try {
+            run();
+        } catch (e) {
+            if (!(e instanceof KernelError)) throw e;
+            throw new UnilogError(
+                `Internal error: the proof kernel rejected '${declName}' (${e.message}). ` +
+                    `This is a bug in Unilog's checker, not in your proof; please report it.`,
+                loc,
+            );
+        }
+    }
 
     /** Reports gaps the checker could not work out. */
     function undetermined(loc: Loc): void {
@@ -365,10 +410,13 @@ export function checkModule(
         env: ReadonlyMap<string, Term>,
         uses: Set<string>,
         instantiate = true,
-    ): { term: Term; decl?: Declaration } {
+    ): { term: Term; decl?: Declaration; w: Work } {
         const use = (d: Declaration) => {
             uses.add(keyOf(d));
-            return { term: instantiate ? u.instantiate(d.prop) : d.prop, decl: d };
+            const w: Work = { k: 'decl', key: keyOf(d) };
+            if (!instantiate) return { term: d.prop, decl: d, w };
+            const { term, vars } = u.specialize(d.prop);
+            return { term, decl: d, w: instantiated(w, vars) };
         };
         if (e.path.length === 1) {
             const id = e.path[0] as string;
@@ -380,7 +428,10 @@ export function checkModule(
                         `'${id}' is not an assumption in scope (assumptions are introduced with '\\${id}. ...')`,
                         e.loc,
                     );
-                return { term: instantiate ? u.instantiate(assumed) : assumed };
+                const w: Work = { k: 'hyp', name: id };
+                if (!instantiate) return { term: assumed, w };
+                const { term, vars } = u.specialize(assumed);
+                return { term, w: instantiated(w, vars) };
             }
             const mine = local.get(id);
             if (mine) return use(mine);
@@ -416,22 +467,27 @@ export function checkModule(
     }
 
     /** Works out what a proof proves. */
-    function infer(e: ProofExpr, env: ReadonlyMap<string, Term>, uses: Set<string>): Derivation {
+    function infer(e: ProofExpr, env: ReadonlyMap<string, Term>, uses: Set<string>): Done {
         const text = showProof(e);
         switch (e.k) {
-            case 'ref':
-                return { k: 'use', text, loc: e.loc, ...lookup(e, env, uses) };
+            case 'ref': {
+                const { w, ...found } = lookup(e, env, uses);
+                return { d: { k: 'use', text, loc: e.loc, ...found }, w };
+            }
             case 'lam': {
                 const assumed = u.fresh();
                 const body = infer(e.body, new Map([...env, [e.param, assumed]]), uses);
                 return {
-                    k: 'assume',
-                    text,
-                    term: imp(assumed, body.term),
-                    loc: e.loc,
-                    param: e.param,
-                    paramLoc: e.paramLoc,
-                    body,
+                    d: {
+                        k: 'assume',
+                        text,
+                        term: imp(assumed, body.d.term),
+                        loc: e.loc,
+                        param: e.param,
+                        paramLoc: e.paramLoc,
+                        body: body.d,
+                    },
+                    w: { k: 'lam', name: e.param, prop: assumed, body: body.w },
                 };
             }
             case 'app':
@@ -443,7 +499,7 @@ export function checkModule(
      * Checks that a proof proves `needed`. A "for every X" in `needed` is proved for a fixed symbol X about which
      * nothing is known; an assumption takes its proposition from `needed`, so it can be universal.
      */
-    function check(e: ProofExpr, needed: Term, env: ReadonlyMap<string, Term>, uses: Set<string>): Derivation {
+    function check(e: ProofExpr, needed: Term, env: ReadonlyMap<string, Term>, uses: Set<string>): Done {
         const target = whnf(needed);
         if (target.k === 'all' && e.k === 'ref') {
             // A universal needed, and a name that proves a universal: compare them as they are first, binder
@@ -452,18 +508,22 @@ export function checkModule(
             const mark = u.mark();
             if (u.unify(target, found.term) === undefined)
                 return {
-                    k: 'use',
-                    text: showProof(e),
-                    loc: e.loc,
-                    term: target,
-                    ...(found.decl && { decl: found.decl }),
+                    d: {
+                        k: 'use',
+                        text: showProof(e),
+                        loc: e.loc,
+                        term: target,
+                        ...(found.decl && { decl: found.decl }),
+                    },
+                    w: found.w,
                 };
             u.rollback(mark);
         }
         if (target.k === 'all') {
             const x: Rigid = u.enter(target.hint, target.ty);
             try {
-                return check(e, whnf(openAll(target, x)), env, uses);
+                const inner = check(e, whnf(openAll(target, x)), env, uses);
+                return { d: inner.d, w: { k: 'gen', fixed: x, body: inner.w } };
             } finally {
                 u.leave();
             }
@@ -480,19 +540,22 @@ export function checkModule(
             }
             const body = check(e.body, to, new Map([...env, [e.param, from]]), uses);
             return {
-                k: 'assume',
-                text: showProof(e),
-                term: imp(from, body.term),
-                loc: e.loc,
-                param: e.param,
-                paramLoc: e.paramLoc,
-                body,
+                d: {
+                    k: 'assume',
+                    text: showProof(e),
+                    term: imp(from, body.d.term),
+                    loc: e.loc,
+                    param: e.param,
+                    paramLoc: e.paramLoc,
+                    body: body.d,
+                },
+                w: { k: 'lam', name: e.param, prop: from, body: body.w },
             };
         }
         if (e.k === 'app') return applied(e, env, uses, target);
-        const d = infer(e, env, uses);
-        expect(d.term, target);
-        return d;
+        const r = infer(e, env, uses);
+        expect(r.d.term, target);
+        return r;
     }
 
     /**
@@ -504,18 +567,19 @@ export function checkModule(
         env: ReadonlyMap<string, Term>,
         uses: Set<string>,
         needed?: Term,
-    ): Derivation {
+    ): Done {
         const calls: (ProofExpr & { k: 'app' })[] = [];
         let head: ProofExpr = e;
         while (head.k === 'app') {
             calls.unshift(head);
             head = head.fn;
         }
-        const headD = infer(head, env, uses);
+        const headDone = infer(head, env, uses);
+        const headD = headDone.d;
         let current = headD.term;
-        const premises: { needs: Term; gives: Term }[] = [];
+        const premises: { needs: Term; gives: Term; vars: Var[] }[] = [];
         for (const call of calls) {
-            const t = u.instantiate(current);
+            const { term: t, vars } = u.specialize(current);
             let from: Term;
             let to: Term;
             if (t.k === 'imp') ({ from, to } = t);
@@ -532,15 +596,21 @@ export function checkModule(
                     );
                 }
             }
-            premises.push({ needs: from, gives: to });
+            premises.push({ needs: from, gives: to, vars });
             current = to;
         }
-        if (needed) expect(u.instantiate(current), needed);
+        let last: Var[] = [];
+        if (needed) {
+            const s = u.specialize(current);
+            last = s.vars;
+            expect(s.term, needed);
+        }
 
         let fnD = headD;
+        let fnW = headDone.w;
         calls.forEach((call, i) => {
-            const { needs, gives } = premises[i] as { needs: Term; gives: Term };
-            let argD: Derivation;
+            const { needs, gives, vars } = premises[i] as { needs: Term; gives: Term; vars: Var[] };
+            let argD: Done;
             // Printed before checking the argument, so a message shows the rule as it was.
             const p = new Printer();
             const before = p.print(fnD.term);
@@ -556,10 +626,15 @@ export function checkModule(
                     call.loc,
                 );
             }
-            fnD = { k: 'apply', text: showProof(call), term: gives, loc: call.loc, fn: fnD, arg: argD };
+            fnD = { k: 'apply', text: showProof(call), term: gives, loc: call.loc, fn: fnD, arg: argD.d };
+            fnW = { k: 'app', fn: instantiated(fnW, vars), arg: argD.w };
         });
-        if (!needed) fnD = { ...fnD, term: u.instantiate(fnD.term) };
-        return fnD;
+        if (!needed) {
+            const s = u.specialize(fnD.term);
+            last = s.vars;
+            fnD = { ...fnD, term: s.term };
+        }
+        return { d: fnD, w: instantiated(fnW, last) };
     }
 }
 

@@ -102,6 +102,8 @@ superman_loves_lois : loves superman lois = subst kent_is_superman kent_loves_lo
 - **Assumptions are fixed unless universal.** Inside its proof, an assumption stands for one particular proposition, unless the stated claim makes it universal (like F above).
 - **Assumptions stay inside their proof.** `P` can only be used inside the `\P. ...` that introduces it.
 
+- **Every proof is checked twice.** After the checker accepts a declaration, it writes the proof out in full, with everything it filled in made explicit (a *certificate*), and a small independent kernel ([`src/kernel.ts`](../src/kernel.ts)) re-checks it. The kernel never searches or guesses; it only substitutes and compares, using six rules (declaration, assumption, `=>` in and out, "for every" in and out). It shares no code with the checker, so a bug in the checker can't let a wrong proof through: the kernel would reject it, and Unilog reports an internal error. To trust Unilog's verdicts, the kernel is the only code you need to read.
+
 Formally, this is natural deduction for intuitionistic higher-order logic: an assumption `\P. body` is ⇒-introduction, application `f a` is ⇒-elimination (modus ponens), and the universal has its introduction and elimination rules, plus your axioms. It is the architecture of Isabelle, HOL and LF (see [the design](design/quantifiers.md)). The proof terms are never run; the checker only works out what they prove.
 
 - **Nothing private.** Every declaration in every module is public, so everything a claim rests on can be inspected and cited. `unilog axioms` lists the full set of axioms behind any declaration.
