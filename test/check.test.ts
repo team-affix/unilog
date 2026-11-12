@@ -194,7 +194,9 @@ describe('soundness', () => {
     });
 
     it('scopes assumptions to their body', () => {
-        expect(() => checkSource('f = \\P. P;\ng = P;')).toThrow(/'P' is not an assumption in scope/);
+        expect(() => checkSource('f = \\P. P;\ng = P;')).toThrow(
+            /'P' is not an assumption in scope \(assumptions are introduced with '\\P\. \.\.\.'\)/,
+        );
     });
 
     it('rejects the Y combinator (no fixed points, so nothing proves itself)', () => {

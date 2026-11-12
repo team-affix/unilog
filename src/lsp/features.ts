@@ -132,7 +132,7 @@ export interface HoverInfo {
  * - a declaration's name: what it proves;
  * - a rule's name applied to arguments, e.g. `pair` in `pair (snd P) (fst P)`: every step of applying it, one
  *   argument at a time, then its general statement;
- * - an assumption where it is introduced (`P` in `P => ...`): what it is assumed to prove;
+ * - an assumption where it is introduced (`P` in `\P. ...`): what it is assumed to prove;
  * - any other proof step: what that step alone proves. The gap after `pair` is the step `pair (snd P)`; the
  *   gap after `(snd P)` is the whole `pair (snd P) (fst P)`. A parenthesized step includes its parentheses;
  * - an import: the module.

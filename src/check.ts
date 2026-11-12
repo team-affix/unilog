@@ -212,7 +212,7 @@ export function checkModule(
                 const assumed = env.get(id);
                 if (!assumed)
                     throw new UnilogError(
-                        `'${id}' is not an assumption in scope (assumptions are introduced with '${id} => ...')`,
+                        `'${id}' is not an assumption in scope (assumptions are introduced with '\\${id}. ...')`,
                         e.loc,
                     );
                 return { term: assumed };
