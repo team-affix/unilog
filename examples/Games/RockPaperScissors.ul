@@ -3,7 +3,7 @@ rock_beats_scissors : beats rock scissors;
 scissors_beats_paper : beats scissors paper;
 paper_beats_rock : beats paper rock;
 
-winner : plays A X => plays B Y => beats X Y => wins A B;
+winner : \A X B Y. plays A X => plays B Y => beats X Y => wins A B;
 
 ann_plays_paper : plays ann paper;
 ben_plays_rock : plays ben rock;

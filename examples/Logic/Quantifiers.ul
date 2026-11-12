@@ -1,0 +1,29 @@
+# Quantifiers beyond "for every", defined by ordinary rules. A quantifier is just a symbol applied to a
+# proposition with a gap: `exists \X. loves X superman`. None of this is built into the language.
+import Logic.Prelude;
+
+# There is an X with B X. Introduce it with an example; use it with a handler that works for anyone.
+exists_intro : \B T. B T => exists B;
+exists_elim : \B C. exists B => (\Y. B Y => C) => C;
+
+# There is no X with B X.
+none_intro : \B. (\X. B X => false) => none B;
+none_elim : \B T. none B => B T => false;
+
+lois_loves_superman : loves lois superman;
+someone_loves_superman : exists \X. loves X superman = exists_intro lois_loves_superman;
+
+# Whoever loves superman, superman is loved.
+loved_if_anyone : \X. loves X superman => loved superman;
+superman_is_loved : loved superman = exists_elim someone_loves_superman loved_if_anyone;
+
+# A universal premise: if everyone is mortal, then socrates and plato both are.
+both_mortal : (\M. mortal M) => and (mortal socrates) (mortal plato) = \F. pair F F;
+
+# Nesting, in any order.
+everyone_loves_someone : \X. exists \Y. loves X Y;
+jake_loves_someone : exists \Y. loves jake Y = everyone_loves_someone;
+
+# If nobody is perfect, then if jake were perfect, that would be absurd.
+nobody_is_perfect : none \X. perfect X;
+jake_is_not_perfect : perfect jake => false = none_elim nobody_is_perfect;

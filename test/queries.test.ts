@@ -9,13 +9,13 @@ function project(mine: string) {
     const dir = tmpDir();
     write(dir, {
         'unilog.json': JSON.stringify({ roots: ['.'], check: ['Mine'] }),
-        'Logic/Core.ul': 'explode : false => C;\nid = \\P. P;',
+        'Logic/Core.ul': 'explode : \\C. false => C;\nid = \\P. P;',
         'Base/Facts.ul': `
             import Logic.Core;
             a : likes jake cake;
-            b : likes X cake => likes X sugar;
+            b : \\X. likes X cake => likes X sugar;
             c = b a;
-            everything : wrong X;
+            everything : \\X. wrong X;
         `,
         'Mine/Main.ul': mine,
     });
@@ -50,22 +50,23 @@ describe('find', () => {
 
     it('counts a more general proof: something proving every X also proves the query', () => {
         const dir = project('import Base.Facts;');
-        expect(commands.find('wrong bob_party', dir).out).toEqual(['axiom     Base.Facts.everything : wrong X']);
+        expect(commands.find('wrong bob_party', dir).out).toEqual(['axiom     Base.Facts.everything : \\X. wrong X']);
     });
 
     it('requires a proof of the query in full generality by default', () => {
         const dir = project('import Base.Facts;');
         // b proves likes X cake => likes X sugar for every X; c only for jake
-        expect(commands.find('likes X cake => likes X sugar', dir).out).toEqual([
-            'axiom     Base.Facts.b : likes X cake => likes X sugar',
+        expect(commands.find('\\X. likes X cake => likes X sugar', dir).out).toEqual([
+            'axiom     Base.Facts.b : \\X. likes X cake => likes X sugar',
         ]);
-        expect(commands.find('likes X sugar', dir)).toMatchObject({ ok: false });
+        expect(commands.find('\\X. likes X sugar', dir)).toMatchObject({ ok: false });
     });
 
-    it('--unify matches anything of the query shape', () => {
+    it('finds instances: a query about jake finds the general rule and the fact about jake', () => {
         const dir = project('import Base.Facts;');
-        expect(commands.find('likes X sugar', dir, { unify: true }).out).toEqual([
-            'inference Base.Facts.c : likes jake sugar',
+        expect(commands.find('likes jake sugar', dir).out).toEqual(['inference Base.Facts.c : likes jake sugar']);
+        expect(commands.find('likes jake cake => likes jake sugar', dir).out).toEqual([
+            'axiom     Base.Facts.b : \\X. likes X cake => likes X sugar',
         ]);
     });
 
@@ -118,7 +119,7 @@ describe('inferences', () => {
         expect(commands.inferences('Mine.Main', dir, { transitive: true }).out).toEqual([
             'Mine.Main.mine : likes jake sugar',
             'Base.Facts.c : likes jake sugar',
-            'Logic.Core.id : A => A',
+            'Logic.Core.id : \\A. A => A',
             '3 inference(s) in Mine.Main and the 2 module(s) it imports',
         ]);
         expect(commands.inferences('Mine.Main', dir, { transitive: true, count: true }).out).toEqual(['3']);

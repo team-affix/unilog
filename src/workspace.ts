@@ -35,19 +35,36 @@ export interface ModuleOutline {
     axioms: DeclaredAxiom[];
 }
 
-/** Prints proposition syntax (as written, before checking). */
-export function showProp(e: PropExpr): string {
+/** Prints proposition syntax (as written, before checking). `tail`: nothing follows, so a lambda needs no parentheses. */
+export function showProp(e: PropExpr, tail = true): string {
     switch (e.k) {
         case 'atom':
         case 'var':
             return e.name;
         case 'app': {
-            const fn = e.fn.k === 'imp' ? `(${showProp(e.fn)})` : showProp(e.fn);
-            const arg = e.arg.k === 'app' || e.arg.k === 'imp' ? `(${showProp(e.arg)})` : showProp(e.arg);
+            const fn = e.fn.k === 'imp' || e.fn.k === 'lam' ? `(${showProp(e.fn)})` : showProp(e.fn, false);
+            const arg =
+                e.arg.k === 'lam' && tail
+                    ? showProp(e.arg)
+                    : e.arg.k === 'app' || e.arg.k === 'imp' || e.arg.k === 'lam'
+                      ? `(${showProp(e.arg)})`
+                      : showProp(e.arg, false);
             return `${fn} ${arg}`;
         }
-        case 'imp':
-            return `${e.from.k === 'imp' ? `(${showProp(e.from)})` : showProp(e.from)} => ${showProp(e.to)}`;
+        case 'imp': {
+            const left = e.from.k === 'imp' || e.from.k === 'lam' ? `(${showProp(e.from)})` : showProp(e.from, false);
+            return `${left} => ${showProp(e.to, tail)}`;
+        }
+        case 'lam': {
+            const names = [e.param];
+            let body = e.body;
+            while (body.k === 'lam') {
+                names.push(body.param);
+                body = body.body;
+            }
+            const text = `\\${names.join(' ')}. ${showProp(body)}`;
+            return tail ? text : `(${text})`;
+        }
     }
 }
 

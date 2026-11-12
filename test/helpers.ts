@@ -33,7 +33,7 @@ export function checkSource(src: string, imported = new Map<string, Module>()): 
 export function proves(mod: Module, name: string): string {
     const d = mod.decls.get(name);
     if (!d) throw new Error(`no declaration ${name}`);
-    return new Printer().print(d.scheme.body);
+    return new Printer().print(d.prop);
 }
 
 /** Checks `src` and returns what `name` proves. */

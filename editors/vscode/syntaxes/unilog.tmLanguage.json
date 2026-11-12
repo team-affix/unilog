@@ -74,6 +74,30 @@
                     "match": ":"
                 },
                 {
+                    "comment": "A quantifier: a symbol whose argument is a lambda, e.g. exists in `exists \\X. ...` (or `exists (\\X. ...)`).",
+                    "match": "\\b([a-z0-9][A-Za-z0-9_']*)(?=\\s*\\(?\\s*\\\\)",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.other.quantifier.unilog"
+                        }
+                    }
+                },
+                {
+                    "comment": "A lambda's head in a proposition, `\\X Y.`: where a proposition is expected it means 'for every X and Y'.",
+                    "match": "(\\\\)\\s*((?:[A-Za-z0-9_']+\\s*)+?)\\s*(\\.)",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.other.quantifier.unilog"
+                        },
+                        "2": {
+                            "name": "entity.name.type.parameter.unilog"
+                        },
+                        "3": {
+                            "name": "keyword.other.quantifier.unilog"
+                        }
+                    }
+                },
+                {
                     "comment": "Variables in propositions (under Curry-Howard, propositions are types, so these are type parameters)",
                     "name": "entity.name.type.parameter.unilog",
                     "match": "\\b[A-Z_][A-Za-z0-9_']*"

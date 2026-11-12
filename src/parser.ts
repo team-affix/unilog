@@ -12,6 +12,8 @@ import {
     FileContext,
     ImportDeclContext,
     PropContext,
+    PropImpContext,
+    PropLamContext,
     PropAtomContext,
     PropNameContext,
     ProofAtomContext,
@@ -54,6 +56,7 @@ class ThrowingErrorListener extends BaseErrorListener {
         const text = msg
             .replace('<EOF>', 'end of file')
             .replace(/\bNAME\b/g, 'a name')
+            .replace(/\bLAMBDA\b/g, "'\\X.'")
             .replace(/, '\.'|'\.', /g, '');
         throw new UnilogError(`Syntax error: ${text}`, loc);
     }
@@ -100,12 +103,33 @@ function converters(file: string) {
         return text;
     };
 
+    /** \X Y. body, as nested single-variable lambdas. Variables bound in propositions are uppercase. */
+    function propLambda(tok: Token, body: PropExpr, loc: Loc): PropExpr {
+        return lambdaParams(tok).reduceRight<PropExpr>((inner, { name, loc: paramLoc }) => {
+            if (!isVariableName(name))
+                throw new UnilogError(
+                    `A lambda binds a variable, so its name starts with an uppercase letter or '_': '${name}'`,
+                    paramLoc,
+                );
+            return { k: 'lam', param: name, body: inner, loc, paramLoc };
+        }, body);
+    }
+
     function prop(ctx: PropContext): PropExpr {
-        const atoms = ctx.propApp().propAtom().map(propAtom);
-        const left = atoms
+        if (ctx instanceof PropLamContext) return propLambda(ctx.LAMBDA().symbol, prop(ctx.prop()), locOf(ctx));
+        const imp = ctx as PropImpContext;
+        const appCtx = imp.propApp();
+        const args = appCtx.propAtom().map(propAtom);
+        const tail = appCtx.LAMBDA();
+        const tailBody = appCtx.prop();
+        if (tail && tailBody) {
+            const start = locOf(tail.symbol);
+            args.push(propLambda(tail.symbol, prop(tailBody), span(start, locOf(tailBody))));
+        }
+        const left = args
             .slice(1)
-            .reduce((fn, arg) => ({ k: 'app', fn, arg, loc: span(fn.loc, arg.loc) }) as PropExpr, atoms[0] as PropExpr);
-        const rest = ctx.prop();
+            .reduce((fn, arg) => ({ k: 'app', fn, arg, loc: span(fn.loc, arg.loc) }) as PropExpr, args[0] as PropExpr);
+        const rest = imp.prop();
         if (!rest) return left;
         const to = prop(rest);
         return { k: 'imp', from: left, to, loc: span(left.loc, to.loc) };

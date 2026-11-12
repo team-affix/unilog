@@ -1,15 +1,33 @@
 import { Loc, UnilogError } from './errors';
 import { isVariableName } from './parser';
 import { Decl, PropExpr, ProofExpr } from './syntax';
-import { app, atom, fresh, generalize, imp, instantiate, Printer, rigid, Scheme, Term, unify, Var } from './term';
+import {
+    all,
+    app,
+    arrow,
+    atom,
+    bound,
+    generalize,
+    imp,
+    isLambdaVariable,
+    lam,
+    Mismatch,
+    Printer,
+    Rigid,
+    Term,
+    resetFills,
+    Ty,
+    Unifier,
+    whnf,
+} from './term';
 
 /** A declaration after checking. */
 export interface Declaration {
     readonly module: string;
     readonly name: string;
     readonly kind: 'axiom' | 'inference';
-    /** What it proves, quantified over its variables. */
-    readonly scheme: Scheme;
+    /** What it proves: a closed proposition, its variables bound by "for every"s. */
+    readonly prop: Term;
     /** Declarations its proof refers to directly (empty for axioms), as `Module.name` keys. */
     readonly uses: readonly string[];
     /** For inferences: how the proof was checked, step by step. */
@@ -23,7 +41,7 @@ export interface Declaration {
 
 /**
  * A checked proof, step by step. Every node records what it proves at that point in the proof, with
- * variables as the proof filled them in (read them with `prune`/`Printer` once checking is done).
+ * unknowns as the proof filled them in (read them with a `Printer` once checking is done).
  */
 export type Derivation =
     /** A reference to a declaration, or to an assumption when `decl` is undefined. */
@@ -37,7 +55,7 @@ export type Derivation =
           readonly fn: Derivation;
           readonly arg: Derivation;
       }
-    /** `param => body` */
+    /** `\param. body` */
     | {
           readonly k: 'assume';
           readonly text: string;
@@ -61,31 +79,143 @@ export interface Module {
 
 export const keyOf = (d: { module: string; name: string }) => `${d.module}.${d.name}`;
 
+// --- Propositions: types, then terms ---
+
+/** Types while inferring them: `t`, gaps, and not-yet-known types. */
+type TyI = { k: 't' } | { k: 'fn'; from: TyI; to: TyI } | { k: 'tv'; ref?: TyI };
+
+const T: TyI = { k: 't' };
+const tv = (): TyI => ({ k: 'tv' });
+const prunetv = (t: TyI): TyI => {
+    while (t.k === 'tv' && t.ref) t = t.ref;
+    return t;
+};
+const occursTy = (v: TyI, t: TyI): boolean => {
+    t = prunetv(t);
+    return t === v || (t.k === 'fn' && (occursTy(v, t.from) || occursTy(v, t.to)));
+};
+function unifyTy(a: TyI, b: TyI): 'ok' | 'clash' | 'self' {
+    a = prunetv(a);
+    b = prunetv(b);
+    if (a === b) return 'ok';
+    if (a.k === 'tv') {
+        if (occursTy(a, b)) return 'self';
+        a.ref = b;
+        return 'ok';
+    }
+    if (b.k === 'tv') return unifyTy(b, a);
+    if (a.k === 't' && b.k === 't') return 'ok';
+    if (a.k === 'fn' && b.k === 'fn') {
+        const r = unifyTy(a.from, b.from);
+        return r === 'ok' ? unifyTy(a.to, b.to) : r;
+    }
+    return 'clash';
+}
+/** A finished type: anything still unknown is a proposition. */
+const final = (t: TyI): Ty => {
+    t = prunetv(t);
+    return t.k === 'fn' ? arrow(final(t.from), final(t.to)) : 't';
+};
+
 /**
- * Turns proposition syntax into a term. Variables with the same name are the same variable.
- * `rigid`: variables may not be instantiated (the proposition must hold for every value of them).
+ * Turns proposition syntax into a closed term. Every variable must be bound by a lambda. A lambda where a
+ * proposition is expected (a claim, either side of `=>`, a lambda's body) means "for every"; a lambda handed to
+ * something, or applied, is a gap.
+ *
+ * Types are inferred only to rule out self-application: `X X` would allow Curry's paradox, so it is rejected.
+ * Symbols (atoms) can be used at any type.
  */
-export function propositionTerm(e: PropExpr, rigidVars = false): Term {
-    return toTerm(e, new Map(), (n) => (rigidVars ? rigid(n) : fresh(n)));
+export function propositionTerm(e: PropExpr): Term {
+    const types = new Map<PropExpr, TyI>();
+    const where = (x: PropExpr) => x.loc;
+
+    const typeError = (r: 'clash' | 'self', x: PropExpr, what: string): never => {
+        throw new UnilogError(
+            r === 'self'
+                ? `${what} is applied to itself, which is not allowed (it would make a paradox provable)`
+                : `${what} is used inconsistently: as a proposition in one place and as something with a gap in another`,
+            where(x),
+        );
+    };
+    const describe = (x: PropExpr) => (x.k === 'var' || x.k === 'atom' ? `'${x.name}'` : 'This');
+
+    // Pass 1: types of bound variables, recorded on each lambda.
+    const asProp = (x: PropExpr, env: ReadonlyMap<string, TyI>): void => {
+        if (x.k === 'lam') {
+            const p = tv();
+            types.set(x, p);
+            asProp(x.body, new Map([...env, [x.param, p]]));
+            return;
+        }
+        if (x.k === 'imp') {
+            asProp(x.from, env);
+            asProp(x.to, env);
+            return;
+        }
+        const r = unifyTy(asValue(x, env), T);
+        if (r !== 'ok') typeError(r, x, describe(x));
+    };
+    const asValue = (x: PropExpr, env: ReadonlyMap<string, TyI>): TyI => {
+        switch (x.k) {
+            case 'atom':
+                return tv();
+            case 'var': {
+                const ty = env.get(x.name);
+                if (!ty)
+                    throw new UnilogError(
+                        `'${x.name}' is not bound: write '\\${x.name}.' to say which proposition it varies over ` +
+                            `(at the front means "for every ${x.name}")`,
+                        x.loc,
+                    );
+                return ty;
+            }
+            case 'lam': {
+                const p = tv();
+                types.set(x, p);
+                asProp(x.body, new Map([...env, [x.param, p]]));
+                return { k: 'fn', from: p, to: T };
+            }
+            case 'imp':
+                asProp(x, env);
+                return T;
+            case 'app': {
+                const f = asValue(x.fn, env);
+                const a = asValue(x.arg, env);
+                const r = tv();
+                const u = unifyTy(f, { k: 'fn', from: a, to: r });
+                if (u !== 'ok') typeError(u, x, describe(x.fn));
+                return r;
+            }
+        }
+    };
+    asProp(e, new Map());
+
+    // Pass 2: the term. `scope` holds bound names, innermost last.
+    const ty = (x: PropExpr) => final(types.get(x) ?? T);
+    const index = (name: string, scope: readonly string[]) => scope.length - 1 - scope.lastIndexOf(name);
+    const prop = (x: PropExpr, scope: readonly string[]): Term => {
+        if (x.k === 'lam') return all(x.param, ty(x), prop(x.body, [...scope, x.param]));
+        if (x.k === 'imp') return imp(prop(x.from, scope), prop(x.to, scope));
+        return value(x, scope);
+    };
+    const value = (x: PropExpr, scope: readonly string[]): Term => {
+        switch (x.k) {
+            case 'atom':
+                return atom(x.name);
+            case 'var':
+                return bound(index(x.name, scope));
+            case 'lam':
+                return lam(x.param, ty(x), prop(x.body, [...scope, x.param]));
+            case 'imp':
+                return prop(x, scope);
+            case 'app':
+                return app(value(x.fn, scope), value(x.arg, scope));
+        }
+    };
+    return prop(e, []);
 }
 
-/** Turns proposition syntax into a term. Variables with the same name in one declaration are the same variable. */
-function toTerm(e: PropExpr, vars: Map<string, Term>, makeVar: (name: string) => Term): Term {
-    switch (e.k) {
-        case 'atom':
-            return atom(e.name);
-        case 'var': {
-            if (e.name === '_') return fresh();
-            let v = vars.get(e.name);
-            if (!v) vars.set(e.name, (v = makeVar(e.name)));
-            return v;
-        }
-        case 'app':
-            return app(toTerm(e.fn, vars, makeVar), toTerm(e.arg, vars, makeVar));
-        case 'imp':
-            return imp(toTerm(e.from, vars, makeVar), toTerm(e.to, vars, makeVar));
-    }
-}
+// --- Proofs ---
 
 /** Prints proof syntax. Consecutive assumptions are written together: \F G X. body. */
 const showProof = (e: ProofExpr): string => {
@@ -108,6 +238,15 @@ const showProof = (e: ProofExpr): string => {
         }
     }
 };
+
+/** A proof that proves something other than what was needed at that point. Turned into a message by the caller. */
+class Mismatched {
+    constructor(
+        readonly proved: Term,
+        readonly needed: Term,
+        readonly mismatch: Mismatch,
+    ) {}
+}
 
 /**
  * Checks one module's declarations in order.
@@ -132,6 +271,8 @@ export function checkModule(
     const declaredHere = new Set(decls.flatMap((d) => (d.k === 'import' ? [] : [d.name])));
     /** The declaration being checked, for a clearer error on self-reference. */
     let current = '';
+    /** Matching state for the declaration being checked. */
+    let u = new Unifier();
 
     for (const decl of decls) {
         if (decl.k === 'import') {
@@ -144,15 +285,15 @@ export function checkModule(
         }
         if (local.has(decl.name)) throw new UnilogError(`'${decl.name}' is already declared in this module`, decl.loc);
         current = decl.name;
+        u = new Unifier();
+        resetFills();
 
-        const vars = new Map<string, Term>();
         if (decl.k === 'axiom') {
-            const prop = toTerm(decl.prop, vars, (n) => fresh(n));
             local.set(decl.name, {
                 module: name,
                 name: decl.name,
                 kind: 'axiom',
-                scheme: generalize(prop),
+                prop: propositionTerm(decl.prop),
                 uses: [],
                 loc: decl.loc,
                 nameLoc: decl.nameLoc,
@@ -161,30 +302,34 @@ export function checkModule(
         }
 
         const uses = new Set<string>();
-        const derivation = infer(decl.proof, new Map(), uses);
-        const inferred = derivation.term;
-        let proves: Term = inferred;
+        let derivation: Derivation;
+        let proves: Term;
         if (decl.prop) {
-            // The stated claim's variables are rigid: the proof must prove the claim for *every* value of them.
-            const claim = toTerm(decl.prop, vars, (n) => rigid(n));
-            const mismatch = unify(inferred, claim);
-            if (mismatch) {
+            const claim = propositionTerm(decl.prop);
+            try {
+                derivation = check(decl.proof, claim, new Map(), uses);
+            } catch (e) {
+                if (!(e instanceof Mismatched)) throw e;
                 const p = new Printer();
                 throw new UnilogError(
                     `The proof does not prove the stated claim.\n` +
-                        `  claimed: ${p.print(claim)}\n` +
-                        `  proved:  ${p.print(inferred)}\n` +
-                        explainMismatch(p, mismatch.a, mismatch.b, mismatch.occurs),
+                        `  claimed: ${p.print(e.needed)}\n` +
+                        `  proved:  ${p.print(e.proved)}\n` +
+                        explainMismatch(p, e.mismatch),
                     decl.loc,
                 );
             }
             proves = claim;
+        } else {
+            derivation = infer(decl.proof, new Map(), uses);
+            proves = derivation.term;
         }
+        undetermined(decl.loc);
         local.set(decl.name, {
             module: name,
             name: decl.name,
             kind: 'inference',
-            scheme: generalize(proves),
+            prop: decl.prop ? proves : generalize(proves),
             uses: [...uses],
             proof: derivation,
             stated: decl.prop !== undefined,
@@ -195,15 +340,35 @@ export function checkModule(
 
     return { name, file, imports, importLocs, decls: local };
 
-    /** Resolves a name to an assumption (undefined) or a declaration. */
+    /** Reports gaps the checker could not work out. */
+    function undetermined(loc: Loc): void {
+        const [first] = u.unresolved();
+        if (!first) return;
+        const p = new Printer();
+        const call = [first.head, ...first.args].map((t) => p.print(t)).join(' ');
+        throw new UnilogError(
+            `Cannot tell where the gap is in ${p.print(first.head)}: ${call} must be ${p.print(first.rhs)}, ` +
+                `and more than one gap would fit. State the claim, so the checker doesn't have to guess.`,
+            loc,
+        );
+    }
+
+    /** Matches what a proof proved against what was needed there, or throws. */
+    function expect(proved: Term, needed: Term): void {
+        const m = u.unify(needed, proved);
+        if (m) throw new Mismatched(proved, needed, m);
+    }
+
+    /** Resolves a name to an assumption or a declaration, with its leading "for every"s instantiated. */
     function lookup(
         e: ProofExpr & { k: 'ref' },
-        env: ReadonlyMap<string, Var>,
+        env: ReadonlyMap<string, Term>,
         uses: Set<string>,
+        instantiate = true,
     ): { term: Term; decl?: Declaration } {
         const use = (d: Declaration) => {
             uses.add(keyOf(d));
-            return { term: instantiate(d.scheme), decl: d };
+            return { term: instantiate ? u.instantiate(d.prop) : d.prop, decl: d };
         };
         if (e.path.length === 1) {
             const id = e.path[0] as string;
@@ -212,10 +377,10 @@ export function checkModule(
                 const assumed = env.get(id);
                 if (!assumed)
                     throw new UnilogError(
-                        `'${id}' is not an assumption in scope (assumptions are introduced with '${id} => ...')`,
+                        `'${id}' is not an assumption in scope (assumptions are introduced with '\\${id}. ...')`,
                         e.loc,
                     );
-                return { term: assumed };
+                return { term: instantiate ? u.instantiate(assumed) : assumed };
             }
             const mine = local.get(id);
             if (mine) return use(mine);
@@ -250,14 +415,14 @@ export function checkModule(
         return use(d);
     }
 
-    /** Infers what a proof proves. */
-    function infer(e: ProofExpr, env: ReadonlyMap<string, Var>, uses: Set<string>): Derivation {
+    /** Works out what a proof proves. */
+    function infer(e: ProofExpr, env: ReadonlyMap<string, Term>, uses: Set<string>): Derivation {
         const text = showProof(e);
         switch (e.k) {
             case 'ref':
                 return { k: 'use', text, loc: e.loc, ...lookup(e, env, uses) };
             case 'lam': {
-                const assumed = fresh();
+                const assumed = u.fresh();
                 const body = infer(e.body, new Map([...env, [e.param, assumed]]), uses);
                 return {
                     k: 'assume',
@@ -269,33 +434,151 @@ export function checkModule(
                     body,
                 };
             }
-            case 'app': {
-                const fnD = infer(e.fn, env, uses);
-                const argD = infer(e.arg, env, uses);
-                const fn = fnD.term;
-                const arg = argD.term;
-                const result = fresh();
-                const p = new Printer();
-                // Print before unifying, so the message shows the propositions as they were.
-                const before = { fn: p.print(fn), arg: p.print(arg) };
-                const mismatch = unify(fn, imp(arg, result));
-                if (mismatch)
-                    throw new UnilogError(
-                        `Cannot apply ${showProof(e.fn)} to ${showProof(e.arg)}.\n` +
-                            `  ${showProof(e.fn)} proves: ${before.fn}\n` +
-                            `  ${showProof(e.arg)} proves: ${before.arg}\n` +
-                            explainMismatch(p, mismatch.a, mismatch.b, mismatch.occurs),
-                        e.loc,
-                    );
-                return { k: 'apply', text, term: result, loc: e.loc, fn: fnD, arg: argD };
+            case 'app':
+                return applied(e, env, uses);
+        }
+    }
+
+    /**
+     * Checks that a proof proves `needed`. A "for every X" in `needed` is proved for a fixed symbol X about which
+     * nothing is known; an assumption takes its proposition from `needed`, so it can be universal.
+     */
+    function check(e: ProofExpr, needed: Term, env: ReadonlyMap<string, Term>, uses: Set<string>): Derivation {
+        const target = whnf(needed);
+        if (target.k === 'all' && e.k === 'ref') {
+            // A universal needed, and a name that proves a universal: compare them as they are first, binder
+            // against binder. Instantiating first would lose how the two variables correspond.
+            const found = lookup(e, env, uses, false);
+            const mark = u.mark();
+            if (u.unify(target, found.term) === undefined)
+                return {
+                    k: 'use',
+                    text: showProof(e),
+                    loc: e.loc,
+                    term: target,
+                    ...(found.decl && { decl: found.decl }),
+                };
+            u.rollback(mark);
+        }
+        if (target.k === 'all') {
+            const x: Rigid = u.enter(target.hint, target.ty);
+            try {
+                return check(e, whnf(openAll(target, x)), env, uses);
+            } finally {
+                u.leave();
             }
         }
+        if (e.k === 'lam') {
+            let from: Term;
+            let to: Term;
+            if (target.k === 'imp') ({ from, to } = target);
+            else {
+                from = u.fresh();
+                to = u.fresh();
+                const m = u.unify(target, imp(from, to));
+                if (m) throw new Mismatched(imp(from, to), target, m);
+            }
+            const body = check(e.body, to, new Map([...env, [e.param, from]]), uses);
+            return {
+                k: 'assume',
+                text: showProof(e),
+                term: imp(from, body.term),
+                loc: e.loc,
+                param: e.param,
+                paramLoc: e.paramLoc,
+                body,
+            };
+        }
+        if (e.k === 'app') return applied(e, env, uses, target);
+        const d = infer(e, env, uses);
+        expect(d.term, target);
+        return d;
+    }
+
+    /**
+     * `f a b ...`: works out f, then takes each argument in turn as a premise. When the result is known (`needed`),
+     * it is matched first: that settles gaps the arguments alone would leave open, as in `exists_intro`.
+     */
+    function applied(
+        e: ProofExpr & { k: 'app' },
+        env: ReadonlyMap<string, Term>,
+        uses: Set<string>,
+        needed?: Term,
+    ): Derivation {
+        const calls: (ProofExpr & { k: 'app' })[] = [];
+        let head: ProofExpr = e;
+        while (head.k === 'app') {
+            calls.unshift(head);
+            head = head.fn;
+        }
+        const headD = infer(head, env, uses);
+        let current = headD.term;
+        const premises: { needs: Term; gives: Term }[] = [];
+        for (const call of calls) {
+            const t = u.instantiate(current);
+            let from: Term;
+            let to: Term;
+            if (t.k === 'imp') ({ from, to } = t);
+            else {
+                from = u.fresh();
+                to = u.fresh();
+                const m = u.unify(t, imp(from, to));
+                if (m) {
+                    const p = new Printer();
+                    throw new UnilogError(
+                        `Cannot apply ${showProof(call.fn)} to ${showProof(call.arg)}: ` +
+                            `${showProof(call.fn)} proves ${p.print(t)}, which is not an implication`,
+                        call.loc,
+                    );
+                }
+            }
+            premises.push({ needs: from, gives: to });
+            current = to;
+        }
+        if (needed) expect(u.instantiate(current), needed);
+
+        let fnD = headD;
+        calls.forEach((call, i) => {
+            const { needs, gives } = premises[i] as { needs: Term; gives: Term };
+            let argD: Derivation;
+            // Printed before checking the argument, so a message shows the rule as it was.
+            const p = new Printer();
+            const before = p.print(fnD.term);
+            try {
+                argD = check(call.arg, needs, env, uses);
+            } catch (err) {
+                if (!(err instanceof Mismatched)) throw err;
+                throw new UnilogError(
+                    `Cannot apply ${showProof(call.fn)} to ${showProof(call.arg)}.\n` +
+                        `  ${showProof(call.fn)} proves: ${before}\n` +
+                        `  ${showProof(call.arg)} proves: ${p.print(err.proved)}\n` +
+                        explainMismatch(p, err.mismatch),
+                    call.loc,
+                );
+            }
+            fnD = { k: 'apply', text: showProof(call), term: gives, loc: call.loc, fn: fnD, arg: argD };
+        });
+        if (!needed) fnD = { ...fnD, term: u.instantiate(fnD.term) };
+        return fnD;
     }
 }
 
-function explainMismatch(p: Printer, a: Term, b: Term, occurs?: boolean): string {
-    if (occurs) return `  ${p.print(a)} would have to contain itself: ${p.print(a)} = ${p.print(b)}`;
-    const describe = (t: Term) =>
-        t.k === 'rigid' ? `${p.print(t)} (a variable of the claim, so it must stay general)` : p.print(t);
-    return `  ${describe(a)} does not match ${describe(b)}`;
+const openAll = (t: Term & { k: 'all' }, x: Term) => whnf(app(lam(t.hint, t.ty, t.body), x));
+
+function explainMismatch(p: Printer, m: Mismatch): string {
+    if (m.occurs) return `  ${p.print(m.a)} would have to contain itself: ${p.print(m.a)} = ${p.print(m.b)}`;
+    if (m.escape)
+        return isLambdaVariable(m.escape)
+            ? `  ${p.print(m.a)} can't depend on ${p.print(m.escape)}, the variable of a lambda it is outside of: ` +
+                  `${p.print(m.a)} = ${p.print(m.b)}`
+            : `  ${p.print(m.escape)} stands for every ${m.escape.hint || 'value'} here, so it can't be part of ` +
+                  `${p.print(m.a)}, which is about something outside: ${p.print(m.a)} = ${p.print(m.b)}`;
+    if (m.type) return `  ${p.print(m.a)} does not match ${p.print(m.b)}: one is a proposition and the other has a gap`;
+    const describe = (t: Term) => {
+        const w = whnf(t);
+        return w.k === 'rigid'
+            ? `${p.print(w)} (stands for every ${w.hint || 'value'}, so it must stay general)`
+            : p.print(t);
+    };
+    return `  ${describe(m.a)} does not match ${describe(m.b)}`;
 }

@@ -3,7 +3,7 @@ import path from 'path';
 import { Declaration, Derivation, keyOf, Module } from '../check';
 import { Loc, UnilogError } from '../errors';
 import { parse } from '../parser';
-import { Printer, prune } from '../term';
+import { Printer, whnf } from '../term';
 import { PROJECT_FILE, SourceProvider, targetOf, Workspace } from '../workspace';
 
 /**
@@ -119,7 +119,7 @@ function stepsAt(d: Derivation, pos: Position, cursor: boolean): Derivation[] {
 /** Proof steps (`proof : proposition`), in the editor's step grammar, which colors the proof part as a proof. */
 const steps = (lines: string[]) => '```unilog-step\n' + lines.join('\n') + '\n```';
 /** A declaration as a step line (its name is a proof), then whether it is an axiom or an inference. */
-const describe = (d: Declaration, p: Printer) => `${steps([`${keyOf(d)} : ${p.print(d.scheme.body)}`])}\n\n${d.kind}`;
+const describe = (d: Declaration, p: Printer) => `${steps([`${keyOf(d)} : ${p.print(d.prop)}`])}\n\n${d.kind}`;
 
 /** What a hover shows, and the range of source it describes (which the editor highlights). */
 export interface HoverInfo {
@@ -132,7 +132,7 @@ export interface HoverInfo {
  * - a declaration's name: what it proves;
  * - a rule's name applied to arguments, e.g. `pair` in `pair (snd P) (fst P)`: every step of applying it, one
  *   argument at a time, then its general statement;
- * - an assumption where it is introduced (`P` in `P => ...`): what it is assumed to prove;
+ * - an assumption where it is introduced (`P` in `\P. ...`): what it is assumed to prove;
  * - any other proof step: what that step alone proves. The gap after `pair` is the step `pair (snd P)`; the
  *   gap after `(snd P)` is the whole `pair (snd P) (fst P)`. A parenthesized step includes its parentheses;
  * - an import: the module.
@@ -168,7 +168,7 @@ export function hover(a: Analysis, file: string, pos: Position): HoverInfo | und
         p.print(d.proof.term);
 
         if (step.k === 'assume' && contains(step.paramLoc, pos)) {
-            const assumed = prune(step.term);
+            const assumed = whnf(step.term);
             const proves = assumed.k === 'imp' ? p.print(assumed.from) : '?';
             return { markdown: steps([`${step.param} : ${proves}`]) + '\n\nassumption', range: rangeOf(step.paramLoc) };
         }
@@ -205,7 +205,7 @@ export function inlayHints(a: Analysis, file: string): InlayHint[] {
     return [...mod.decls.values()]
         .filter((d) => d.kind === 'inference' && !d.stated && d.proof)
         .map((d) => {
-            const prop = new Printer().print((d.proof as Derivation).term);
+            const prop = new Printer().print(d.prop);
             return { position: rangeOf(d.nameLoc).end, label: `: ${prop}`, insert: ` : ${prop}` };
         });
 }
@@ -249,7 +249,7 @@ export function outline(a: Analysis, file: string): OutlineEntry[] {
     return [...mod.decls.values()].map((d) => ({
         name: d.name,
         kind: d.kind,
-        detail: new Printer().print(d.scheme.body),
+        detail: new Printer().print(d.prop),
         range: rangeOf(d.loc),
         selectionRange: rangeOf(d.nameLoc),
     }));

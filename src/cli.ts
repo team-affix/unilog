@@ -66,17 +66,11 @@ program
     .description(
         'List the declarations that prove a proposition, e.g. `unilog find false`. Exits non-zero if there are none.',
     )
-    .argument('<proposition>', 'the proposition, quoted if it has spaces or parentheses: "wrong X"')
+    .argument('<proposition>', 'the proposition, quoted if it has spaces: "wrong bob" or "\\X. wrong X"')
     .argument('[dir]', 'directory', '.')
-    .option(
-        '-u, --unify',
-        "match any declaration that unifies with the query (both sides' variables may bind): shape matching, not proof",
-    )
     .option('-e, --exact', 'match only declarations of exactly the same generality (variable names may differ)')
     .option('--json', 'output JSON')
-    .action((query: string, dir: string, opts: { unify?: boolean; exact?: boolean; json?: boolean }) =>
-        emit(find(query, dir, opts)),
-    );
+    .action((query: string, dir: string, opts: { exact?: boolean; json?: boolean }) => emit(find(query, dir, opts)));
 
 program
     .command('proof')

@@ -2,7 +2,7 @@
 # Anything proved with it lists Logic.Classical.lem among its axioms (`unilog axioms`).
 import Logic.Prelude;
 
-lem : or P (P => false);
+lem : \P. or P (P => false);
 
-double_negation : ((P => false) => false) => P =
+double_negation : \P. ((P => false) => false) => P =
     \Nnp. case lem (\P. P) (\Np. explode (Nnp Np));

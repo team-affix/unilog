@@ -1,5 +1,10 @@
-# Equality as ordinary rules. Substitution: if X and Y are the same, whatever holds of X holds of Y.
-refl : eq X X;
-sym : eq X Y => eq Y X;
-trans : eq X Y => eq Y Z => eq X Z;
-subst : eq X Y => P X => P Y;
+# Equality as two ordinary rules. Everything else about identity follows from them.
+refl : \X. eq X X;
+
+# Substitution: if X and Y are the same, whatever holds of X holds of Y. P is a proposition with a gap,
+# so it works in any position: the checker finds the gap by comparing the before and after.
+subst : \X Y P. eq X Y => P X => P Y;
+
+# Symmetry and transitivity are inferences, not beliefs.
+sym : \X Y. eq X Y => eq Y X = \E. subst E refl;
+trans : \X Y Z. eq X Y => eq Y Z => eq X Z = \Exy Eyz. subst Eyz Exy;

@@ -50,6 +50,8 @@ const PROOF = 'entity.name.function.proof.unilog';
 const LAMBDA = 'keyword.operator.lambda.unilog';
 // Atoms (lowercase symbols in propositions) are colored too: they are what propositions are about.
 const ATOM = 'constant.other.symbol.unilog';
+// Quantification: the lambda head in a proposition, and a symbol whose argument is a lambda.
+const QUANT = 'keyword.other.quantifier.unilog';
 
 const cases = [
     [
@@ -193,6 +195,43 @@ const cases = [
             ['F', ASSUMPTION],
             ['X', ASSUMPTION],
             [')', 'punctuation.parenthesis.unilog'],
+            [';', 'punctuation.terminator.unilog'],
+        ],
+    ],
+    [
+        // A universal: the lambda head is a quantifier, its variables are proposition variables.
+        ['b : \\X. likes X cake => likes X sugar;'],
+        [
+            ['b', 'entity.name.function.unilog'],
+            [':', 'keyword.operator.colon.unilog'],
+            ['\\', QUANT],
+            ['X', PROP_VAR],
+            ['.', QUANT],
+            ['likes', ATOM],
+            ['X', PROP_VAR],
+            ['cake', ATOM],
+            ['=>', 'keyword.operator.arrow.unilog'],
+            ['likes', ATOM],
+            ['X', PROP_VAR],
+            ['sugar', ATOM],
+            [';', 'punctuation.terminator.unilog'],
+        ],
+    ],
+    [
+        // A user-defined quantifier: the symbol in front of the lambda is colored as a quantifier.
+        ['s : exists \\X Y. loves X Y = proof;'],
+        [
+            ['s', 'entity.name.function.unilog'],
+            [':', 'keyword.operator.colon.unilog'],
+            ['exists', QUANT],
+            ['\\', QUANT],
+            ['X Y', PROP_VAR],
+            ['.', QUANT],
+            ['loves', ATOM],
+            ['X', PROP_VAR],
+            ['Y', PROP_VAR],
+            ['=', 'keyword.operator.equals.unilog'],
+            ['proof', PROOF],
             [';', 'punctuation.terminator.unilog'],
         ],
     ],

@@ -2,19 +2,19 @@
 # "add M N K" (M + N = K) holds. A proof of a sum is a step-by-step calculation, checked by Unilog.
 
 zero_nat : nat z;
-succ_nat : nat N => nat (s N);
+succ_nat : \N. nat N => nat (s N);
 
-add_zero : nat N => add z N N;
-add_succ : add M N K => add (s M) N (s K);
+add_zero : \N. nat N => add z N N;
+add_succ : \M N K. add M N K => add (s M) N (s K);
 
-mul_zero : mul z N z;
-mul_succ : mul M N P => add N P Q => mul (s M) N Q;
+mul_zero : \N. mul z N z;
+mul_succ : \M N P Q. mul M N P => add N P Q => mul (s M) N Q;
 
 even_zero : even z;
-even_next : even N => even (s (s N));
+even_next : \N. even N => even (s (s N));
 
-lt_zero : nat N => lt z (s N);
-lt_succ : lt M N => lt (s M) (s N);
+lt_zero : \N. nat N => lt z (s N);
+lt_succ : \M N. lt M N => lt (s M) (s N);
 
 two_nat : nat (s (s z)) = succ_nat (succ_nat zero_nat);
 
@@ -35,4 +35,4 @@ four_even : even (s (s (s (s z)))) = even_next (even_next even_zero);
 one_lt_three : lt (s z) (s (s (s z))) = lt_succ (lt_zero (succ_nat zero_nat));
 
 # A general rule, not a calculation: adding 1 on the left adds 1 to the sum, whatever the numbers are.
-plus_one : add M N K => add (s M) N (s K) = add_succ;
+plus_one : \M N K. add M N K => add (s M) N (s K) = add_succ;

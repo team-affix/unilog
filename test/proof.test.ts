@@ -11,9 +11,9 @@ function project(files: Record<string, string>) {
 
 const T = {
     'M/T.ul': `
-        b : likes X cake => likes X sugar;
+        b : \\X. likes X cake => likes X sugar;
         a : likes jake cake;
-        pair : A => B => both A B;
+        pair : \\A B. A => B => both A B;
         lemma = b a;
         twice = pair lemma lemma;
         lift = \\P. pair P lemma;
@@ -70,7 +70,7 @@ describe('proof', () => {
 
     it('follows proofs across modules', () => {
         const dir = project({
-            'Kant/Ethics.ul': 'duty : good X => ought X;\nhonesty : good truthful;\ntell_truth = duty honesty;',
+            'Kant/Ethics.ul': 'duty : \\X. good X => ought X;\nhonesty : good truthful;\ntell_truth = duty honesty;',
             'Mine/Main.ul': 'import Kant.Ethics;\nmine = tell_truth;',
         });
         expect(commands.proof('Mine.Main.mine', dir).out).toEqual([
@@ -105,9 +105,9 @@ describe('proof', () => {
 
     it('--flat lists every declaration the proof relies on, once each, in declaration order', () => {
         expect(commands.proof('M.T.twice', project(T), { flat: true }).out).toEqual([
-            'M.T.b : likes X cake => likes X sugar   [axiom]',
+            'M.T.b : \\X. likes X cake => likes X sugar   [axiom]',
             'M.T.a : likes jake cake   [axiom]',
-            'M.T.pair : A => B => both A B   [axiom]',
+            'M.T.pair : \\A B. A => B => both A B   [axiom]',
             'M.T.lemma = b a : likes jake sugar',
             'M.T.twice = pair lemma lemma : both (likes jake sugar) (likes jake sugar)',
         ]);
@@ -142,25 +142,25 @@ describe('proof', () => {
 
     it('--flat follows inferences through their own proofs, across modules', () => {
         const dir = project({
-            'Kant/Ethics.ul': 'duty : good X => ought X;\nhonesty : good truthful;\ntell_truth = duty honesty;',
+            'Kant/Ethics.ul': 'duty : \\X. good X => ought X;\nhonesty : good truthful;\ntell_truth = duty honesty;',
             'Mine/Main.ul': 'import Kant.Ethics;\nmine = tell_truth;\nboth_ways = \\P. duty P;',
         });
         expect(commands.proof('Mine.Main.mine', dir, { flat: true }).out).toEqual([
-            'Kant.Ethics.duty : good X => ought X   [axiom]',
+            'Kant.Ethics.duty : \\X. good X => ought X   [axiom]',
             'Kant.Ethics.honesty : good truthful   [axiom]',
             'Kant.Ethics.tell_truth = duty honesty : ought truthful',
             'Mine.Main.mine = tell_truth : ought truthful',
         ]);
         expect(commands.proof('Mine.Main.both_ways', dir, { flat: true }).out).toEqual([
-            'Kant.Ethics.duty : good X => ought X   [axiom]',
-            'Mine.Main.both_ways = \\P. duty P : good X => ought X',
+            'Kant.Ethics.duty : \\X. good X => ought X   [axiom]',
+            'Mine.Main.both_ways = \\P. duty P : \\X. good X => ought X',
         ]);
     });
 
     it('--flat --shallow lists only what the proof uses directly', () => {
         expect(commands.proof('M.T.use_lift', project(T), { flat: true, shallow: true }).out).toEqual([
             'M.T.a : likes jake cake   [axiom]',
-            'M.T.lift : A => both A (likes jake sugar)   [inference]',
+            'M.T.lift : \\A. A => both A (likes jake sugar)   [inference]',
             'M.T.use_lift = lift a : both (likes jake cake) (likes jake sugar)',
         ]);
     });
@@ -173,7 +173,7 @@ describe('proof', () => {
         expect(
             JSON.parse(commands.proof('M.T.lemma', project(T), { flat: true, json: true }).out[0] as string),
         ).toEqual([
-            { name: 'M.T.b', kind: 'axiom', proposition: 'likes X cake => likes X sugar' },
+            { name: 'M.T.b', kind: 'axiom', proposition: '\\X. likes X cake => likes X sugar' },
             { name: 'M.T.a', kind: 'axiom', proposition: 'likes jake cake' },
             { name: 'M.T.lemma', kind: 'inference', proposition: 'likes jake sugar', proof: 'b a' },
         ]);

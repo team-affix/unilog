@@ -10,8 +10,8 @@ import { tmpDir, write } from './helpers';
  */
 const ALICE = {
     'Alice/Beliefs.ul': `
-        lying_wrong : lies X => wrong X;
-        surprise_lies : surprises X => lies X;
+        lying_wrong : \\X. lies X => wrong X;
+        surprise_lies : \\X. surprises X => lies X;
         party : surprises bob_party;
     `,
 };
@@ -38,7 +38,7 @@ describe('axioms: counting', () => {
             {
                 // Alice's module also imports Shared.Common: a diamond, so Shared.Common must be counted once.
                 'Alice/Beliefs.ul': 'import Shared.Common;\n' + (ALICE['Alice/Beliefs.ul'] as string),
-                'Shared/Common.ul': 'common : everyone (agrees X);',
+                'Shared/Common.ul': 'common : \\X. everyone (agrees X);',
             },
         );
 
@@ -78,8 +78,8 @@ describe('axioms: counting', () => {
     });
 
     it('prints propositions as written, including variables and nested implications', () => {
-        const d = debate('r : (a X => b) => f (g X) => c;');
-        expect(commands.axioms('Bob.Rebuttal', d).out[0]).toBe('Bob.Rebuttal.r : (a X => b) => f (g X) => c');
+        const d = debate('r : \\X. (a X => b) => f (g X) => c;');
+        expect(commands.axioms('Bob.Rebuttal', d).out[0]).toBe('Bob.Rebuttal.r : \\X. (a X => b) => f (g X) => c');
     });
 
     it('only parses: it counts axioms in code that would fail to check', () => {
@@ -116,9 +116,13 @@ describe('rests-on: what a conclusion depends on', () => {
         expect(JSON.parse(commands.restsOn('Bob.Rebuttal.party_wrong', dir, true).out[0] as string)).toEqual({
             declaration: 'Bob.Rebuttal.party_wrong',
             axioms: [
-                { name: 'Alice.Beliefs.lying_wrong', module: 'Alice.Beliefs', proposition: 'lies X => wrong X' },
+                { name: 'Alice.Beliefs.lying_wrong', module: 'Alice.Beliefs', proposition: '\\X. lies X => wrong X' },
                 { name: 'Alice.Beliefs.party', module: 'Alice.Beliefs', proposition: 'surprises bob_party' },
-                { name: 'Alice.Beliefs.surprise_lies', module: 'Alice.Beliefs', proposition: 'surprises X => lies X' },
+                {
+                    name: 'Alice.Beliefs.surprise_lies',
+                    module: 'Alice.Beliefs',
+                    proposition: '\\X. surprises X => lies X',
+                },
             ],
         });
     });
@@ -176,7 +180,7 @@ describe('summary', () => {
             {
                 name: 'Bob.Rebuttal.via',
                 kind: 'inference',
-                proposition: 'lies X => wrong X',
+                proposition: '\\X. lies X => wrong X',
                 uses: ['Alice.Beliefs.lying_wrong'],
                 restsOn: ['Alice.Beliefs.lying_wrong'],
             },
