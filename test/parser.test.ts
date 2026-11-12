@@ -3,7 +3,7 @@ import { parse, UnilogError } from '../src';
 
 describe('lexing (via parse)', () => {
     it('joins dotted names into qualified names, and ends declarations with semicolons', () => {
-        const decls = parse('a : b => C; # comment\nx = Mod.Sub.y z;', 'f');
+        const decls = parse('a : \\C. b => C; # comment\nx = Mod.Sub.y z;', 'f');
         expect(decls).toHaveLength(2);
         expect(decls[1]).toMatchObject({
             proof: { k: 'app', fn: { k: 'ref', path: ['Mod', 'Sub', 'y'] }, arg: { path: ['z'] } },
@@ -57,14 +57,38 @@ describe('parse', () => {
     });
 
     it('treats uppercase and _ names as variables in propositions', () => {
-        const [d] = parse('r : X _y z;', 'f');
+        const [d] = parse('r : \\X _y. X _y z;', 'f');
+        expect(d).toMatchObject({
+            prop: {
+                k: 'lam',
+                param: 'X',
+                body: {
+                    k: 'lam',
+                    param: '_y',
+                    body: {
+                        k: 'app',
+                        fn: { k: 'app', fn: { k: 'var', name: 'X' }, arg: { k: 'var', name: '_y' } },
+                        arg: { k: 'atom' },
+                    },
+                },
+            },
+        });
+    });
+
+    it('parses a lambda as the last argument, its body running to the end', () => {
+        const [d] = parse('s : exists \\X. loves X mom => q;', 'f');
         expect(d).toMatchObject({
             prop: {
                 k: 'app',
-                fn: { k: 'app', fn: { k: 'var', name: 'X' }, arg: { k: 'var', name: '_y' } },
-                arg: { k: 'atom' },
+                fn: { k: 'atom', name: 'exists' },
+                arg: { k: 'lam', param: 'X', body: { k: 'imp', to: { k: 'atom', name: 'q' } } },
             },
         });
+    });
+
+    it('parses a parenthesized lambda as a premise', () => {
+        const [d] = parse('p : (\\M. mortal M) => mortal socrates;', 'f');
+        expect(d).toMatchObject({ prop: { k: 'imp', from: { k: 'lam', param: 'M' } } });
     });
 
     it('parses assumptions in proofs', () => {
@@ -118,7 +142,12 @@ describe('parse', () => {
             /Assumptions are written with a backslash: '\\X\. \.\.\.' rather than 'X => \.\.\.'/,
         ],
         ['unbalanced parens', 'a : (b c;', /1:9: Syntax error: missing '\)'/],
-        ['empty proposition', 'a : ;', /1:5: Syntax error: .*expecting \{'\(', a name\}/],
+        ['empty proposition', 'a : ;', /1:5: Syntax error: .*expecting \{'\\X\.', '\(', a name\}/],
+        [
+            'a lowercase variable in a proposition',
+            'a : \\x. p x;',
+            /binds a variable, so its name starts with an uppercase/,
+        ],
         ['import without a module', 'import ;', /1:8: Syntax error: missing a name/],
     ])('rejects %s', (_, src, msg) => {
         expect(() => parse(src, 'f')).toThrow(UnilogError);

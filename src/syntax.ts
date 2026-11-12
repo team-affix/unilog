@@ -5,7 +5,12 @@ export type PropExpr =
     | { k: 'atom'; name: string; loc: Loc }
     | { k: 'var'; name: string; loc: Loc }
     | { k: 'app'; fn: PropExpr; arg: PropExpr; loc: Loc }
-    | { k: 'imp'; from: PropExpr; to: PropExpr; loc: Loc };
+    | { k: 'imp'; from: PropExpr; to: PropExpr; loc: Loc }
+    /**
+     * `\X. body`. Where a proposition is expected it means "for every X, body"; handed to something (an
+     * argument, or applied) it is a gap. `paramLoc` is where X is written.
+     */
+    | { k: 'lam'; param: string; body: PropExpr; loc: Loc; paramLoc: Loc };
 
 /** Proof syntax. */
 export type ProofExpr =
@@ -13,13 +18,13 @@ export type ProofExpr =
     | { k: 'ref'; path: string[]; loc: Loc }
     /** Applying a proof to another: `b a`. */
     | { k: 'app'; fn: ProofExpr; arg: ProofExpr; loc: Loc }
-    /** Assuming a proof: `p => body` proves `A => B` if `body` proves B given p proves A. `paramLoc` is where `p` is written. */
+    /** Assuming a proof: `\\P. body` proves `A => B` if `body` proves B given P proves A. `paramLoc` is where `P` is written. */
     | { k: 'lam'; param: string; body: ProofExpr; loc: Loc; paramLoc: Loc };
 
 export type Decl =
     /** `pathLoc` is the module name's location. */
     | { k: 'import'; path: string[]; loc: Loc; pathLoc: Loc }
-    /** `name : P.` A stated belief. `nameLoc` is the name's location. */
+    /** `name : P;` A stated belief. `nameLoc` is the name's location. */
     | { k: 'axiom'; name: string; prop: PropExpr; loc: Loc; nameLoc: Loc }
-    /** `name = proof.` or `name : P = proof.` */
+    /** `name = proof;` or `name : P = proof;` */
     | { k: 'inference'; name: string; prop?: PropExpr; proof: ProofExpr; loc: Loc; nameLoc: Loc };

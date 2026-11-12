@@ -1,6 +1,6 @@
 # Design: quantifiers
 
-Status: proposal, not implemented.
+Status: implemented in 0.3.0. The [language reference](../language.md) describes the result.
 
 ## Goal
 
@@ -20,6 +20,9 @@ One addition: **lambdas in propositions.** `\X. P` is P with a gap at X, and
   `exists` is an ordinary atom, and its meaning comes from rules users write.
 - **Types are inferred, never written,** and keep lambdas sound.
 
+Which of the two a lambda is depends only on where it is written: as an argument, or applied, it is a gap;
+anywhere a proposition is expected (a claim, either side of `=>`, a lambda's body) it means "for every".
+
 There are no built-in quantifiers, connectives or equality, and no standard library.
 
 ## Syntax
@@ -30,7 +33,7 @@ q \X. P        the symbol q applied to a gap (q is an ordinary atom)
 ```
 
 - Bodies run as far right as possible; parenthesize to stop them: `(\X. mortal X) => mortal socrates`.
-- Every variable in a proposition must be bound by a lambda. A free variable is an error with a fix.
+- Every variable in a proposition must be bound by a lambda. A free variable is an error that says how to bind it.
 - Proofs are unchanged.
 
 ```
@@ -39,8 +42,9 @@ b : \X. likes X cake => likes X sugar;
 
 ## Universal: a gap nothing consumes
 
-Wherever a proposition is expected (a claim, either side of `=>`) and something with a gap appears, it
-is claimed for every filling of the gap. The inferred types say where that is, so this is never a guess.
+Wherever a proposition is expected (a claim, either side of `=>`, a lambda's body) and a lambda appears, it
+is claimed for every filling of the gap. This is decided by where the lambda is written, so it is never a
+guess.
 
 - **Using** such a proof: X becomes an unknown, filled in by matching (as declarations work today, now
   also for assumptions and results).
@@ -71,8 +75,11 @@ When B is an unknown, matching `B T` against a proposition is solved only when t
 - T is a fixed symbol: the gap is wherever it occurs;
 - two fillings `B X` and `B Y` are known: the gap is where they differ.
 
-Otherwise the checker asks for the claim to be stated rather than guessing. (This is the decidable
-fragment of higher-order unification used by Twelf and λProlog.)
+In general the checker tries each possible gap (each choice of which occurrences become the gap) against
+everything else it knows, and takes the one that fits. If more than one fits, it asks for the claim to be
+stated rather than guessing. (The cases above are the decidable fragment of higher-order unification used
+by Twelf and λProlog.) When a universal is needed and a name proving a universal is given, the two are
+compared binder against binder first.
 
 ## Examples
 
@@ -130,10 +137,9 @@ expected and nothing consumes it, so it is universal.
 - **`unilog find`:** a query is an ordinary closed proposition. The default lists declarations whose
   proof would be accepted for it; `--exact` lists the same proposition up to renaming. `--unify` is
   removed.
-- **Editor:** light yellow (`#E8DE8A`) marks quantification. A universal lambda's `\` and bound
-  variables are colored as a quantifier, and so is any symbol directly followed by a lambda (`exists`).
-  Since a forgotten `exists` silently becomes "for every", hover always says which one a lambda is. A free
-  variable gets a quick fix that binds it.
+- **Editor:** light yellow (`#E8DE8A`) marks quantification: the `\` and `.` of a lambda in a
+  proposition, and any symbol directly followed by a lambda (`exists`). A forgotten `exists` silently becomes
+  "for every", so a lambda with no yellow symbol in front of it is a universal.
 
 ## Guarantees and limits
 

@@ -7,7 +7,7 @@ import { proves, tmpDir, write } from './helpers';
 const KANT = {
     'Kant/Ethics.ul': `
         good_will : good will;
-        duty : good X => ought (act_from X);
+        duty : \\X. good X => ought (act_from X);
     `,
 };
 
@@ -131,7 +131,7 @@ describe('axiomsOf: everything a claim rests on', () => {
         const dir = tmpDir();
         write(dir, {
             'Base/Facts.ul': 'a : likes jake cake;\nunused : irrelevant;',
-            'Base/Rules.ul': 'b : likes X cake => likes X sugar;\nlift : P => believed P;',
+            'Base/Rules.ul': 'b : \\X. likes X cake => likes X sugar;\nlift : \\P. P => believed P;',
             'Mine/Main.ul': 'import Base.Facts;\nimport Base.Rules;\nc = b a;\nd = lift c;\ne = \\P. P;',
         });
         const ws = new Workspace([dir]);
@@ -247,7 +247,7 @@ describe('commands', () => {
         write(dir, KANT);
         expect(commands.check(dir, { verbose: true }).out.slice(0, 2)).toEqual([
             'axiom     Kant.Ethics.good_will : good will',
-            'axiom     Kant.Ethics.duty : good X => ought (act_from X)',
+            'axiom     Kant.Ethics.duty : \\X. good X => ought (act_from X)',
         ]);
     });
 
@@ -269,7 +269,7 @@ describe('commands', () => {
         const dir = tmpDir();
         write(dir, { ...KANT, ...ETHICS });
         expect(commands.restsOn('Ethics.Main.acting', dir).out).toEqual([
-            'Kant.Ethics.duty : good X => ought (act_from X)',
+            'Kant.Ethics.duty : \\X. good X => ought (act_from X)',
             'Kant.Ethics.good_will : good will',
         ]);
     });

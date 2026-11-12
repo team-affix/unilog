@@ -4,6 +4,16 @@ import Identity.Equality;
 kent_is_superman : eq clark_kent superman;
 superman_is_kal_el : eq superman kal_el;
 kent_wears_glasses : wears_glasses clark_kent;
+lois_loves_kent : loves lois clark_kent;
+kent_loves_lois : loves clark_kent lois;
 
 kent_is_kal_el : eq clark_kent kal_el = trans kent_is_superman superman_is_kal_el;
 superman_wears_glasses : wears_glasses superman = subst kent_is_superman kent_wears_glasses;
+
+# Substitution works in any position, not just the last.
+lois_loves_superman : loves lois superman = subst kent_is_superman lois_loves_kent;
+superman_loves_lois : loves superman lois = subst kent_is_superman kent_loves_lois;
+
+# And inside a quantified statement.
+everyone_likes_kent : \X. likes X clark_kent;
+everyone_likes_superman : \X. likes X superman = subst kent_is_superman everyone_likes_kent;

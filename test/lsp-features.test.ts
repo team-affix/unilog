@@ -17,7 +17,7 @@ function project() {
     const dir = tmpDir();
     write(dir, {
         'unilog.json': JSON.stringify({ roots: ['.', 'deps'], check: ['Mine'] }),
-        'deps/Kant/Ethics.ul': 'duty : good X => ought X;\nhonesty : good truthful;\ntell_truth = duty honesty;',
+        'deps/Kant/Ethics.ul': 'duty : \\X. good X => ought X;\nhonesty : good truthful;\ntell_truth = duty honesty;',
         'Mine/Main.ul': 'import Kant.Ethics;\nmine = duty honesty;\nstated : ought truthful = tell_truth;\n',
     });
     return dir;
@@ -56,7 +56,7 @@ describe('language server features', () => {
     it('reports a problem in an imported module at its own location, saying how it was reached', () => {
         const dir = project();
         const kant = path.join(dir, 'deps/Kant/Ethics.ul');
-        const a = analyze(dir, overlay({ [kant]: 'duty : good X => ought X;\nhonesty = nope;' }));
+        const a = analyze(dir, overlay({ [kant]: 'duty : \\X. good X => ought X;\nhonesty = nope;' }));
         expect(problems(a)).toEqual([
             {
                 file: kant,
@@ -90,7 +90,7 @@ describe('language server features', () => {
         it('on a rule applied to arguments: each step of applying it, then its general statement', () => {
             expect(at(1, 8)).toBe(
                 '```unilog-step\nduty : good truthful => ought truthful\nduty honesty : ought truthful\n```' +
-                    '\n\n```unilog-step\nKant.Ethics.duty : good X => ought X\n```\n\naxiom',
+                    '\n\n```unilog-step\nKant.Ethics.duty : \\X. good X => ought X\n```\n\naxiom',
             );
         });
 
@@ -106,7 +106,7 @@ describe('language server features', () => {
                 const d = tmpDir();
                 write(d, {
                     'M/P.ul':
-                        'pair : A => B => and A B;\nfst : and A B => A;\nsnd : and A B => B;\nand_comm = \\P. pair (snd P) (fst P);',
+                        'pair : \\A B. A => B => and A B;\nfst : \\A B. and A B => A;\nsnd : \\A B. and A B => B;\nand_comm = \\P. pair (snd P) (fst P);',
                 });
                 return d;
             };
@@ -118,7 +118,7 @@ describe('language server features', () => {
             it('the rule name shows it taking each argument in turn, named as in the statement', () => {
                 expect(on(16)).toBe(
                     '```unilog-step\npair : B => A => and B A\npair (snd P) : A => and B A\npair (snd P) (fst P) : and B A\n```' +
-                        '\n\n```unilog-step\nM.P.pair : A => B => and A B\n```\n\naxiom',
+                        '\n\n```unilog-step\nM.P.pair : \\A B. A => B => and A B\n```\n\naxiom',
                 );
             });
 
@@ -135,7 +135,7 @@ describe('language server features', () => {
 
             it('a rule taking one argument shows both steps', () => {
                 expect(on(21)).toBe(
-                    '```unilog-step\nsnd : and A B => B\nsnd P : B\n```\n\n```unilog-step\nM.P.snd : and A B => B\n```\n\naxiom',
+                    '```unilog-step\nsnd : and A B => B\nsnd P : B\n```\n\n```unilog-step\nM.P.snd : \\A B. and A B => B\n```\n\naxiom',
                 );
             });
 
@@ -212,7 +212,7 @@ describe('language server features', () => {
         expect(
             outline(analyze(dir), path.join(dir, 'deps/Kant/Ethics.ul')).map((e) => [e.name, e.kind, e.detail]),
         ).toEqual([
-            ['duty', 'axiom', 'good X => ought X'],
+            ['duty', 'axiom', '\\X. good X => ought X'],
             ['honesty', 'axiom', 'good truthful'],
             ['tell_truth', 'inference', 'ought truthful'],
         ]);

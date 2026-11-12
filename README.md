@@ -3,13 +3,14 @@
 A minimal constructive logic for stating beliefs and checking what follows from them.
 
 ```
-a : likes jake cake;                  # a belief (axiom)
-b : likes X cake => likes X sugar;    # a rule: for any X
-c = b a;                              # a proof; the checker infers: likes jake sugar
+a : likes jake cake;                      # a belief (axiom)
+b : \X. likes X cake => likes X sugar;    # a rule: for every X
+c = b a;                                  # a proof; the checker works out: likes jake sugar
 ```
 
-- **Constructive logic via Curry–Howard.** Propositions are types, proofs are programs, and checking is type inference. You never write types or quantifiers.
-- **Tiny, sound core.** Its only connective is `=>`. There is no recursion, and checking always terminates. `and`, `or`, `false` and even excluded middle are ordinary axioms in packages.
+- **Constructive logic via Curry–Howard.** Propositions are types, proofs are programs, and checking is type checking. You never write types.
+- **Tiny, sound core.** It knows only `=>` and "for every" (`\X.`), usable anywhere, including inside premises. There is no recursion, and checking always terminates. `and`, `or`, `false`, `exists`, equality and even excluded middle are ordinary rules in packages.
+- **Quantifiers are yours to define.** Any quantifier is a symbol applied to a proposition with a gap (`exists \X. loves X mom`), and its rules are written once for every proposition.
 - **Adversarial transparency.** Everything is public, and `unilog axioms` lists every belief a claim ultimately rests on.
 - **Independent of any package manager.** Modules import each other by name, resolved through the search roots in the project's `unilog.json`. Whatever installs dependencies, point a root at the folder it uses.
 

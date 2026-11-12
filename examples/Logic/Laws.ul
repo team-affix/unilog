@@ -3,27 +3,27 @@
 import Logic.Prelude;
 
 # If A gives B and B gives C, then A gives C.
-chain : (A => B) => (B => C) => A => C = \F G X. G (F X);
+chain : \A B C. (A => B) => (B => C) => A => C = \F G X. G (F X);
 
 # Currying: a rule taking a pair is the same as a rule taking two premises, one at a time.
-curry : (and A B => C) => A => B => C = \F X Y. F (pair X Y);
-uncurry : (A => B => C) => and A B => C = \F P. F (fst P) (snd P);
+curry : \A B C. (and A B => C) => A => B => C = \F X Y. F (pair X Y);
+uncurry : \A B C. (A => B => C) => and A B => C = \F P. F (fst P) (snd P);
 
 # Contraposition: if A gives B, then "not B" gives "not A".
-contrapose : (A => B) => (B => false) => A => false = \F Nb X. Nb (F X);
+contrapose : \A B. (A => B) => (B => false) => A => false = \F Nb X. Nb (F X);
 
 # Anything true is not false. (The converse needs excluded middle: see Classical.ul.)
-not_not_intro : A => (A => false) => false = \X Nx. Nx X;
+not_not_intro : \A. A => (A => false) => false = \X Nx. Nx X;
 
 # De Morgan, constructively.
-not_or : (or A B => false) => and (A => false) (B => false) =
+not_or : \A B. (or A B => false) => and (A => false) (B => false) =
     \N. pair (\X. N (left X)) (\Y. N (right Y));
-or_not : or (A => false) (B => false) => and A B => false =
+or_not : \A B. or (A => false) (B => false) => and A B => false =
     \O P. case O (\Na. Na (fst P)) (\Nb. Nb (snd P));
 
 # Distributing "and" over "or".
-distribute : and A (or B C) => or (and A B) (and A C) =
+distribute : \A B C. and A (or B C) => or (and A B) (and A C) =
     \P. case (snd P) (\Xb. left (pair (fst P) Xb)) (\Xc. right (pair (fst P) Xc));
 
 # "A or A" is just A.
-or_idem : or A A => A = \O. case O (\X. X) (\X. X);
+or_idem : \A. or A A => A = \O. case O (\X. X) (\X. X);

@@ -13,9 +13,9 @@ describe('examples/', () => {
 
     it('classical results list excluded middle among their axioms', () => {
         expect(commands.restsOn('Logic.Classical.double_negation', examples).out).toEqual([
-            'Logic.Classical.lem : or P (P => false)',
-            'Logic.Prelude.case : or A B => (A => C) => (B => C) => C',
-            'Logic.Prelude.explode : false => C',
+            'Logic.Classical.lem : \\P. or P (P => false)',
+            'Logic.Prelude.case : \\A B C. or A B => (A => C) => (B => C) => C',
+            'Logic.Prelude.explode : \\C. false => C',
         ]);
     });
 

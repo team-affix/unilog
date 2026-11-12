@@ -6,11 +6,11 @@ installed, open this folder to hover over any step of a proof.
 
 | Folder | What it shows |
 |---|---|
-| `Logic/` | The connectives (`and`, `or`, `false`) as plain axioms (`Prelude`), classical logic as one extra belief (`Classical`), and laws proved from them (`Laws`): currying, contraposition, De Morgan, distributivity |
+| `Logic/` | The connectives (`and`, `or`, `false`) as plain axioms (`Prelude`), classical logic as one extra belief (`Classical`), laws proved from them (`Laws`): currying, contraposition, De Morgan, distributivity, and quantifiers defined by rules (`Quantifiers`): `exists`, `none`, a universal premise, nesting |
 | `Arithmetic/` | Numbers built from `z` and `s`, with addition and multiplication as rules: `2 + 2 = 4` is a checked calculation |
 | `Family/` | A family tree: ancestors, siblings, and a derived rule that a grandparent is an ancestor |
 | `Aristotle/` | Socrates is mortal, and the syllogism form Barbara proved from no axioms at all |
-| `Identity/` | Equality as rules. Frege's morning star and evening star, and Superman's glasses |
+| `Identity/` | Equality as two rules, with symmetry and transitivity derived. Frege's morning star and evening star, and Superman's glasses, substituting in any position |
 | `Ethics/`, `Debate/` | A Kantian and a utilitarian, each consistent alone, contradict each other about the murderer at the door |
 | `Knowledge/` | Knowledge as justified true belief, and where Gettier's objection would bite |
 | `Science/` | Reasoning backwards with modus tollens: dry ground means no rain |
@@ -32,11 +32,12 @@ unilog rests-on Logic.Classical.double_negation           # needs excluded middl
 unilog proof Identity.Venus.hesperus_seen_at_dawn --flat  # the whole argument, in order
 unilog proof Arithmetic.Peano.two_times_two               # 2 * 2 = 4, step by step
 
-unilog find "mortal X" --unify                            # everyone proved mortal: socrates, plato
+unilog find "mortal socrates"                             # every declaration that proves it
+unilog rests-on Logic.Quantifiers.superman_is_loved       # including the rules for exists
 unilog inferences Logic.Laws                              # the laws and what each states
 unilog summary                                            # axiom and inference counts for every module
 ```
 
 To see a belief give way, edit `Ethics/Kant.ul` so lying is wrong only when it harms someone
-(`lying_is_wrong : lies X => harms X => wrong X;`). `unilog check` then reports exactly where
+(`lying_is_wrong : \X. lies X => harms X => wrong X;`). `unilog check` then reports exactly where
 `Debate.Clash` stopped working: the contradiction depended on the old belief.

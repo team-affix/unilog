@@ -3,7 +3,7 @@ import path from 'path';
 import { Declaration, Derivation, keyOf, propositionTerm } from './check';
 import { UnilogError } from './errors';
 import { parseProposition } from './parser';
-import { instantiate, instantiateRigid, Printer, unify } from './term';
+import { Printer, proves, Term } from './term';
 import { DEFAULT_CONFIG, PROJECT_FILE, targetOf, Workspace } from './workspace';
 
 /** The outcome of a command: lines for stdout and stderr, and whether it succeeded. */
@@ -75,7 +75,7 @@ export function check(dir: string, options: CheckOptions = {}): Output {
     const decls = modules.flatMap((m) => [...m.decls.values()]);
     if (options.verbose)
         for (const d of decls)
-            out.push(`${d.kind === 'axiom' ? 'axiom    ' : 'inference'} ${keyOf(d)} : ${prop(d.scheme.body)}`);
+            out.push(`${d.kind === 'axiom' ? 'axiom    ' : 'inference'} ${keyOf(d)} : ${prop(d.prop)}`);
     if (l.errors.length > 0) return { ok: false, out, err: l.errors };
 
     const mine = decls.filter((d) => isOwn(l, d));
@@ -155,7 +155,7 @@ export function restsOn(name: string, dir: string, json = false): Output {
                         axioms: list.map((a) => ({
                             name: keyOf(a),
                             module: a.module,
-                            proposition: prop(a.scheme.body),
+                            proposition: prop(a.prop),
                         })),
                     },
                     null,
@@ -165,7 +165,7 @@ export function restsOn(name: string, dir: string, json = false): Output {
             return;
         }
         if (list.length === 0) out.push(`${name} rests on no axioms`);
-        for (const a of list) out.push(`${keyOf(a)} : ${prop(a.scheme.body)}`);
+        for (const a of list) out.push(`${keyOf(a)} : ${prop(a.prop)}`);
     });
 }
 
@@ -173,7 +173,7 @@ export function restsOn(name: string, dir: string, json = false): Output {
 export function show(name: string, dir: string): Output {
     return guarded((out) => {
         const d = new Workspace(targetOf(dir).roots).declaration(name);
-        out.push(`${d.kind} ${keyOf(d)} : ${prop(d.scheme.body)}`);
+        out.push(`${d.kind} ${keyOf(d)} : ${prop(d.prop)}`);
     });
 }
 
@@ -222,7 +222,7 @@ export function summary(dir: string, json = false): Output {
             declarations: decls.map((d) => ({
                 name: keyOf(d),
                 kind: d.kind,
-                proposition: prop(d.scheme.body),
+                proposition: prop(d.prop),
                 uses: [...d.uses],
                 restsOn: l.ws.axiomsOf(keyOf(d)).map(keyOf),
             })),
@@ -266,15 +266,10 @@ export function init(dir: string, options: InitOptions = {}): Output {
 
 export interface FindOptions {
     /**
-     * Match declarations whose proposition unifies with the query: variables on both sides may bind, so it
-     * matches by shape (e.g. `wrong X` finds `wrong bob_party`). This finds candidates; it does not mean the
-     * declaration proves the query.
-     */
-    unify?: boolean;
-    /**
      * Match only declarations of exactly the query's generality: the declaration proves the query and the
-     * query proves the declaration. `likes Y cake => likes Y sugar` matches `likes X cake => likes X sugar`
-     * (only the variable names differ) but not its special case `likes jake cake => likes jake sugar`.
+     * query proves the declaration. `\\Y. likes Y cake => likes Y sugar` matches
+     * `\\X. likes X cake => likes X sugar` (only the variable names differ) but not its special case
+     * `likes jake cake => likes jake sugar`.
      */
     exact?: boolean;
     json?: boolean;
@@ -286,11 +281,10 @@ export interface FindOptions {
  * declarations that exist; it does not search for new proofs. Fails (non-zero exit) if none is found.
  */
 export function find(query: string, dir: string, options: FindOptions = {}): Output {
-    if (options.unify && options.exact) return { ok: false, out: [], err: ['--unify and --exact cannot be combined'] };
     let l: Loaded;
-    let expr: ReturnType<typeof parseProposition>;
+    let q: Term;
     try {
-        expr = parseProposition(query);
+        q = propositionTerm(parseProposition(query));
         l = load(dir);
     } catch (e) {
         if (!(e instanceof UnilogError)) throw e;
@@ -298,22 +292,14 @@ export function find(query: string, dir: string, options: FindOptions = {}): Out
     }
     if (l.errors.length > 0) return { ok: false, out: [], err: l.errors };
 
-    // Every check works on fresh copies: a declaration's variables are instantiated anew for each test,
-    // and the query is rebuilt whenever its variables are allowed to bind, so no test can affect another.
-    // "a proves b" = a's variables may bind, b's are rigid (fixed but arbitrary).
-    const declProvesQuery = (d: Declaration) => unify(instantiate(d.scheme), propositionTerm(expr, true)) === undefined;
-    const queryProvesDecl = (d: Declaration) => unify(propositionTerm(expr), instantiateRigid(d.scheme)) === undefined;
-    const unifies = (d: Declaration) => unify(instantiate(d.scheme), propositionTerm(expr)) === undefined;
-    const matches = options.unify
-        ? unifies
-        : options.exact
-          ? (d: Declaration) => declProvesQuery(d) && queryProvesDecl(d)
-          : declProvesQuery;
+    const matches = options.exact
+        ? (d: Declaration) => proves(d.prop, q) && proves(q, d.prop)
+        : (d: Declaration) => proves(d.prop, q);
     const found = sorted(l)
         .flatMap((m) => [...m.decls.values()])
         .filter(matches);
 
-    const shown = new Printer().print(propositionTerm(expr));
+    const shown = new Printer().print(q);
     if (options.json)
         return {
             ok: found.length > 0,
@@ -326,7 +312,7 @@ export function find(query: string, dir: string, options: FindOptions = {}): Out
                             kind: d.kind,
                             module: d.module,
                             own: l.own.has(d.module),
-                            proposition: prop(d.scheme.body),
+                            proposition: prop(d.prop),
                         })),
                     },
                     null,
@@ -338,7 +324,7 @@ export function find(query: string, dir: string, options: FindOptions = {}): Out
     if (found.length === 0) return { ok: false, out: [], err: [`No declaration proves ${shown}`] };
     return {
         ok: true,
-        out: found.map((d) => `${d.kind === 'axiom' ? 'axiom    ' : 'inference'} ${keyOf(d)} : ${prop(d.scheme.body)}`),
+        out: found.map((d) => `${d.kind === 'axiom' ? 'axiom    ' : 'inference'} ${keyOf(d)} : ${prop(d.prop)}`),
         err: [],
     };
 }
@@ -376,7 +362,7 @@ export function inferences(module: string, dir: string, options: InferencesOptio
                         inferences: list.map((d) => ({
                             name: keyOf(d),
                             module: d.module,
-                            proposition: prop(d.scheme.body),
+                            proposition: prop(d.prop),
                         })),
                     },
                     null,
@@ -384,7 +370,7 @@ export function inferences(module: string, dir: string, options: InferencesOptio
                 ),
             );
         } else {
-            for (const d of list) out.push(`${keyOf(d)} : ${prop(d.scheme.body)}`);
+            for (const d of list) out.push(`${keyOf(d)} : ${prop(d.prop)}`);
             out.push(
                 options.transitive
                     ? `${list.length} inference(s) in ${module} and the ${modules.length - 1} module(s) it imports`
@@ -466,7 +452,7 @@ function proofLines(d: Declaration, ws: Workspace, shallow: boolean, axiomsFirst
         ? [...ordered.filter((x) => x.kind === 'axiom'), ...ordered.filter((x) => x.kind === 'inference')]
         : ordered;
     return final.map((x) => {
-        const l: ProofLine = { name: keyOf(x), kind: x.kind, proposition: prop(x.scheme.body) };
+        const l: ProofLine = { name: keyOf(x), kind: x.kind, proposition: prop(x.prop) };
         if (x.proof && (!shallow || x === d)) l.proof = x.proof.text;
         return l;
     });
@@ -520,7 +506,7 @@ export function proof(name: string, dir: string, options: ProofOptions = {}): Ou
                   ...ruleOf(d.proof),
                   children: childrenOf(d.proof),
               }
-            : { expr: keyOf(d), proposition: p.print(d.scheme.body), kind: 'axiom', name: keyOf(d), children: [] };
+            : { expr: keyOf(d), proposition: p.print(d.prop), kind: 'axiom', name: keyOf(d), children: [] };
 
         if (options.flat) {
             const lines = proofLines(d, ws, !!options.shallow, !!options.axiomsFirst);

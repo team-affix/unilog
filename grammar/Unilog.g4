@@ -25,13 +25,16 @@ terminator
     | DOT
     ;
 
-// '=>' is right-associative; application (juxtaposition) binds tighter.
+// '=>' is right-associative; application (juxtaposition) binds tighter. A lambda's body runs as far right as
+// possible. Where a proposition is expected, \X. P means "for every X, P"; as an argument it is a gap.
 prop
-    : propApp (ARROW prop)?
+    : LAMBDA prop                       # propLam
+    | propApp (ARROW prop)?             # propImp
     ;
 
+// A lambda may end an application, as its last argument: exists \X. loves X mom.
 propApp
-    : propAtom+
+    : propAtom+ (LAMBDA prop)?
     ;
 
 propAtom

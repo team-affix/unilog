@@ -4,9 +4,9 @@ parent_bob_carol : parent bob carol;
 parent_bob_dave : parent bob dave;
 parent_carol_eve : parent carol eve;
 
-ancestor_parent : parent X Y => ancestor X Y;
-ancestor_step : parent X Y => ancestor Y Z => ancestor X Z;
-siblings_by_parent : parent P X => parent P Y => sibling X Y;
+ancestor_parent : \X Y. parent X Y => ancestor X Y;
+ancestor_step : \X Y Z. parent X Y => ancestor Y Z => ancestor X Z;
+siblings_by_parent : \P X Y. parent P X => parent P Y => sibling X Y;
 
 # Alice is Eve's ancestor, three generations up.
 alice_ancestor_of_eve : ancestor alice eve =
@@ -16,4 +16,4 @@ alice_ancestor_of_eve : ancestor alice eve =
 carol_dave_siblings : sibling carol dave = siblings_by_parent parent_bob_carol parent_bob_dave;
 
 # A general rule derived from the axioms: a grandparent is an ancestor.
-grandparent_ancestor : parent X Y => parent Y Z => ancestor X Z = \Xy Yz. ancestor_step Xy (ancestor_parent Yz);
+grandparent_ancestor : \X Y Z. parent X Y => parent Y Z => ancestor X Z = \Xy Yz. ancestor_step Xy (ancestor_parent Yz);
