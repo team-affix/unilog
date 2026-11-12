@@ -25,6 +25,8 @@ export interface Problem {
     file: string;
     range: Range;
     message: string;
+    /** A bug in Unilog rather than a mistake in the file (see UnilogError's `kind`). */
+    internal: boolean;
 }
 
 /** A checked project: the workspace with every module that checked, and the errors from those that didn't. */
@@ -102,6 +104,7 @@ export function problems(a: Analysis): Problem[] {
         file: e.loc?.file ? path.resolve(e.loc.file) : path.join(a.projectDir, PROJECT_FILE),
         range: e.loc ? rangeOf(e.loc) : { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
         message: e.reason + (e.context ? `\n(${e.context})` : ''),
+        internal: e.kind === 'internal',
     }));
 }
 

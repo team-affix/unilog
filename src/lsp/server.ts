@@ -68,7 +68,9 @@ export function listen(connection: Connection): void {
         const byFile = new Map<string, Diagnostic[]>();
         for (const p of problems(a)) {
             const list = byFile.get(p.file) ?? [];
-            list.push({ range: p.range, message: p.message, severity: DiagnosticSeverity.Error, source: 'unilog' });
+            // A bug Unilog found in itself is not the user's mistake: shown as a warning (yellow), not an error (red).
+            const severity = p.internal ? DiagnosticSeverity.Warning : DiagnosticSeverity.Error;
+            list.push({ range: p.range, message: p.message, severity, source: 'unilog' });
             byFile.set(p.file, list);
         }
         // Clear files that had problems last time but don't now.

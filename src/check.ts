@@ -381,6 +381,8 @@ export function checkModule(
                 `Internal error: the proof kernel rejected '${declName}' (${e.message}). ` +
                     `This is a bug in Unilog's checker, not in your proof; please report it.`,
                 loc,
+                undefined,
+                'internal',
             );
         }
     }
