@@ -151,7 +151,8 @@ export class Workspace {
         } catch (e) {
             if (!(e instanceof UnilogError)) throw e;
             // The innermost failing module adds how it was reached; modules further out pass it on unchanged.
-            const err = e.context || this.loading.length < 2 ? e : new UnilogError(e.reason, e.loc, this.chain());
+            const err =
+                e.context || this.loading.length < 2 ? e : new UnilogError(e.reason, e.loc, this.chain(), e.kind);
             this.failed.set(name, err);
             throw err;
         } finally {

@@ -20,6 +20,11 @@ export class UnilogError extends Error {
         public readonly loc?: Loc,
         /** How the failing module was reached, e.g. "in Alice.Beliefs, imported by Bob.Rebuttal". */
         public readonly context?: string,
+        /**
+         * `internal`: not the user's mistake but a bug in Unilog, found by the proof kernel disagreeing with the
+         * checker. The declaration is still rejected, but editors show it differently from the user's errors.
+         */
+        public readonly kind: 'user' | 'internal' = 'user',
     ) {
         super((loc ? `${loc.file}:${loc.line}:${loc.col}: ` : '') + reason + (context ? `\n  (${context})` : ''));
         this.name = 'UnilogError';

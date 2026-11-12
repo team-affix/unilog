@@ -1,7 +1,8 @@
 import path from 'path';
 import { describe, expect, it } from 'vitest';
-import { diskSources, SourceProvider } from '../src';
+import { diskSources, SourceProvider, UnilogError } from '../src';
 import {
+    Analysis,
     analyze,
     declarationMarkers,
     definition,
@@ -49,6 +50,7 @@ describe('language server features', () => {
                 file: main,
                 range: { start: { line: 1, character: 6 }, end: { line: 1, character: 15 } },
                 message: expect.stringMatching(/^Cannot apply duty to duty/),
+                internal: false,
             },
         ]);
     });
@@ -64,8 +66,17 @@ describe('language server features', () => {
                 message: expect.stringMatching(
                     /'nope' is not declared[\s\S]*\(in Kant\.Ethics, imported by Mine\.Main\)/,
                 ),
+                internal: false,
             },
         ]);
+    });
+
+    it("marks a problem as internal when it is a bug in Unilog (the kernel disagreeing), not the user's mistake", () => {
+        const loc = { file: path.join(tmpDir(), 'M.ul'), line: 1, col: 1 };
+        const bug = new UnilogError('Internal error: the proof kernel rejected ...', loc, undefined, 'internal');
+        const mistake = new UnilogError('Cannot apply a to b', loc);
+        const a = { projectDir: tmpDir(), errors: [bug, mistake] } as unknown as Analysis;
+        expect(problems(a).map((p) => p.internal)).toEqual([true, false]);
     });
 
     it('puts configuration problems on unilog.json', () => {
