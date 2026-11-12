@@ -1,4 +1,4 @@
-# Design: explicit universal quantification
+# Design: quantifiers
 
 Status: proposal, not implemented.
 
@@ -10,46 +10,55 @@ Today a variable in a proposition is universal without saying so, and only for t
 b : likes X cake => likes X sugar;        # means: for every X, ...
 ```
 
-Two things cannot be said:
+So these cannot be said:
 
-1. **A universal premise.** "If everyone is mortal, then socrates and plato are mortal." Writing
-   `mortal M => both (mortal socrates) (mortal plato)` does not say it: M is chosen by whoever uses the
-   declaration, so the premise only demands that *someone* is mortal.
-2. **A quantifier anywhere but the front.** "Someone loves everyone", "nobody is perfect", and so on.
+1. **A universal premise.** "If everyone is mortal, then socrates is mortal." In
+   `mortal M => mortal socrates`, M is chosen by whoever uses the declaration, so the premise only
+   demands that *someone* is mortal.
+2. **A quantifier anywhere but the front.** "Someone loves everyone", "nobody is perfect".
+3. **Other quantifiers** (exists, none, at least one, most, ...), with rules written once that work for
+   every proposition.
+4. **Rewriting anywhere.** Substituting equals for equals in any position of any proposition.
 
 We also want every variable to be visibly quantified.
 
-## 2. The proposal in one paragraph
+## 2. The proposal
 
-Add one construct, `{X} P`, meaning "for every X, P". It can appear anywhere a proposition can: at the
-front of a declaration, inside a premise, nested inside another `{...}`. Every variable in a proposition
-must be bound by an enclosing `{...}`; there are no implicit variables any more. The checker knows the
-rules of `{...}` (how to use one and how to prove one), and nothing else is built in. Other quantifiers
-and connectives (exists, and, or, false, none, ...) are written in terms of `{...}` and `=>`, or as atoms
-with axioms, exactly as today.
+Two additions:
+
+1. **`{X} P`**: "for every X, P". The one built-in quantifier. It can appear anywhere a proposition can.
+   Every variable must be bound by a `{...}` or a lambda; there are no implicit variables.
+2. **Lambdas in propositions**: `\X. P` is "P with a gap at X". `(\X. loves X mom) socrates` is the same
+   proposition as `loves socrates mom`. Any other quantifier is an ordinary atom in front of a lambda:
+   `exists \X. loves X mom`. Its meaning comes from rules users write.
+
+Nothing else is built in: no other quantifiers, no connectives, no equality, no standard library.
 
 ## 3. Syntax
 
 ```
 {X} P               for every X, P
 {X Y Z} P           for every X, Y and Z, P   (same as {X} {Y} {Z} P)
+\X. P               P with a gap at X
+\X Y. P             same as \X. \Y. P
+q \X. P             q applied to \X. P: a quantifier written by a user
 ```
 
-- The body runs as far right as possible, like `\P.` in proofs. Use parentheses to stop it:
+- `{...}` and `\X.` bodies run as far right as possible. Use parentheses to stop them:
   `({X} mortal X) => mortal socrates`.
 - A variable (a name starting with an uppercase letter or `_`) in a proposition must be bound by an
-  enclosing `{...}`. A free variable is an error, with a fix that adds it to a `{...}`.
-- Variables range over all terms, including propositions, as today.
+  enclosing `{...}` or lambda. A free variable is an error, with a fix that binds it.
+- Variables range over all terms, including propositions and lambdas.
 - In proofs nothing changes: uppercase names are assumptions introduced by `\P.`.
 
-Every existing declaration converts by adding its variables at the front:
+Every existing declaration converts by binding its variables at the front:
 
 ```
 b : {X} likes X cake => likes X sugar;
 add_succ : {M N K} add M N K => add (s M) N (s K);
 ```
 
-## 4. The two rules of `{...}`
+## 4. `{...}`: the two rules
 
 **Using** a proof of `{X} P`: X is replaced by an *unknown*, which matching then fills in. This is what
 happens today whenever a declaration is used. Now it also happens for assumptions and for the results of
@@ -61,30 +70,46 @@ which nothing is known. The proof must prove P for that symbol. This is what hap
 claim's variables must stay general.
 
 **Escape check.** A fixed symbol belongs to the `{...}` that created it. An unknown created outside that
-`{...}` may not be filled with anything containing the fixed symbol. This single check is what keeps both
-rules sound.
+`{...}` may not be filled with anything containing the fixed symbol. This single check keeps both rules
+sound.
 
-Matching never uses either rule: two propositions containing `{...}` match only if they are the same up
-to renaming of their bound variables. Using and proving happen only where proofs are applied and checked.
+## 5. Lambdas: propositions with a gap
 
-## 5. When a claim must be stated
+`(\X. P) A` is the same proposition as P with A in place of X. The checker always works with, and shows,
+the result of filling the gap.
 
-The checker never guesses a `{...}`. An assumption gets a proposition containing `{...}` only from a
-stated claim:
+**The one restriction: a gap may only be filled with something that contains no lambda.**
 
-```
-premise : ({M} mortal M) => both (mortal socrates) (mortal plato) = \F. pair F F;
-```
+Without it the logic is unsound (Curry's paradox): with `C = \X. (X X => false)`, the proposition `C C`
+is the same as `C C => false`, and from that `false` can be proved with no axioms. The restriction rejects
+`C C`, because it fills C's gap with a lambda. It also guarantees that filling gaps always finishes: each
+step removes a lambda and adds none.
 
-Here F gets `{M} mortal M` from the claim. Without the claim, F's proposition would be inferred, and an
-inferred proposition never contains `{...}` except at the front. The error in that case says to state the
-claim.
+What it costs: a gap cannot hold another gapped proposition. Gaps are filled with things like `socrates`,
+`s z` or `likes jake cake`, which covers quantifiers, predicate variables and rewriting.
 
-Declarations without a stated claim keep working: their claim is inferred, and any variables left over
-are bound at the front, so `c = b a;` shows as `c : likes jake sugar`, and a general one as
-`c : {A} ...`.
+**Matching with a gap.** Matching `B T`, where B is an unknown, against a proposition has one answer
+when B is already known (from a stated claim or another premise). Then the gap is filled and matching
+proceeds as usual. When B is not known, the answer is usually ambiguous (in `loves lois superman`, is the
+gap at lois, at superman, or nowhere?), and the checker asks for the claim to be stated rather than
+guess. Two cases are unambiguous and solved directly:
 
-## 6. Worked examples
+- T is a fixed symbol: the gap is wherever that symbol occurs.
+- Two fillings of the same B are both known, such as `B X` and `B Y` in a rewrite rule: the gap is
+  exactly where the two propositions differ.
+
+## 6. When a claim must be stated
+
+The checker never guesses a `{...}` or a gap:
+
+- An assumption gets a proposition containing `{...}` only from a stated claim.
+- A gap is found only when it is determined, as in section 5.
+
+The error in either case says which claim to state. Declarations without a stated claim keep working
+when nothing needs guessing: `c = b a;` shows as `c : likes jake sugar`, and leftover variables are bound
+at the front, as `c : {A} ...`.
+
+## 7. Worked examples
 
 ### A universal premise, used twice
 
@@ -94,59 +119,73 @@ pair : {A B} A => B => both A B;
 premise : ({M} mortal M) => both (mortal socrates) (mortal plato) = \F. pair F F;
 ```
 
-F proves `{M} mortal M`. Each use of F replaces M with a new unknown, so the first F proves
-`mortal socrates` and the second `mortal plato`.
-
-Passing a proof to that premise requires a general one:
+F proves `{M} mortal M`. Each use replaces M with a new unknown, so the first F proves `mortal socrates`
+and the second `mortal plato`. Passing a proof to that premise requires a general one:
 
 ```
 all_mortal : {X} mortal X;
 socrates_mortal : mortal socrates;
 
-ok = premise all_mortal;           # accepted: checked against mortal c for a fixed symbol c
+ok = premise all_mortal;           # accepted
 bad = premise socrates_mortal;     # rejected: socrates does not match the fixed symbol
 ```
 
-### Existence, written with `{...}`
+### A quantifier defined by a user
 
-"Someone loves superman" is: for any conclusion C, if C follows from *whoever* loves superman, then C.
+A package (any package; there is no standard one) can define `exists`:
 
 ```
-someone_loves_superman : {C} ({X} loves X superman => C) => C;
+exists_intro : {B T} B T => exists B;
+exists_elim  : {B C} exists B => ({Y} B Y => C) => C;
 ```
 
-Proving it (give the handler one person you know):
+Using them:
 
 ```
 lois_loves_superman : loves lois superman;
-someone_loves_superman : {C} ({X} loves X superman => C) => C = \K. K lois_loves_superman;
+someone_loves_superman : exists \X. loves X superman = exists_intro lois_loves_superman;
 ```
 
-Using it (give a conclusion and a handler that works for anyone):
+The claim gives B = `\X. loves X superman`. The premise `B T` becomes `loves T superman`, which matches
+`loves lois superman`, so T = lois.
 
 ```
 loved_if_anyone : {X} loves X superman => loved superman;
-superman_loved : loved superman = someone_loves_superman loved_if_anyone;
+superman_loved : loved superman = exists_elim someone_loves_superman loved_if_anyone;
 ```
 
-The handler is checked against `loves x superman => C` for a fixed symbol x, so:
+The handler is checked against `loves y superman => C` for a fixed symbol y. A handler that only works
+for lois is rejected (lois does not match y), and so is one whose conclusion mentions the person
+(`{X} loves X superman => happy X`), because C may not contain y.
 
-- a handler that only works for lois (`loves lois superman => loved superman`) is rejected:
-  lois does not match x;
-- a handler whose conclusion mentions the person (`{X} loves X superman => happy X`) is rejected:
-  C would have to contain x, which the escape check forbids.
+The same pattern gives any other quantifier its rules: `none`, `at_least_one`, `most`, ... Each is an
+atom followed by a lambda, and its rules are axioms that `unilog axioms` lists.
+
+### Rewriting anywhere
+
+```
+refl  : {X} eq X X;
+subst : {B X Y} eq X Y => B X => B Y;
+
+kent_is_superman : eq clark_kent superman;
+kent_loves_lois  : loves clark_kent lois;
+superman_loves_lois : loves superman lois = subst kent_is_superman kent_loves_lois;
+```
+
+The claim and the premise together determine B = `\Z. loves Z lois`: the gap is where the two differ.
+The same rule works in any position, and inside quantified propositions.
 
 ### Nesting in any order
 
 ```
-everyone_loves_someone : {X} {C} ({Y} loves X Y => C) => C;     # for every X, someone X loves
-someone_loves_everyone : {C} ({X} ({Y} loves X Y) => C) => C;   # someone loves every Y
+everyone_loves_someone : {X} exists \Y. loves X Y;
+someone_loves_everyone : exists \X. {Y} loves X Y;
 ```
 
-## 7. Other quantifiers and connectives
+## 8. Encodings without axioms
 
-None are built in. Each can be written with `{...}` and `=>`, in which case its rules come from those of
-`{...}` and need no axioms:
+Connectives can also be written with `{...}` and `=>` alone, so their rules come from `{...}` and need
+no axioms:
 
 | Meaning | Written with `{...}` |
 |---|---|
@@ -154,16 +193,10 @@ None are built in. Each can be written with `{...}` and `=>`, in which case its 
 | A and B | `{C} (A => B => C) => C` |
 | A or B | `{C} (A => C) => (B => C) => C` |
 | some X with P | `{C} ({X} P => C) => C` |
-| no X with P | `{X} P => {C} C` |
 
-Or, as today, a package can make any of them an atom and state its rules as axioms (`examples/Logic`
-does this for `and`, `or` and `false`). Either way it is the user's choice, and with atoms the axioms show
-up in `unilog axioms`.
+Whether to use these or atoms with axioms is the user's choice.
 
-The encoded forms are long. If that becomes a burden, a later, separate proposal could add named
-abbreviations. Nothing in this design depends on it.
-
-## 8. `unilog find`
+## 9. `unilog find`
 
 A query is an ordinary proposition, quantified like any other.
 
@@ -173,42 +206,48 @@ A query is an ordinary proposition, quantified like any other.
 - `--exact`: the same proposition, up to renaming bound variables.
 - `--unify` is removed.
 
-## 9. Editor
+## 10. Editor
 
-- `{`, `}` are colored light yellow (about `#E8DE8A`), distinct from atoms (blue), variables (teal),
-  proof names (purple) and assumptions (orange).
+- Quantifiers are light yellow (about `#E8DE8A`): the `{`, `}` braces, and any atom directly followed by
+  a lambda (`exists` in `exists \X. ...`). This is distinct from atoms (blue), variables (teal), proof names
+  (purple) and assumptions (orange).
 - A free variable gets a quick fix that binds it.
-- Hover shows what each `{...}` was filled in with at that step.
+- Hover shows what each `{...}` and each gap was filled with at that step.
 
-## 10. What stays true
+## 11. What stays true
 
-- Checking always terminates: no recursion, and matching is still first-order (plus renaming of bound
-  variables).
-- Soundness: the rules are natural deduction for intuitionistic logic with a universal quantifier over
-  all terms, including propositions. Nothing proves `{C} C` from no axioms.
-- Every inference rests on axioms listed by `unilog axioms`.
+- **Checking always terminates:** no recursion; filling gaps always finishes (section 5); matching is
+  first-order apart from gaps, which are solved only when determined.
+- **Soundness:** the rules are natural deduction for intuitionistic logic, with a universal quantifier
+  over all terms and with predicate variables. The lambda restriction rules out Curry's paradox. Nothing
+  proves `{C} C` from no axioms.
+- **Every inference rests on axioms listed by `unilog axioms`.**
 
-## 11. What this does not do
+## 12. Limits
 
-- **General rules about "any proposition with a gap"** cannot be written. For example, one rule that
-  turns *any* example into an existence claim, or substitution of equals in any position of any
-  proposition (substitution through a variable P, as in `{P X Y} eq X Y => P X => P Y`, reaches only a
-  relation's last argument). That would need lambdas inside propositions, a larger change that can be
-  proposed separately if the need shows up.
-- **Inference is incomplete where `{...}` is nested:** such declarations must state their claim.
+- **A gap cannot be filled with a lambda** (section 5). Rules about rules about gapped propositions
+  (third-order) cannot be written directly.
+- **Claims must be stated where something would otherwise be guessed** (section 6).
+- **No computation:** relations, not functions, as today.
 
-## 12. Migration and versions
+## 13. Migration and versions
 
 - Breaking change: version 0.3.0. Files must bind their variables.
 - The examples, docs and tests are converted by hand.
 
-## 13. Implementation outline
+## 14. Implementation outline
 
-1. Grammar: `{ NAME+ } prop` in propositions; free-variable check after parsing.
-2. Terms: a binder node; unknowns and fixed symbols carry the depth of the `{...}` they were made in,
-   for the escape check.
-3. Checker: check a proof against a known claim where there is one (that is where fixed symbols come
-   from), infer otherwise; replace the leading `{...}` of anything used with unknowns; bind leftover
-   unknowns at the front of inferred claims.
-4. Matching: first-order, with bound variables compared by renaming, plus the escape check.
-5. `find`, printing, hover, editor grammar and coloring, examples, docs and tests.
+1. **Grammar:** `{ NAME+ } prop` and `\NAME+. prop` in propositions; free-variable check after parsing.
+2. **Terms:**
+   - binder nodes for `{...}` and lambdas;
+   - filling gaps (with the no-lambda check), keeping propositions in filled form;
+   - unknowns and fixed symbols that carry the depth they were made at, for the escape check.
+3. **Checker:**
+   - check a proof against a known claim where there is one, and infer otherwise;
+   - replace the leading `{...}` of anything used with unknowns;
+   - bind leftover unknowns at the front of inferred claims.
+4. **Matching:**
+   - first-order, with bound variables compared up to renaming;
+   - gaps solved when determined, and an error otherwise;
+   - the escape check.
+5. **Everything else:** `find`, printing, hover, editor grammar and coloring, examples, docs and tests.
