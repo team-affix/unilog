@@ -107,10 +107,11 @@ export class Workspace {
         return found[0];
     }
 
-    /** The module name of a file under one of the roots. */
+    /** The module name of a file under one of the roots (the most specific one, if roots are nested). */
     moduleNameOf(file: string): string {
         const abs = path.resolve(file);
-        for (const root of this.roots) {
+        const deepestFirst = [...this.roots].sort((a, b) => path.resolve(b).length - path.resolve(a).length);
+        for (const root of deepestFirst) {
             const rel = path.relative(path.resolve(root), abs);
             if (!rel.startsWith('..') && !path.isAbsolute(rel) && rel.endsWith(EXTENSION)) {
                 const segments = rel.slice(0, -EXTENSION.length).split(path.sep);
@@ -277,7 +278,7 @@ export const PROJECT_FILE = 'unilog.json';
  * A project's configuration (`unilog.json` in the project directory). Paths are relative to that directory.
  *
  *   {
- *       "roots": [".", "deps"],     where modules are looked up, in order
+ *       "roots": [".", "deps/*"],   where modules are looked up; "deps/*" means every folder in deps/
  *       "check": ["Ethics"]         folders or .ul files that `unilog check` checks
  *   }
  *
@@ -303,6 +304,22 @@ function stringList(value: unknown, field: string, file: string): string[] {
 
 /** The configuration `unilog init` writes: look up modules in the project directory, check nothing yet. */
 export const DEFAULT_CONFIG: ProjectConfig = { roots: ['.'], check: [] };
+
+/**
+ * A root as paths: `deps/*` means every folder directly in `deps/` (as DPM installs packages, one folder per
+ * package, each laid out like a project), in name order. Anything else is one path.
+ */
+function expandRoot(dir: string, root: string): string[] {
+    const base = root === '*' ? '' : root.endsWith('/*') ? root.slice(0, -2) : undefined;
+    if (base === undefined) return [path.join(dir, root)];
+    const parent = path.join(dir, base);
+    if (!fs.existsSync(parent)) return [];
+    return fs
+        .readdirSync(parent, { withFileTypes: true })
+        .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+        .map((e) => path.join(parent, e.name))
+        .sort();
+}
 
 /** Reads and validates a project file. */
 export function readProjectConfig(file: string): ProjectConfig {
@@ -332,7 +349,7 @@ export function targetOf(dir: string): Target {
     if (!fs.existsSync(file)) return { roots: [dir], files: findSources(dir) };
 
     const config = readProjectConfig(file);
-    const roots = config.roots.map((r) => path.join(dir, r)).filter((r) => fs.existsSync(r));
+    const roots = config.roots.flatMap((r) => expandRoot(dir, r)).filter((r) => fs.existsSync(r));
     const files = config.check.flatMap((c) => {
         const p = path.join(dir, c);
         if (!fs.existsSync(p)) throw new UnilogError(`${file}: 'check' path does not exist: ${c}`);
