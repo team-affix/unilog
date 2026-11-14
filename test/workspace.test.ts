@@ -283,3 +283,43 @@ describe('commands', () => {
         });
     });
 });
+
+describe('packages installed by DPM: "deps/*" roots', () => {
+    const KANT = 'bafybeieedcwo4wyypn4l2r73564segyb3evs7zeeomxbci7pedrif3c2pu';
+    const ALICE = 'bafybeielfcvgt3wpq3y5aeg3j7n4iz4lpylgqex436uhz6xkepefn524di';
+    const config = JSON.stringify({ roots: ['.', 'deps/*'], check: ['Mine'] });
+
+    it('looks modules up in every folder of deps/, each laid out like a project', () => {
+        const dir = tmpDir();
+        write(dir, {
+            'unilog.json': config,
+            [`deps/${KANT}/Kant/Ethics.ul`]: 'duty : \\X. good X => ought X;\n',
+            [`deps/${ALICE}/Alice/Beliefs.ul`]: 'import Kant.Ethics;\nhonest : good honesty;\n',
+            'Mine/Main.ul': 'import Alice.Beliefs;\nimport Kant.Ethics;\nmine = duty honest;\n',
+        });
+        expect(commands.check(dir)).toMatchObject({ ok: true });
+        // In name order: KANT's CID sorts before ALICE's.
+        expect(targetOf(dir).roots).toEqual([dir, path.join(dir, 'deps', KANT), path.join(dir, 'deps', ALICE)]);
+    });
+
+    it('names a module by the most specific root it is under', () => {
+        const dir = tmpDir();
+        write(dir, { [`deps/${KANT}/Kant/Ethics.ul`]: 'duty : \\X. good X => ought X;\n' });
+        const ws = new Workspace([dir, path.join(dir, 'deps', KANT)]);
+        expect(ws.moduleNameOf(path.join(dir, 'deps', KANT, 'Kant/Ethics.ul'))).toBe('Kant.Ethics');
+    });
+
+    it('reports two packages providing the same module', () => {
+        const dir = tmpDir();
+        write(dir, {
+            'unilog.json': config,
+            [`deps/${KANT}/Kant/Ethics.ul`]: 'duty : \\X. good X => ought X;\n',
+            [`deps/${ALICE}/Kant/Ethics.ul`]: 'duty : \\X. good X => permitted X;\n',
+            'Mine/Main.ul': 'import Kant.Ethics;\n',
+        });
+        expect(commands.check(dir)).toMatchObject({
+            ok: false,
+            err: [expect.stringMatching(/Module Kant\.Ethics is ambiguous/)],
+        });
+    });
+});

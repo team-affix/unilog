@@ -117,15 +117,15 @@ A project is configured by a `unilog.json` file in its directory (like Agda's `.
 
 ```json
 {
-    "roots": [".", "deps"],
+    "roots": [".", "deps/*"],
     "check": ["Ethics"]
 }
 ```
 
-- `roots`: where modules are looked up, in order, relative to the project. Put your own source's parent directory here, along with wherever your dependencies are installed. Roots that don't exist yet are skipped.
+- `roots`: where modules are looked up, relative to the project. Put your own source's parent directory here, along with wherever your dependencies are installed. `deps/*` means every folder in `deps/`: that's how [DPM](https://github.com/team-affix/apm) installs packages, one folder per package (`deps/<cid>/`), each laid out like a project. Roots that don't exist yet are skipped. If two roots provide the same module, it is an error: "Module … is ambiguous".
 - `check`: the folders (or `.ul` files) that `unilog check` checks. Modules they import are checked as far as they're used.
 
-`unilog init` writes one: `unilog init --roots . deps --check Ethics`, or with no options a starting one (`"roots": ["."]`, `"check": []`) to fill in. `unilog check` refuses to run while `check` is empty.
+`unilog init` writes one: `unilog init --roots . 'deps/*' --check Ethics`, or with no options a starting one (`"roots": ["."]`, `"check": []`) to fill in. `unilog check` refuses to run while `check` is empty.
 
 Only the `unilog.json` of the project you run `unilog` in applies. One that comes with a dependency is ignored.
 
