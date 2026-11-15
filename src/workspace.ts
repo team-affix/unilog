@@ -278,7 +278,7 @@ export const PROJECT_FILE = 'unilog.json';
  * A project's configuration (`unilog.json` in the project directory). Paths are relative to that directory.
  *
  *   {
- *       "roots": [".", "deps/*"],   where modules are looked up; "deps/*" means every folder in deps/
+ *       "roots": [".", "lib/*"],    where modules are looked up; "lib/*" means every folder in lib/
  *       "check": ["Ethics"]         folders or .ul files that `unilog check` checks
  *   }
  *
@@ -306,8 +306,8 @@ function stringList(value: unknown, field: string, file: string): string[] {
 export const DEFAULT_CONFIG: ProjectConfig = { roots: ['.'], check: [] };
 
 /**
- * A root as paths: `deps/*` means every folder directly in `deps/` (as DPM installs packages, one folder per
- * package, each laid out like a project), in name order. Anything else is one path.
+ * A root as paths: a root ending in `/*` (e.g. `lib/*`) means every folder directly in that folder, in name order,
+ * each laid out like a project. Anything else is one path.
  */
 function expandRoot(dir: string, root: string): string[] {
     const base = root === '*' ? '' : root.endsWith('/*') ? root.slice(0, -2) : undefined;

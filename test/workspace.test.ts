@@ -284,12 +284,12 @@ describe('commands', () => {
     });
 });
 
-describe('packages installed by DPM: "deps/*" roots', () => {
+describe('roots ending in /* (e.g. "deps/*"): every folder in a folder', () => {
     const KANT = 'bafybeieedcwo4wyypn4l2r73564segyb3evs7zeeomxbci7pedrif3c2pu';
     const ALICE = 'bafybeielfcvgt3wpq3y5aeg3j7n4iz4lpylgqex436uhz6xkepefn524di';
     const config = JSON.stringify({ roots: ['.', 'deps/*'], check: ['Mine'] });
 
-    it('looks modules up in every folder of deps/, each laid out like a project', () => {
+    it('looks modules up in every folder of deps/, each laid out like a project (whatever the folders are named)', () => {
         const dir = tmpDir();
         write(dir, {
             'unilog.json': config,
