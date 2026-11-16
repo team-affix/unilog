@@ -19,7 +19,7 @@ Projects are found by their `unilog.json`; see the [language reference](https://
 npm install
 npm run build       # generates the parser and bundles the extension and language server into out/
 npm test            # syntax-highlighting tests
-npm run package     # builds unilog-<version>.vsix; install with: code --install-extension unilog-0.1.0.vsix
+npm run package     # builds unilog-<version>.vsix; install with: code --install-extension unilog-<version>.vsix
 ```
 
 Press F5 in VS Code (with this folder open) to launch a window with the extension loaded, opening `../../examples`.

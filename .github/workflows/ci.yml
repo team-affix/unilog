@@ -113,6 +113,17 @@ jobs:
           npm run build
           npx vsce package --no-dependencies --out "../../dist-release/unilog-vscode-$VERSION.vsix"
 
+      - name: Add copies under names without the version
+        if: steps.decide.outputs.release == 'true'
+        # So .../releases/latest/download/<name> always gets the newest release's file.
+        working-directory: dist-release
+        run: |
+          cp "unilog-$VERSION.cjs" unilog.cjs
+          cp "unilog-lsp-$VERSION.cjs" unilog-lsp.cjs
+          cp "team-affix-unilog-$VERSION.tgz" unilog.tgz
+          cp "unilog-vscode-$VERSION.vsix" unilog-vscode.vsix
+          ls -l
+
       - name: Create the GitHub Release
         if: steps.decide.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
