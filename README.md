@@ -18,8 +18,8 @@ c = b a;                                  # a proof; the checker works out: like
 ## Usage
 
 ```bash
-# install (Node.js 20+), using the .tgz from the latest release: https://github.com/team-affix/unilog/releases
-npm install -g https://github.com/team-affix/unilog/releases/download/v0.1.6/team-affix-unilog-0.1.6.tgz
+# install the latest release (Node.js 20+); run it again to upgrade
+npm install -g https://github.com/team-affix/unilog/releases/latest/download/unilog.tgz
 
 unilog init                                # create a unilog.json here (--roots . deps --check MyPkg to fill it in)
 unilog check                               # check the project in this directory, as configured by unilog.json
@@ -48,7 +48,13 @@ See the [language reference](docs/language.md) and [`examples/`](examples).
 
 ## Editor support
 
-A VS Code extension lives in [`editors/vscode`](editors/vscode): errors as you type, hover to see what any declaration or proof step proves, inferred claims shown inline, go to definition and an outline. It is a client for the Unilog language server (`unilog-lsp`, in [`src/lsp`](src/lsp)), which uses the same checker as `unilog check`. Other editors that speak the Language Server Protocol can run `unilog-lsp --stdio`.
+A VS Code extension lives in [`editors/vscode`](editors/vscode). To install the latest:
+
+```bash
+curl -fsSLO https://github.com/team-affix/unilog/releases/latest/download/unilog-vscode.vsix && code --install-extension unilog-vscode.vsix
+```
+
+It gives you errors as you type, hover to see what any declaration or proof step proves, inferred claims shown inline, go to definition and an outline. It is a client for the Unilog language server (`unilog-lsp`, in [`src/lsp`](src/lsp)), which uses the same checker as `unilog check`. Other editors that speak the Language Server Protocol can run `unilog-lsp --stdio`.
 
 ## Releases
 
@@ -60,6 +66,8 @@ Built files are never committed. They are attached to [GitHub Releases](https://
 | `unilog-lsp-<version>.cjs` | the language server as a single file, for any LSP editor: `node unilog-lsp-<version>.cjs --stdio` |
 | `unilog-vscode-<version>.vsix` | the VS Code extension: `code --install-extension unilog-vscode-<version>.vsix` |
 | `team-affix-unilog-<version>.tgz` | the npm package (both commands and the library): `npm i -g ./team-affix-unilog-<version>.tgz` |
+
+Each release also has the same files without the version in their names (`unilog.cjs`, `unilog-lsp.cjs`, `unilog-vscode.vsix`, `unilog.tgz`), so `https://github.com/team-affix/unilog/releases/latest/download/<name>` always gets the newest.
 
 To release: set the same new version in `package.json` and `editors/vscode/package.json`, and merge to `main`. After every test job passes, CI tags the merge commit `v<version>` and publishes the release. Merges that don't change the version publish nothing. (Pushing a matching `v*` tag by hand also releases.)
 
