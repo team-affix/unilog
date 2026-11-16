@@ -81,9 +81,12 @@ describe('language server features', () => {
 
     it('puts configuration problems on unilog.json', () => {
         const dir = tmpDir();
-        write(dir, { 'unilog.json': '{ "roots": ["."], "check": [] }' });
+        write(dir, { 'unilog.json': '{ "roots": ["."], "check": ["Nope"] }' });
         expect(problems(analyze(dir))).toMatchObject([
-            { file: path.join(dir, 'unilog.json'), message: expect.stringMatching(/nothing to check/) },
+            {
+                file: path.join(dir, 'unilog.json'),
+                message: expect.stringMatching(/'check' path does not exist: Nope/),
+            },
         ]);
     });
 

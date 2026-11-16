@@ -181,12 +181,18 @@ describe('targetOf', () => {
         expect(targetOf(dir)).toEqual({ roots: [dir], files: [path.join(dir, 'X/A.ul')] });
     });
 
+    it('checks nothing, successfully, when check is empty: an empty conjunction holds', () => {
+        const dir = tmpDir();
+        write(dir, { 'unilog.json': JSON.stringify({ roots: ['.'], check: [] }), 'X/A.ul': 'a : p = nothing;' });
+        expect(targetOf(dir).files).toEqual([]);
+        expect(commands.check(dir)).toMatchObject({ ok: true });
+    });
+
     it.each([
         ['invalid JSON', '{', /not valid JSON/],
         ['a non-object', '[]', /must be a JSON object/],
         ['missing roots', JSON.stringify({ check: ['P'] }), /'roots' must be an array of paths/],
         ['non-string paths', JSON.stringify({ roots: [1], check: ['P'] }), /'roots' must be an array of paths/],
-        ['nothing to check', JSON.stringify({ roots: ['.'], check: [] }), /nothing to check yet/],
         ['an unknown field', JSON.stringify({ roots: ['.'], check: ['P'], name: 'x' }), /unknown field\(s\): name/],
         [
             'a missing check path',
@@ -222,10 +228,14 @@ describe('init', () => {
         expect(fs.readFileSync(path.join(dir, 'unilog.json'), 'utf8')).toBe('{"roots":["src"],"check":["src"]}');
     });
 
-    it('a fresh project says what to fill in, then checks once it is filled in', () => {
+    it('a fresh project checks trivially (nothing to check), then checks what is filled in', () => {
         const dir = tmpDir();
         commands.init(dir);
-        expect(commands.check(dir)).toMatchObject({ ok: false, err: [expect.stringMatching(/nothing to check yet/)] });
+        // check is a conjunction over the listed files: with none, it holds.
+        expect(commands.check(dir)).toMatchObject({
+            ok: true,
+            out: [expect.stringMatching(/^ok: 0 module\(s\) checked/)],
+        });
         write(dir, { 'unilog.json': JSON.stringify({ roots: ['.'], check: ['Mine'] }), 'Mine/A.ul': 'a : p;' });
         expect(commands.check(dir).ok).toBe(true);
     });

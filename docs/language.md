@@ -125,7 +125,7 @@ A project is configured by a `unilog.json` file in its directory (like Agda's `.
 - `roots`: where modules are looked up, relative to the project. Put your own source's parent directory here, along with wherever your dependencies are. A root ending in `/*` means every folder directly inside that folder, each laid out like a project: with `lib/*`, the modules of `lib/kant/Kant/Ethics.ul` and `lib/mill/Mill/Ethics.ul` are `Kant.Ethics` and `Mill.Ethics`. That suits dependencies kept one folder each, whatever the folders are named. Roots that don't exist yet are skipped. If two roots provide the same module, it is an error: "Module … is ambiguous".
 - `check`: the folders (or `.ul` files) that `unilog check` checks. Modules they import are checked as far as they're used.
 
-`unilog init` writes one: `unilog init --roots . 'lib/*' --check Ethics`, or with no options a starting one (`"roots": ["."]`, `"check": []`) to fill in. `unilog check` refuses to run while `check` is empty.
+`unilog init` writes one: `unilog init --roots . 'lib/*' --check Ethics`, or with no options a starting one (`"roots": ["."]`, `"check": []`) to fill in. With `check` empty, `unilog check` checks nothing and succeeds: it checks that every listed file holds, and with none listed, that holds trivially.
 
 Only the `unilog.json` of the project you run `unilog` in applies. One that comes with a dependency is ignored.
 

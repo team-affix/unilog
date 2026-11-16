@@ -357,7 +357,5 @@ export function targetOf(dir: string): Target {
         if (!p.endsWith(EXTENSION)) throw new UnilogError(`${file}: 'check' file is not a ${EXTENSION} file: ${c}`);
         return [p];
     });
-    if (config.check.length === 0)
-        throw new UnilogError(`${file}: nothing to check yet. Add folders or .ul files to 'check'.`);
     return { roots, files: [...new Set(files)].sort() };
 }
