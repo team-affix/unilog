@@ -188,6 +188,16 @@ describe('targetOf', () => {
         expect(commands.check(dir)).toMatchObject({ ok: true });
     });
 
+    it('rejects a directory that does not exist', () => {
+        expect(() => targetOf(path.join(tmpDir(), 'nope'))).toThrow(/No such directory: .*nope/);
+    });
+
+    it('rejects a file given as the directory, saying to list it in unilog.json', () => {
+        const dir = tmpDir();
+        write(dir, { 'A.ul': '' });
+        expect(() => targetOf(path.join(dir, 'A.ul'))).toThrow(/A\.ul is a file, not a directory.*"check"/);
+    });
+
     it.each([
         ['invalid JSON', '{', /not valid JSON/],
         ['a non-object', '[]', /must be a JSON object/],

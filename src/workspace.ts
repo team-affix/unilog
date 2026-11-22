@@ -345,6 +345,12 @@ export function readProjectConfig(file: string): ProjectConfig {
  * - Without one: every `.ul` file under the directory, with the directory as the only root.
  */
 export function targetOf(dir: string): Target {
+    if (!fs.existsSync(dir)) throw new UnilogError(`No such directory: ${dir}`);
+    if (!fs.statSync(dir).isDirectory())
+        throw new UnilogError(
+            `${dir} is a file, not a directory. Unilog commands take a project directory; to check particular ` +
+                `files, list them under "check" in the project's ${PROJECT_FILE}.`,
+        );
     const file = path.join(dir, PROJECT_FILE);
     if (!fs.existsSync(file)) return { roots: [dir], files: findSources(dir) };
 
