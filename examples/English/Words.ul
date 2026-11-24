@@ -1,0 +1,75 @@
+# The dictionary: what kind of word each symbol is (Grammar.ul says what each kind applies to), and what
+# words mean in terms of each other. One symbol per meaning, in its plain form: `run`, never `ran` or
+# `running`. Tense is said with times (see Sentences.ul), not with the word.
+
+# --- Nouns: kinds of things. `dog the_dog`: the_dog is a dog. ---
+dog_noun      : noun dog;
+cat_noun      : noun cat;
+animal_noun   : noun animal;
+hill_noun     : noun hill;
+store_noun    : noun store;
+book_noun     : noun book;
+child_noun    : noun child;
+stranger_noun : noun stranger;
+ground_noun   : noun ground;
+
+# --- Relations between two things. `grandfather_of walter jake`: walter is jake's grandfather. ---
+grandfather_of_relation : relation grandfather_of;
+family_of_relation      : relation family_of;
+kind_to_relation        : relation kind_to;
+
+# --- Adjectives: properties of things. `steep the_hill`: the hill is steep. ---
+steep_adjective : adjective steep;
+open_adjective  : adjective open;
+
+# A graded adjective is relative to a kind: a tall child need not be tall. `tall_for child tom`.
+tall_for_graded : graded_adjective tall_for;
+
+# --- Verbs: kinds of events. `run jakes_run`: jakes_run is a running. ---
+run_verb      : verb run;
+drive_verb    : verb drive;
+give_verb     : verb give;
+visit_verb    : verb visit;
+chase_verb    : verb chase;
+bark_verb     : verb bark;
+rain_verb     : verb rain;
+exercise_verb : verb exercise;
+
+# --- States: things that hold for a while, like events. `tired jakes_tiredness`. ---
+tired_state : state tired;
+wet_state   : state wet;
+
+# --- Adverbs: how an event happened. `careful jakes_drive`: the drive was careful. ---
+careful_adverb : adverb careful;
+upward_adverb  : adverb upward;
+
+# --- Roles: how a thing takes part in an event. `agent jakes_run jake`: jake did the running. ---
+agent_role     : role agent;       # who does it
+theme_role     : role theme;       # what it is done to, or what moves
+recipient_role : role recipient;   # who receives
+goal_role      : role goal;        # where it ends up
+path_role      : role path;        # what it goes along
+target_role    : role target;      # what it is aimed at ("barked at")
+holder_role    : role holder;      # who or what a state holds of ("jake was tired")
+helps_role     : role helps;       # who it helps
+good_for_role  : role good_for;    # who it is good for
+
+# --- Relations between events. ---
+after_relation         : event_relation after;          # after E F: E came after F
+starts_during_relation : event_relation starts_during;  # starts_during E F: E began while F was going on
+causes_relation        : event_relation causes;         # causes E F: E brought F about
+
+# --- Attitudes: a person's stance toward a whole sentence. `believes jake (open the_store)`. ---
+believes_attitude : attitude believes;
+
+# --- What the words mean, in terms of each other ---
+every_dog_is_an_animal : \X. dog X => animal X;
+running_is_exercise    : \E. run E => exercise E;
+a_grandfather_is_family : \X Y. grandfather_of X Y => family_of X Y;
+
+# Driving someone somewhere helps them, and so does giving them something.
+driving_someone_somewhere_helps_them : \E Y Z. drive E => theme E Y => goal E Z => helps E Y;
+giving_someone_something_helps_them  : \E Y. give E => recipient E Y => helps E Y;
+
+# Time runs one way.
+before_is_transitive : \A B C. before A B => before B C => before A C;

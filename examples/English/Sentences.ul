@@ -1,0 +1,240 @@
+# English sentences, translated. Each sentence is broken into small facts, one per piece of meaning, and each
+# fact comes with a proof that it is well-formed (its name ends in `_wf`).
+#
+# How a sentence breaks down:
+#   - A specific thing or person gets a name: "the dog" is the_dog, "Jake" is jake.
+#   - A noun or adjective is a fact about it: `dog the_dog`, `steep the_hill`.
+#   - A verb names an event, and says what kind it is: "ran" is an event jakes_run with `run jakes_run`.
+#   - Each part attached to the verb is a role of that event: `agent jakes_run jake` (who ran).
+#   - An adverb is a fact about the event: `careful jakes_drive`.
+#   - Tense is a time: `on jakes_run day_2026_11_23`. Times are absolute, never "now", because a published
+#     package never changes and "now" would be wrong tomorrow. These sentences were written on 2026-11-24.
+import English.Grammar;
+import English.Words;
+import Logic.Prelude;
+import Logic.Quantifiers;
+
+# --- Who and what the sentences are about (grammar facts: the sort of each name) ---
+jake_entity               : entity jake;
+mia_entity                : entity mia;
+tom_entity                : entity tom;
+walter_entity             : entity walter;
+jakes_grandfather_entity  : entity jakes_grandfather;
+the_dog_entity            : entity the_dog;
+the_cat_entity            : entity the_cat;
+the_hill_entity           : entity the_hill;
+the_store_entity          : entity the_store;
+a_book_entity             : entity a_book;
+the_stranger_entity       : entity the_stranger;
+the_ground_entity         : entity the_ground;
+
+jakes_run_event       : event jakes_run;
+mias_run_event        : event mias_run;
+the_dogs_run_event    : event the_dogs_run;
+the_chase_event       : event the_chase;
+jakes_drive_event     : event jakes_drive;
+jakes_gift_event      : event jakes_gift;
+jakes_visit_event     : event jakes_visit;
+jakes_tiredness_event : event jakes_tiredness;
+the_rain_event        : event the_rain;
+the_wetness_event     : event the_wetness;
+
+yesterday_time : time day_2026_11_23;
+today_time     : time day_2026_11_24;
+tomorrow_time  : time day_2026_11_25;
+
+yesterday_before_today    : before day_2026_11_23 day_2026_11_24;
+yesterday_before_today_wf : wf (before day_2026_11_23 day_2026_11_24) = wf_before yesterday_time today_time;
+today_before_tomorrow     : before day_2026_11_24 day_2026_11_25;
+today_before_tomorrow_wf  : wf (before day_2026_11_24 day_2026_11_25) = wf_before today_time tomorrow_time;
+
+
+# 1. "Jake ran yesterday."            An intransitive verb: one role, the agent. Past tense, as a date.
+s1_run     : run jakes_run;
+s1_run_wf  : wf (run jakes_run) = wf_verb run_verb jakes_run_event;
+s1_who     : agent jakes_run jake;
+s1_who_wf  : wf (agent jakes_run jake) = wf_role agent_role jakes_run_event jake_entity;
+s1_when    : on jakes_run day_2026_11_23;
+s1_when_wf : wf (on jakes_run day_2026_11_23) = wf_on jakes_run_event yesterday_time;
+
+
+# 2. "The dog that chased the cat ran up the hill."
+#    "the dog", "the cat", "the hill"   specific things: each gets a name, and a noun saying what it is
+#    "that chased the cat"              a relative clause: just more facts about the_dog, through a second event
+#    "up the hill"                      the hill is the path of the run, and the run went upward
+s2_dog       : dog the_dog;
+s2_dog_wf    : wf (dog the_dog) = wf_noun dog_noun the_dog_entity;
+s2_cat       : cat the_cat;
+s2_cat_wf    : wf (cat the_cat) = wf_noun cat_noun the_cat_entity;
+s2_hill      : hill the_hill;
+s2_hill_wf   : wf (hill the_hill) = wf_noun hill_noun the_hill_entity;
+
+s2_chase        : chase the_chase;
+s2_chase_wf     : wf (chase the_chase) = wf_verb chase_verb the_chase_event;
+s2_chaser       : agent the_chase the_dog;
+s2_chaser_wf    : wf (agent the_chase the_dog) = wf_role agent_role the_chase_event the_dog_entity;
+s2_chased       : theme the_chase the_cat;
+s2_chased_wf    : wf (theme the_chase the_cat) = wf_role theme_role the_chase_event the_cat_entity;
+
+s2_run          : run the_dogs_run;
+s2_run_wf       : wf (run the_dogs_run) = wf_verb run_verb the_dogs_run_event;
+s2_runner       : agent the_dogs_run the_dog;
+s2_runner_wf    : wf (agent the_dogs_run the_dog) = wf_role agent_role the_dogs_run_event the_dog_entity;
+s2_along        : path the_dogs_run the_hill;
+s2_along_wf     : wf (path the_dogs_run the_hill) = wf_role path_role the_dogs_run_event the_hill_entity;
+s2_up           : upward the_dogs_run;
+s2_up_wf        : wf (upward the_dogs_run) = wf_adverb upward_adverb the_dogs_run_event;
+s2_when         : on the_dogs_run day_2026_11_23;
+s2_when_wf      : wf (on the_dogs_run day_2026_11_23) = wf_on the_dogs_run_event yesterday_time;
+
+
+# 3. "Jake carefully drove his grandfather to the store."
+#    A transitive verb (drove whom: the theme), with a destination (to the store: the goal) and an adverb.
+#    "his grandfather" is a person named by how they relate to Jake.
+s3_grandfather    : grandfather_of jakes_grandfather jake;
+s3_grandfather_wf : wf (grandfather_of jakes_grandfather jake) =
+    wf_relation grandfather_of_relation jakes_grandfather_entity jake_entity;
+s3_store          : store the_store;
+s3_store_wf       : wf (store the_store) = wf_noun store_noun the_store_entity;
+
+s3_drive      : drive jakes_drive;
+s3_drive_wf   : wf (drive jakes_drive) = wf_verb drive_verb jakes_drive_event;
+s3_driver     : agent jakes_drive jake;
+s3_driver_wf  : wf (agent jakes_drive jake) = wf_role agent_role jakes_drive_event jake_entity;
+s3_driven     : theme jakes_drive jakes_grandfather;
+s3_driven_wf  : wf (theme jakes_drive jakes_grandfather) = wf_role theme_role jakes_drive_event jakes_grandfather_entity;
+s3_to         : goal jakes_drive the_store;
+s3_to_wf      : wf (goal jakes_drive the_store) = wf_role goal_role jakes_drive_event the_store_entity;
+s3_how        : careful jakes_drive;
+s3_how_wf     : wf (careful jakes_drive) = wf_adverb careful_adverb jakes_drive_event;
+s3_when       : on jakes_drive day_2026_11_23;
+s3_when_wf    : wf (on jakes_drive day_2026_11_23) = wf_on jakes_drive_event yesterday_time;
+
+
+# 4. "Jake gave his grandfather a book."
+#    A ditransitive verb: who gave (agent), what (theme), to whom (recipient).
+#    "a book" is not a specific, known book, but it is the one he gave, so it still gets a name: a_book.
+s4_book      : book a_book;
+s4_book_wf   : wf (book a_book) = wf_noun book_noun a_book_entity;
+s4_give      : give jakes_gift;
+s4_give_wf   : wf (give jakes_gift) = wf_verb give_verb jakes_gift_event;
+s4_giver     : agent jakes_gift jake;
+s4_giver_wf  : wf (agent jakes_gift jake) = wf_role agent_role jakes_gift_event jake_entity;
+s4_given     : theme jakes_gift a_book;
+s4_given_wf  : wf (theme jakes_gift a_book) = wf_role theme_role jakes_gift_event a_book_entity;
+s4_to        : recipient jakes_gift jakes_grandfather;
+s4_to_wf     : wf (recipient jakes_gift jakes_grandfather) =
+    wf_role recipient_role jakes_gift_event jakes_grandfather_entity;
+
+
+# 5. "The hill is steep."             An adjective. No time: it is meant as lasting.
+s5_steep    : steep the_hill;
+s5_steep_wf : wf (steep the_hill) = wf_adjective steep_adjective the_hill_entity;
+
+
+# 6. "Jake was tired after his run."  A temporary state is like an event: it gets a name, a kind, a holder,
+#                                     and a place in time (here, after another event).
+s6_tired      : tired jakes_tiredness;
+s6_tired_wf   : wf (tired jakes_tiredness) = wf_state tired_state jakes_tiredness_event;
+s6_who        : holder jakes_tiredness jake;
+s6_who_wf     : wf (holder jakes_tiredness jake) = wf_role holder_role jakes_tiredness_event jake_entity;
+s6_after      : after jakes_tiredness jakes_run;
+s6_after_wf   : wf (after jakes_tiredness jakes_run) =
+    wf_event_relation after_relation jakes_tiredness_event jakes_run_event;
+
+
+# 7. "It started raining while Jake was driving."
+#    "It" refers to nothing: rain has no agent, so the event simply has none.
+#    "was driving" (progressive) means the drive was going on at that moment: the rain began during it.
+s7_rain     : rain the_rain;
+s7_rain_wf  : wf (rain the_rain) = wf_verb rain_verb the_rain_event;
+s7_while    : starts_during the_rain jakes_drive;
+s7_while_wf : wf (starts_during the_rain jakes_drive) =
+    wf_event_relation starts_during_relation the_rain_event jakes_drive_event;
+
+
+# 8. "Jake will visit his grandfather tomorrow."   Future tense: a date after the day it was written.
+s8_visit       : visit jakes_visit;
+s8_visit_wf    : wf (visit jakes_visit) = wf_verb visit_verb jakes_visit_event;
+s8_visitor     : agent jakes_visit jake;
+s8_visitor_wf  : wf (agent jakes_visit jake) = wf_role agent_role jakes_visit_event jake_entity;
+s8_visited     : theme jakes_visit jakes_grandfather;
+s8_visited_wf  : wf (theme jakes_visit jakes_grandfather) =
+    wf_role theme_role jakes_visit_event jakes_grandfather_entity;
+s8_when        : on jakes_visit day_2026_11_25;
+s8_when_wf     : wf (on jakes_visit day_2026_11_25) = wf_on jakes_visit_event tomorrow_time;
+
+
+# 9. "Jake and Mia ran yesterday."    Two subjects. Here each ran (two runs); Jake's is sentence 1.
+#                                     If they ran together, it would be one run with two agents.
+s9_run      : run mias_run;
+s9_run_wf   : wf (run mias_run) = wf_verb run_verb mias_run_event;
+s9_who      : agent mias_run mia;
+s9_who_wf   : wf (agent mias_run mia) = wf_role agent_role mias_run_event mia_entity;
+s9_when     : on mias_run day_2026_11_23;
+s9_when_wf  : wf (on mias_run day_2026_11_23) = wf_on mias_run_event yesterday_time;
+
+
+# 10. "Tom is a tall child."          "is a child": a noun. "tall" here means tall for a child, so it takes the
+#                                     kind it is measured against: Tom need not be tall.
+s10_child     : child tom;
+s10_child_wf  : wf (child tom) = wf_noun child_noun tom_entity;
+s10_tall      : tall_for child tom;
+s10_tall_wf   : wf (tall_for child tom) = wf_graded tall_for_graded child_noun tom_entity;
+
+
+# 11. "Jake's grandfather is Walter." This "is" says two names are the same person (identity), not that
+#                                     someone has a property ("is a child", "is steep").
+s11_same    : eq jakes_grandfather walter;
+s11_same_wf : wf (eq jakes_grandfather walter) = wf_same jakes_grandfather_entity walter_entity;
+
+
+# 12. "Jake believes that the store is open."
+#     A belief about a whole sentence. This says nothing about whether the store IS open.
+s12_believes    : believes jake (open the_store);
+s12_believes_wf : wf (believes jake (open the_store)) =
+    wf_attitude believes_attitude jake_entity (wf_adjective open_adjective the_store_entity);
+
+
+# 13. "The ground was wet because it rained."   "because" is a relation between two events, not "=>":
+#                                               the rain brought the wetness about.
+s13_ground      : ground the_ground;
+s13_ground_wf   : wf (ground the_ground) = wf_noun ground_noun the_ground_entity;
+s13_wet         : wet the_wetness;
+s13_wet_wf      : wf (wet the_wetness) = wf_state wet_state the_wetness_event;
+s13_what        : holder the_wetness the_ground;
+s13_what_wf     : wf (holder the_wetness the_ground) = wf_role holder_role the_wetness_event the_ground_entity;
+s13_because     : causes the_rain the_wetness;
+s13_because_wf  : wf (causes the_rain the_wetness) =
+    wf_event_relation causes_relation the_rain_event the_wetness_event;
+
+
+# 14. "The dog never barked at the stranger."   Negation: no event is a barking by the dog at the stranger.
+#     "For every event E: if E is a barking, by the dog, at the stranger, then false."
+s14_stranger    : stranger the_stranger;
+s14_stranger_wf : wf (stranger the_stranger) = wf_noun stranger_noun the_stranger_entity;
+s14_never       : \E. bark E => agent E the_dog => target E the_stranger => false;
+s14_never_wf    : wf (\E. bark E => agent E the_dog => target E the_stranger => false) =
+    wf_every_event (\E. wf_if (wf_verb bark_verb E)
+                           (wf_if (wf_role agent_role E the_dog_entity)
+                           (wf_if (wf_role target_role E the_stranger_entity) wf_false)));
+
+
+# 15. "Some dog chased a cat."        "some" and "a" here don't name anyone: they say there is one.
+#     This one isn't a belief of its own: it follows from sentence 2, which names the dog, the cat and the chase.
+s15_some      : exists \D. exists \C. exists \E. and (dog D) (and (cat C) (and (chase E) (and (agent E D) (theme E C)))) =
+    exists_intro (exists_intro (exists_intro (pair s2_dog (pair s2_cat (pair s2_chase (pair s2_chaser s2_chased))))));
+s15_some_wf   : wf (exists \D. exists \C. exists \E. and (dog D) (and (cat C) (and (chase E) (and (agent E D) (theme E C))))) =
+    wf_some_entity (\D. wf_some_entity (\C. wf_some_event (\E.
+        wf_and (wf_noun dog_noun D) (wf_and (wf_noun cat_noun C) (wf_and (wf_verb chase_verb E)
+        (wf_and (wf_role agent_role E D) (wf_role theme_role E C)))))));
+
+
+# 16. "Every dog is an animal."       "every": for every X, if X is a dog, X is an animal. It is a fact about
+#                                     the words, so it is in Words.ul; here is its proof of well-formedness.
+s16_every_wf : wf (\X. dog X => animal X) =
+    wf_every_entity (\X. wf_if (wf_noun dog_noun X) (wf_noun animal_noun X));
+
+
+# Not translated: questions ("Did Jake run?") and commands ("Run!") claim nothing, so there is nothing to
+# believe or prove. Their answers are sentences, and those translate as above.

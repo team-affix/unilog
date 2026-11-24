@@ -15,6 +15,7 @@ installed, open this folder to hover over any step of a proof.
 | `Knowledge/` | Knowledge as justified true belief, and where Gettier's objection would bite |
 | `Science/` | Reasoning backwards with modus tollens: dry ground means no rain |
 | `Games/`, `Travel/` | Rock-paper-scissors and routes on a map, as rules |
+| `English/` | Real English sentences translated, with a grammar that proves each one well-formed, and opinions that lead to a view (see its [README](English/README.md)) |
 | `Demo/` | The first examples from the language's design |
 
 ## Things to try
@@ -36,6 +37,8 @@ unilog find "mortal socrates"                             # every declaration th
 unilog rests-on Logic.Quantifiers.superman_is_loved       # including the rules for exists
 unilog inferences Logic.Laws                              # the laws and what each states
 unilog summary                                            # axiom and inference counts for every module
+
+unilog rests-on English.Views.jake_was_kind_to_walter      # from English sentences to a view
 ```
 
 To see a belief give way, edit `Ethics/Kant.ul` so lying is wrong only when it harms someone
