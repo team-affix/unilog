@@ -1,0 +1,38 @@
+# Grammar: which sentences are well-formed. `wf S` means "S is a well-formed sentence".
+#
+# Every name stands for one of three sorts of thing:
+#   entity   a thing or a person: jake, the_dog, the_hill
+#   event    anything that happens, or holds for a while (states count too): jakes_run, the_rain
+#   time     a day or a moment: day_2026_11_23
+#
+# Words are grouped by kind (Words.ul says which word is which kind), and each kind says what it applies to.
+# Nobody is stopped from writing any symbols they like; a sentence just isn't well-formed until `wf` of it
+# is proved from these rules.
+
+# --- Words, by kind ---
+wf_noun           : \N X. noun N => entity X => wf (N X);                          # dog the_dog
+wf_adjective      : \A X. adjective A => entity X => wf (A X);                     # steep the_hill
+wf_relation       : \R X Y. relation R => entity X => entity Y => wf (R X Y);      # grandfather_of walter jake
+wf_verb           : \V E. verb V => event E => wf (V E);                           # run jakes_run
+wf_state          : \S E. state S => event E => wf (S E);                          # tired jakes_tiredness
+wf_adverb         : \A E. adverb A => event E => wf (A E);                         # careful jakes_drive
+wf_role           : \R E X. role R => event E => entity X => wf (R E X);           # agent jakes_run jake
+wf_event_relation : \R E F. event_relation R => event E => event F => wf (R E F);  # causes the_rain the_wetness
+wf_graded         : \A N X. graded_adjective A => noun N => entity X => wf (A N X); # tall_for child tom
+wf_attitude       : \A X S. attitude A => entity X => wf S => wf (A X S);          # believes jake (open the_store)
+
+# --- Time and identity ---
+wf_on     : \E T. event E => time T => wf (on E T);         # on jakes_run day_2026_11_23
+wf_before : \T U. time T => time U => wf (before T U);     # before day_2026_11_23 day_2026_11_24
+wf_same   : \X Y. entity X => entity Y => wf (eq X Y);     # eq jakes_grandfather walter
+
+# --- Logic: a sentence built from well-formed sentences is well-formed ---
+wf_false : wf false;
+wf_if    : \A B. wf A => wf B => wf (A => B);
+wf_and   : \A B. wf A => wf B => wf (and A B);
+
+# "every" and "some", over each sort. To prove `wf (\X. P X)`, prove `wf (P X)` for any X of that sort.
+wf_every_entity : \P. (\X. entity X => wf (P X)) => wf (\X. P X);
+wf_every_event  : \P. (\X. event X => wf (P X)) => wf (\X. P X);
+wf_some_entity  : \P. (\X. entity X => wf (P X)) => wf (exists P);
+wf_some_event   : \P. (\X. event X => wf (P X)) => wf (exists P);

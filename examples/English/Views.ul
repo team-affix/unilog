@@ -1,0 +1,41 @@
+# Beliefs about the world, and the views they lead to, from the facts in Sentences.ul and the meanings in
+# Words.ul. These two beliefs are opinions: someone else can hold different ones, and `unilog rests-on`
+# shows exactly which beliefs each conclusion depends on.
+import English.Grammar;
+import English.Words;
+import English.Sentences;
+import Identity.Equality;
+
+# --- Beliefs ---
+exercise_is_good_for_whoever_does_it : \E X. exercise E => agent E X => good_for E X;
+helping_family_is_kind               : \E X Y. helps E Y => agent E X => family_of Y X => kind_to X Y;
+
+# --- What follows ---
+
+# Jake's run was good for him: running is exercise, and exercise is good for whoever does it.
+jakes_run_was_good_for_him : good_for jakes_run jake =
+    exercise_is_good_for_whoever_does_it (running_is_exercise s1_run) s1_who;
+
+# The dog's run up the hill was good for the dog, for the same reasons.
+the_dogs_run_was_good_for_it : good_for the_dogs_run the_dog =
+    exercise_is_good_for_whoever_does_it (running_is_exercise s2_run) s2_runner;
+
+# Jake was kind to his grandfather: driving him to the store helped him, Jake did it, and a grandfather is family.
+jake_was_kind_to_his_grandfather : kind_to jake jakes_grandfather =
+    helping_family_is_kind
+        (driving_someone_somewhere_helps_them s3_drive s3_driven s3_to)
+        s3_driver
+        (a_grandfather_is_family s3_grandfather);
+
+# The gift was kind too, by a different route: giving helps.
+the_gift_was_kind : kind_to jake jakes_grandfather =
+    helping_family_is_kind
+        (giving_someone_something_helps_them s4_give s4_to)
+        s4_giver
+        (a_grandfather_is_family s3_grandfather);
+
+# Jake's grandfather is Walter, so Jake was kind to Walter.
+jake_was_kind_to_walter : kind_to jake walter = subst s11_same jake_was_kind_to_his_grandfather;
+
+# The conclusion is a well-formed sentence too.
+jake_was_kind_to_walter_wf : wf (kind_to jake walter) = wf_relation kind_to_relation jake_entity walter_entity;
