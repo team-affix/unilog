@@ -16,7 +16,7 @@ import Logic.Quantifiers;
 
 # --- Who and what the sentences are about (grammar facts: the sort of each name) ---
 jake_entity               : entity jake;
-mia_entity                : entity mia;
+daniel_entity             : entity daniel;
 tom_entity                : entity tom;
 walter_entity             : entity walter;
 jakes_grandfather_entity  : entity jakes_grandfather;
@@ -29,7 +29,7 @@ the_stranger_entity       : entity the_stranger;
 the_ground_entity         : entity the_ground;
 
 jakes_run_event       : event jakes_run;
-mias_run_event        : event mias_run;
+daniels_run_event     : event daniels_run;
 the_dogs_run_event    : event the_dogs_run;
 the_chase_event       : event the_chase;
 jakes_drive_event     : event jakes_drive;
@@ -165,14 +165,14 @@ s8_when        : on jakes_visit day_2026_11_25;
 s8_when_wf     : wf (on jakes_visit day_2026_11_25) = wf_on jakes_visit_event tomorrow_time;
 
 
-# 9. "Jake and Mia ran yesterday."    Two subjects. Here each ran (two runs); Jake's is sentence 1.
+# 9. "Jake and Daniel ran yesterday."    Two subjects. Here each ran (two runs); Jake's is sentence 1.
 #                                     If they ran together, it would be one run with two agents.
-s9_run      : run mias_run;
-s9_run_wf   : wf (run mias_run) = wf_verb run_verb mias_run_event;
-s9_who      : agent mias_run mia;
-s9_who_wf   : wf (agent mias_run mia) = wf_role agent_role mias_run_event mia_entity;
-s9_when     : on mias_run day_2026_11_23;
-s9_when_wf  : wf (on mias_run day_2026_11_23) = wf_on mias_run_event yesterday_time;
+s9_run      : run daniels_run;
+s9_run_wf   : wf (run daniels_run) = wf_verb run_verb daniels_run_event;
+s9_who      : agent daniels_run daniel;
+s9_who_wf   : wf (agent daniels_run daniel) = wf_role agent_role daniels_run_event daniel_entity;
+s9_when     : on daniels_run day_2026_11_23;
+s9_when_wf  : wf (on daniels_run day_2026_11_23) = wf_on daniels_run_event yesterday_time;
 
 
 # 10. "Tom is a tall child."          "is a child": a noun. "tall" here means tall for a child, so it takes the
